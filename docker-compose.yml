@@ -43,7 +43,7 @@ services:
       - POSTGRES_USER=cantinaweb
       - POSTGRES_PASSWORD=#Password#
     volumes:
-      - postgres_data_CantinaWeb:/var/lib/postgresql/data
+      - postgres_data_CantinaWeb:/var/lib/postgresql
     networks:
       - backend-CantinaWeb
 
