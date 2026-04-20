@@ -96,12 +96,14 @@ export default function Header({ onToggleSidebar }) {
                   <li className="px-4 pt-3 pb-2">
                     <div className="text-xs font-semibold text-gray-500">Tema</div>
                     <select
-                      className="mt-2 w-full rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       value={themeName}
                       onChange={(e) => setTheme(e.target.value)}
                     >
                       {Object.entries(themes).map(([key, t]) => (
-                        <option key={key} value={key}>{t.label}</option>
+                        <option key={key} value={key} className="text-slate-700">
+                          {t.label}
+                        </option>
                       ))}
                     </select>
                     <button
