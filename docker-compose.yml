@@ -22,7 +22,7 @@ services:
 
 ##  Frontend: React (con Apache sirviendo los archivos estáticos)
   frontend:
-    build: ./CantinaWeb-React
+    build: ./CantinaWeb
     container_name: react-app-CantinaWeb
     ports:
       - "3005:3000"
