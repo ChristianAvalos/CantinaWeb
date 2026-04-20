@@ -1,21 +1,37 @@
-import { useEffect, useRef } from 'react';
-import Chart from 'chart.js/auto';
+import { useEffect, useRef, useState } from 'react';
 import { formatearGuarani } from '../helpers/HelpersNumeros';
 
 const GraficoGastos = ({ datos, restante, acumulado, ingresoMes, egresoMes, mesSeleccionado, handleMesChange }) => {
-
+    const [ChartModule, setChartModule] = useState(null);
     const canvasRef = useRef(null);
     const inputRef = useRef(null);
+    const chartRef = useRef(null);
 
     useEffect(() => {
+        let cancelled = false;
+
+        import('chart.js/auto').then(({ default: Chart }) => {
+            if (!cancelled) {
+                setChartModule(() => Chart);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!ChartModule || !canvasRef.current) {
+            return undefined;
+        }
+
         const categorias = datos.map(d => d.categoria);
         const montos = datos.map(d => d.monto);
         const colores = datos.map(d => d.color);
 
-        const total = montos.reduce((a, b) => a + b, 0);
-        //const restante = datos.restante ?? 0;
-
-        const chart = new Chart(canvasRef.current, {
+        chartRef.current?.destroy();
+        chartRef.current = new ChartModule(canvasRef.current, {
             type: 'doughnut',
             data: {
                 labels: [...categorias, 'Restante'],
@@ -35,9 +51,10 @@ const GraficoGastos = ({ datos, restante, acumulado, ingresoMes, egresoMes, mesS
         });
 
         return () => {
-            chart.destroy();
+            chartRef.current?.destroy();
+            chartRef.current = null;
         };
-    }, [datos]);
+    }, [ChartModule, datos, restante]);
 
     return (
         <div className="w-full max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4">
@@ -116,7 +133,13 @@ const GraficoGastos = ({ datos, restante, acumulado, ingresoMes, egresoMes, mesS
             {/* Gráfico */}
             <div className="w-full flex justify-center">
                 <div className="w-full sm:w-2/3 md:w-1/2">
-                    <canvas ref={canvasRef}></canvas>
+                    {ChartModule ? (
+                        <canvas ref={canvasRef}></canvas>
+                    ) : (
+                        <div className="flex min-h-72 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm font-semibold text-slate-500">
+                            Cargando grafico...
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

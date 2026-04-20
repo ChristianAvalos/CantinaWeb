@@ -1,24 +1,31 @@
-import { createBrowserRouter,Navigate } from "react-router-dom";
+import { Suspense, lazy } from 'react';
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import AuthLayout from "./layouts/AuthLayout";
-import Inicio from "./views/Inicio";
-import Login from "./views/Login";
-import Registro from "./views/Registro";
-import Usuarios from "./views/Usuarios";
-import Error from "./views/Error";
 import ProtectedRoute from "./hooks/ProtectedRoute";
-import InicioUsuarios from "./views/InicioUsuarios";
-import RolesUsuarios from "./views/RolesUsuarios";
-import UserReportRolesPermission from "./report/UserReportRolesPermission";
-import Organizacion from "./views/Organizacion";
-import ErrorEstadoUsuario from "./views/ErrorEstadoUsuario";
-import Transacciones from "./views/Transacciones";
-import Categorias from "./views/Categorias";
-import Productos from "./views/Productos";
-import Persona from "./views/Personas";
-import Compras from "./views/Compras";
-import Ventas from "./views/Ventas";
-import Ajustes from "./views/Ajustes";
+import Spinner from './components/Spinner';
+
+const Inicio = lazy(() => import("./views/Inicio"));
+const Login = lazy(() => import("./views/Login"));
+const Registro = lazy(() => import("./views/Registro"));
+const Usuarios = lazy(() => import("./views/Usuarios"));
+const Error = lazy(() => import("./views/Error"));
+const InicioUsuarios = lazy(() => import("./views/InicioUsuarios"));
+const RolesUsuarios = lazy(() => import("./views/RolesUsuarios"));
+const UserReportRolesPermission = lazy(() => import("./report/UserReportRolesPermission"));
+const Organizacion = lazy(() => import("./views/Organizacion"));
+const ErrorEstadoUsuario = lazy(() => import("./views/ErrorEstadoUsuario"));
+const Transacciones = lazy(() => import("./views/Transacciones"));
+const Categorias = lazy(() => import("./views/Categorias"));
+const Productos = lazy(() => import("./views/Productos"));
+const Persona = lazy(() => import("./views/Personas"));
+const Compras = lazy(() => import("./views/Compras"));
+const Ventas = lazy(() => import("./views/Ventas"));
+const Ajustes = lazy(() => import("./views/Ajustes"));
+
+function withSuspense(element) {
+    return <Suspense fallback={<Spinner />}>{element}</Suspense>;
+}
 
 
 const router = createBrowserRouter ([
@@ -28,17 +35,15 @@ const router = createBrowserRouter ([
         children: [
             {
                 index:true,
-                element: (
+                element: withSuspense(
                     <ProtectedRoute permission="Principal">
                         <Inicio/>
                     </ProtectedRoute>
-            
-                    )
-                    },
+                )
+            },
             {
                 path:'/usuarios',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Herraminetas_usuarios">
                     <Usuarios/>
                 </ProtectedRoute>
@@ -46,8 +51,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/usuarios/roles',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Herraminetas_usuarios">
                     <RolesUsuarios/>
                 </ProtectedRoute>
@@ -55,17 +59,16 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/error',
-                element: <Error/>
+                element: withSuspense(<Error/>)
             },
 
             {
                 path:'/iniciousuarios',
-                element: <InicioUsuarios/>
+                element: withSuspense(<InicioUsuarios/>)
             },
             {
                 path:'/usuarios/reporte',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Reporte_Usuarios">
                     <UserReportRolesPermission/>
                 </ProtectedRoute>
@@ -73,8 +76,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/organizacion',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Organizacion">
                     <Organizacion/>
                 </ProtectedRoute>
@@ -82,8 +84,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/productos',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Productos">
                     <Productos/>
                 </ProtectedRoute>
@@ -91,8 +92,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/compras',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Compras">
                     <Compras/>
                 </ProtectedRoute>
@@ -100,8 +100,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/ventas',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Ventas">
                     <Ventas/>
                 </ProtectedRoute>
@@ -109,8 +108,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/ajustes',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Ajustes">
                     <Ajustes/>
                 </ProtectedRoute>
@@ -118,8 +116,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/transacciones',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Transacciones">
                     <Transacciones/>
                 </ProtectedRoute>
@@ -127,8 +124,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/categorias',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Categorias">
                     <Categorias/>
                 </ProtectedRoute>
@@ -136,8 +132,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/personas',
-                
-                element: (
+                element: withSuspense(
                 <ProtectedRoute permission="Personas">
                     <Persona/>
                 </ProtectedRoute>
@@ -155,22 +150,17 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/auth/login',
-                element: <Login />
+                element: withSuspense(<Login />)
             },
             {
                 path: '/auth/registro',
-                element: <Registro/>
+                element: withSuspense(<Registro/>)
             }
         ]
     },
     {
         path:'/errorEstadoUsuario',
-        element: (
-                <ErrorEstadoUsuario/>
-    
-            )
-        
-        
+        element: withSuspense(<ErrorEstadoUsuario/>)
     }
 ])
 

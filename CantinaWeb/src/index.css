@@ -8,25 +8,42 @@
   --g360-on: 255 255 255; /* texto por defecto sobre gradiente */
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Source Sans Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body *,
+body *::before,
+body *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 @layer utilities {
   .g360-gradient {
     background-image: linear-gradient(to bottom right, rgb(var(--g360-from)), rgb(var(--g360-to)));
     color: rgb(var(--g360-on));
-  }
-
-  /* AdminLTE aplica colores/opacity a .nav-link; en temas oscuros se ve “apagado”.
-     Esto fuerza el color del texto del sidenav a nuestro color "on" del tema. */
-  .g360-sidenav,
-  .g360-sidenav .nav-link,
-  .g360-sidenav .nav-link p,
-  .g360-sidenav .nav-link i,
-  .g360-sidenav .nav-icon,
-  .g360-sidenav .nav-header {
-    color: rgb(var(--g360-on)) !important;
-  }
-
-  .g360-sidenav .nav-link {
-    opacity: 1 !important;
   }
 
   .g360-gradient-r {
@@ -45,6 +62,70 @@
   input[type="month"]::-webkit-input-placeholder {
     @apply text-gray-400;
   }
+}
+
+@layer components {
+  .content {
+    @apply w-full;
+  }
+
+  .container-fluid {
+    @apply w-full;
+  }
+
+  .card {
+    @apply overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-sm ring-1 ring-white/70;
+  }
+
+  .card-body {
+    @apply px-4 py-4 md:px-6;
+  }
+
+  .table {
+    @apply min-w-full border-separate border-spacing-0 text-sm text-slate-700;
+  }
+
+  .table th {
+    @apply border-b border-slate-200 px-3 py-3 font-bold;
+  }
+
+  .table td {
+    @apply border-b border-slate-100 px-3 py-3 align-middle;
+  }
+
+  .table-bordered th,
+  .table-bordered td {
+    @apply border-r border-slate-100 last:border-r-0;
+  }
+
+  .table-striped tbody tr:nth-child(odd) {
+    @apply bg-white;
+  }
+
+  .table-striped tbody tr:nth-child(even) {
+    @apply bg-slate-50;
+  }
+
+  .table-striped tbody tr:hover {
+    @apply bg-slate-100/80;
+  }
+}
+
+.text-end {
+  text-align: right;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.app-sidebar {
+  min-height: 100vh;
+}
+
+.app-sidebar .sidebar {
+  min-height: 100vh;
 }
 
 /* Utilidades adicionales */
@@ -75,6 +156,7 @@
 .g360-gradient,
 .g360-gradient-r {
   background-repeat: no-repeat;
+  background-size: cover;
   background-position: center;
 }
 
@@ -85,57 +167,4 @@
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-attachment: fixed !important;
-}
-
-/* Override extra: neutralizar pseudo-elementos y cualquier fondo animado/pattern
-   que algunas librerías inyectan (pace, plugins). Mantenerlo lo más específico
-   y seguro posible: solo impacta a elementos con la clase `pace` y sus hijos. */
-.pace,
-.pace *,
-.pace::before,
-.pace::after,
-.pace .pace-activity::before,
-.pace .pace-activity::after,
-.pace .pace-progress:before,
-.pace .pace-progress:after {
-  background-image: none !important;
-  background: transparent !important;
-  background-repeat: no-repeat !important;
-  background-size: auto !important;
-  box-shadow: none !important;
-}
-
-/* Si la regla anterior no es suficiente, esto fuerza transparencia en
-   pseudo-elementos concretos que suelen usar `linear-gradient`. */
-.pace .pace-activity::before,
-.pace .pace-activity::after {
-  content: none !important;
-}
-
-/* Ocultar pseudo-elementos globales que puedan inyectar patrones/gradientes
-   (prueba segura: solo afecta a pseudo-elementos). Si esto quita el patrón,
-   luego podemos anularlo más específicamente por archivo/selector. */
-html::before,
-html::after,
-body::before,
-body::after,
-#root::before,
-#root::after,
-.wrapper::before,
-.wrapper::after,
-main::before,
-main::after {
-  content: "" !important;
-  display: none !important;
-  background: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-}
-
-/* Regla de emergencia: si un elemento tiene inline style con `background-image`
-   y no es nuestra utilidad `.g360-gradient(-r)`, desactivar momentáneamente
-   para aislar la causa. */
-*[style*="background-image"]:not(.g360-gradient):not(.g360-gradient-r) {
-  background-image: none !important;
-  background: transparent !important;
 }

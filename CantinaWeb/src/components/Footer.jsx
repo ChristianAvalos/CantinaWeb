@@ -2,19 +2,13 @@
 
 export default function Footer() {
   return (
-    <div>
+    <footer className="mt-auto flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white/80 px-4 py-4 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-between md:px-6">
       <div>
-        <footer className="main-footer">
-          <strong>Copyright © 2024-2027 <a href="">CDSystem</a>.</strong>
-          All rights reserved.
-          <div className="float-right d-none d-sm-inline-block">
-            <b>Version</b> 1.0.0
-          </div>
-        </footer>
-        <aside className="control-sidebar control-sidebar-dark">
-        </aside>
+        <strong>Copyright © 2024-2027 CDSystem.</strong> Todos los derechos reservados.
       </div>
-
-    </div>
+      <div>
+        <b>Version</b> 1.0.0
+      </div>
+    </footer>
   )
 }

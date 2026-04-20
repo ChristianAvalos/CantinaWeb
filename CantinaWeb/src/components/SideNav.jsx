@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom"
 import React, { useEffect, useState } from 'react';
 import useAuthPermisos from "../hooks/useAuthPermisos";
+import { useTheme } from '../context/ThemeContext';
 
 const buildExpandedSections = (pathname) => ({
   operaciones: pathname === '/compras' || pathname === '/ventas' || pathname === '/ajustes' || pathname === '/transacciones',
@@ -10,15 +11,32 @@ const buildExpandedSections = (pathname) => ({
 });
 
 export default function SideNav() {
-
-
-  const { permissions, hasPermission } = useAuthPermisos();
+  const { hasPermission, loading } = useAuthPermisos();
+  const { theme } = useTheme();
   const location = useLocation();
 
   // Estado para el término de búsqueda y los ítems del menú
   const [searchTerm, setSearchTerm] = useState('');
   const [menuItems, setMenuItems] = useState([]);
   const [expandedSections, setExpandedSections] = useState(() => buildExpandedSections(location.pathname));
+
+  const isLightTheme = theme.on === '15 23 42';
+  const dividerColor = isLightTheme ? `rgba(${theme.on}, 0.14)` : 'rgba(255, 255, 255, 0.1)';
+  const sidenavStyle = {
+    backgroundColor: `rgb(${theme.from})`,
+    backgroundImage: `linear-gradient(180deg, rgb(${theme.from}) 0%, rgb(${theme.to}) 100%)`,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '100% 100%',
+    color: `rgb(${theme.on})`,
+    borderRightColor: dividerColor,
+  };
+  const loadingStyle = {
+    backgroundColor: `rgb(${theme.from})`,
+    backgroundImage: `linear-gradient(180deg, rgb(${theme.from}) 0%, rgb(${theme.to}) 100%)`,
+    color: `rgb(${theme.on})`,
+  };
+  const sectionTitleClasses = "mt-5 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-extrabold uppercase tracking-[0.14em] transition hover:bg-white/10";
+  const itemLinkClasses = "flex items-center gap-3 rounded-xl px-3 py-2 text-[1.02rem] font-semibold transition hover:bg-white/10";
 
   // Función para manejar el cambio del input de búsqueda
   const handleSearch = (e) => {
@@ -94,156 +112,120 @@ export default function SideNav() {
     toggleSection(sectionName);
   };
 
-
-
-
-  //esto es para ver la cantidad de permisos que tiene
-  //   permissions.forEach(permission => {
-  //     console.log(`El usuario tiene permiso: ${permission}`);
-  // });
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center" style={loadingStyle}>
+        <span className="text-lg font-bold">Cargando menu...</span>
+      </div>
+    );
+  }
 
 
   return (
-    <>
-      {/* Main Sidebar Container */}
-
-
-      <div className="sidebar h-full g360-sidenav g360-gradient">
-        {/* Sidebar user panel (optional) */}
-        <div className="user-panel mt-3 pb-3 mb-3 flex justify-center">
-          <div className="info">
+      <div className="flex h-full min-h-full w-full">
+      <div className="sidebar flex h-full min-h-full flex-1 flex-col overflow-y-auto border-r shadow-2xl" style={sidenavStyle}>
+        <div className="flex flex-col items-center gap-4 px-5 pb-4 pt-6">
+          <div className="flex justify-center">
             {hasPermission('Principal') ? (
 
               <Link to="/" className="flex justify-center">
                 <img
                   src="/img/Logo Institucional.png"
                   alt="CDSystem"
-                  className="rounded-full bg-white w-50 h-30"
+                  className="mb-4 h-24 w-24 rounded-full bg-slate-50 object-contain p-2 shadow-sm"
                 />
               </Link>
             ) : (
               <img
                 src="/img/Logo Institucional.png"
                 alt="CDSystem"
-                className="rounded-full bg-white w-50 h-30"
+                className="h-24 w-24 rounded-full bg-white object-contain p-2 shadow-sm"
               />
             )}
           </div>
+          <div className="h-px w-full" style={{ backgroundColor: dividerColor }} />
         </div>
 
-        {/* SidebarSearch Form */}
-        {/* ocultado por ahora */}
-        <div className="form-inline hidden">
-          <div className="input-group" data-widget="sidebar-search">
+        <div className="px-3">
+          <div className="hidden">
             <input
-              className="form-control form-control-sidebar"
+              className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm placeholder:text-white/70"
               type="search"
               placeholder="Buscar"
               aria-label="Search"
               value={searchTerm}
               onChange={handleSearch}
             />
-            <div className="input-group-append">
-              <button className="btn btn-sidebar">
-                <div className="font-bold">
-                  <i className="fas fa-search fa-fw" />
-                </div>
-              </button>
-            </div>
           </div>
         </div>
 
-
-        {/* Mostrar los items filtrados solo si hay término de búsqueda */}
         {searchTerm && (
-          <>
+          <div className="px-3 pb-2">
             {filteredMenuItems && filteredMenuItems.length > 0 ? (
-              <ul className="nav nav-pills nav-sidebar flex-column">
+              <ul className="space-y-1">
                 {filteredMenuItems.map((item, index) => {
-                  console.log("Index:", index, "Item:", item); // 👈 aquí ves en consola
                   return (
-                    <li key={index} className="nav-item">
-                      <Link to={item.route || "#"} className="nav-link">
-                        <div className="font-bold">
-                          <i className="nav-icon fas fa-circle"></i>
-                          <p>{item.text}</p>
-                        </div>
+                    <li key={index}>
+                      <Link to={item.route || "#"} className={itemLinkClasses}>
+                        <i className="fas fa-circle h-5 w-5 shrink-0 text-center text-[0.6rem]" />
+                        <span>{item.text}</span>
                       </Link>
                     </li>
                   );
                 })}
               </ul>
             ) : (
-              <div className="ml-3 mt-2">No hay resultados</div>
+              <div className="px-3 py-2 text-sm font-semibold">No hay resultados</div>
             )}
-
-
-          </>
+          </div>
         )}
 
-
-        {/* Sidebar Menu */}
-        <nav className="mt-2">
-          <ul className="nav nav-pills nav-sidebar flex-column" role="menu" data-accordion="false">
+        <nav className="flex-1 px-3 pb-6">
+          <ul className="space-y-1" role="menu">
 
             {(hasPermission('Transacciones') || hasPermission('Categorias')  
                 || hasPermission('Compras') || hasPermission('Ventas') || hasPermission('Ajustes')         
               )
             && (
 
-              <li className={`nav-item has-treeview ${expandedSections.operaciones ? 'menu-open' : ''}`}>
-                <button type="button" onClick={(event) => handleSectionToggle(event, 'operaciones')} className="nav-link underline w-full border-0 bg-transparent text-left">
-
-                  <p>
-                    Operaciones
-                    <i className={`right fas fa-angle-left transition-transform ${expandedSections.operaciones ? 'rotate-[-90deg]' : ''}`}></i>
-                  </p>
+              <li>
+                <button type="button" onClick={(event) => handleSectionToggle(event, 'operaciones')} className={sectionTitleClasses}>
+                  <span>Operaciones</span>
+                  <i className={`fas fa-angle-left text-sm transition-transform ${expandedSections.operaciones ? '-rotate-90' : ''}`}></i>
                 </button>
-                <ul className="nav nav-treeview" style={{ display: expandedSections.operaciones ? 'block' : 'none' }}>
+                <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.operaciones ? 'mt-2 max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Compras') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/compras" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/shopping-cart-arrow-in.png" alt="Transacciones" className="w-5 h-5 mr-2" />
-                          {/* <i className="far fa-address-card"></i> */}
-                          <p className="ml-2 font-bold">Compras</p>
-                        </div>
+                    <li>
+                      <Link to="/compras" className={itemLinkClasses}>
+                        <img src="/img/Icon/shopping-cart-arrow-in.png" alt="Compras" className="h-5 w-5 shrink-0" />
+                        <span>Compras</span>
                       </Link>
                     </li>
                   )}
 
                   {hasPermission('Ventas') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/ventas" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Transacciones" className="w-5 h-5 mr-2" />
-                          {/* <i className="far fa-address-card"></i> */}
-                          <p className="ml-2 font-bold">Ventas</p>
-                        </div>
+                    <li>
+                      <Link to="/ventas" className={itemLinkClasses}>
+                        <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas" className="h-5 w-5 shrink-0" />
+                        <span>Ventas</span>
                       </Link>
                     </li>
                   )}
 
                   {hasPermission('Ajustes') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/ajustes" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/processes-filled.png" alt="Transacciones" className="w-5 h-5 mr-2" />
-                          {/* <i className="far fa-address-card"></i> */}
-                          <p className="ml-2 font-bold">Ajustes</p>
-                        </div>
+                    <li>
+                      <Link to="/ajustes" className={itemLinkClasses}>
+                        <img src="/img/Icon/processes-filled.png" alt="Ajustes" className="h-5 w-5 shrink-0" />
+                        <span>Ajustes</span>
                       </Link>
                     </li>
                   )}
 
                   {hasPermission('Transacciones') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/transacciones" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/sort.png" alt="Transacciones" className="w-5 h-5 mr-2" />
-                          {/* <i className="far fa-address-card"></i> */}
-                          <p className="ml-2 font-bold">Transacciones</p>
-                        </div>
+                    <li>
+                      <Link to="/transacciones" className={itemLinkClasses}>
+                        <img src="/img/Icon/sort.png" alt="Transacciones" className="h-5 w-5 shrink-0" />
+                        <span>Transacciones</span>
                       </Link>
                     </li>
                   )}
@@ -255,47 +237,35 @@ export default function SideNav() {
             )}
             {(hasPermission('Categorias') || hasPermission('Personas') || hasPermission('Productos'))  && (
 
-              <li className={`nav-item has-treeview ${expandedSections.definiciones ? 'menu-open' : ''}`}>
-                <button type="button" onClick={(event) => handleSectionToggle(event, 'definiciones')} className="nav-link underline w-full border-0 bg-transparent text-left">
-
-                  <p>
-                    Definiciones
-                    <i className={`right fas fa-angle-left transition-transform ${expandedSections.definiciones ? 'rotate-[-90deg]' : ''}`}></i>
-                  </p>
+                          <li>
+                            <button type="button" onClick={(event) => handleSectionToggle(event, 'definiciones')} className={sectionTitleClasses}>
+                              <span>Definiciones</span>
+                              <i className={`fas fa-angle-left text-sm transition-transform ${expandedSections.definiciones ? '-rotate-90' : ''}`}></i>
                 </button>
-                <ul className="nav nav-treeview" style={{ display: expandedSections.definiciones ? 'block' : 'none' }}>
+                            <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.definiciones ? 'mt-2 max-h-[320px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Productos') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/productos" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/product-filled.bmp" alt="Productos" className="w-5 h-5 mr-2" />
-                          {/* <i className="far fa-address-card"></i> */}
-                          <p className="ml-2 font-bold">Productos</p>
-                        </div>
+                                <li>
+                                  <Link to="/productos" className={itemLinkClasses}>
+                                    <img src="/img/Icon/product-filled.bmp" alt="Productos" className="h-5 w-5 shrink-0" />
+                                    <span>Productos</span>
                       </Link>
                     </li>
                   )}
                   
                   {hasPermission('Categorias') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/categorias" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/tag-filled-green.png" alt="Categorias" className="w-5 h-5 mr-2" />
-                          {/* <i className="fas fa-tags"></i> */}
-                          <p className="ml-2">Categorías</p>
-                        </div>
+                                <li>
+                                  <Link to="/categorias" className={itemLinkClasses}>
+                                    <img src="/img/Icon/tag-filled-green.png" alt="Categorias" className="h-5 w-5 shrink-0" />
+                                    <span>Categorias</span>
                       </Link>
                     </li>
                   )}
 
                   {hasPermission('Personas') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/personas" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/business-card-man.png" alt="Categorias" className="w-5 h-5 mr-2" />
-                          {/* <i className="fas fa-tags"></i> */}
-                          <p className="ml-2">Clientes/Proveedores</p>
-                        </div>
+                                <li>
+                                  <Link to="/personas" className={itemLinkClasses}>
+                                    <img src="/img/Icon/business-card-man.png" alt="Clientes y proveedores" className="h-5 w-5 shrink-0" />
+                                    <span>Clientes/Proveedores</span>
                       </Link>
                     </li>
                   )}
@@ -306,23 +276,17 @@ export default function SideNav() {
 
             {(hasPermission('Herraminetas_usuarios') || hasPermission('Organizacion')) && (
 
-              <li className={`nav-item has-treeview ${expandedSections.herramientas ? 'menu-open' : ''}`}>
-                <button type="button" onClick={(event) => handleSectionToggle(event, 'herramientas')} className="nav-link underline w-full border-0 bg-transparent text-left">
-
-                  <p>
-                    Herramientas
-                    <i className={`right fas fa-angle-left transition-transform ${expandedSections.herramientas ? 'rotate-[-90deg]' : ''}`}></i>
-                  </p>
+              <li>
+                <button type="button" onClick={(event) => handleSectionToggle(event, 'herramientas')} className={sectionTitleClasses}>
+                  <span>Herramientas</span>
+                  <i className={`fas fa-angle-left text-sm transition-transform ${expandedSections.herramientas ? '-rotate-90' : ''}`}></i>
                 </button>
-                <ul className="nav nav-treeview" style={{ display: expandedSections.herramientas ? 'block' : 'none' }}>
+                <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.herramientas ? 'mt-2 max-h-[320px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Organizacion') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/organizacion" className="nav-link flex items-center">
-                        <div className="font-bold flex items-center">
-                          <img src="/img/Icon/organogram.png" alt="Organigrama" className="w-5 h-5 mr-2" />
-                          {/* <i className="fas fa-sitemap"></i> */}
-                          <p className="ml-2">Organización</p>
-                        </div>
+                    <li>
+                      <Link to="/organizacion" className={itemLinkClasses}>
+                        <img src="/img/Icon/organogram.png" alt="Organizacion" className="h-5 w-5 shrink-0" />
+                        <span>Organizacion</span>
                       </Link>
                     </li>
                   )}
@@ -330,28 +294,22 @@ export default function SideNav() {
 
                   {hasPermission('Herraminetas_usuarios') && (
 
-                    <ul className="nav nav-pills ">
-                      <li className="nav-item ml-2">
-                        <Link to="/usuarios" className="nav-link flex items-center">
-                          <div className="font-bold flex items-center">
-                            <img src="/img/Icon/user-group.png" alt="User" className="w-5 h-5 mr-2" />
-                            {/* <i className="fas fa-user"></i> */}
-                            <p className="ml-2">Usuarios</p>
-                          </div>
+                    <>
+                      <li>
+                        <Link to="/usuarios" className={itemLinkClasses}>
+                          <img src="/img/Icon/user-group.png" alt="Usuarios" className="h-5 w-5 shrink-0" />
+                          <span>Usuarios</span>
                         </Link>
                       </li>
 
 
-                      <li className="nav-item ml-2">
-                        <Link to="/usuarios/roles" className="nav-link flex items-center">
-                          <div className="font-bold flex items-center">
-                            <img src="/img/Icon/manage-user.png" alt="Roles User" className="w-5 h-5 mr-2" />
-                            {/* <i className="fas fa-user-tag"></i> */}
-                            <p className="ml-2">Roles usuario </p>
-                          </div>
+                      <li>
+                        <Link to="/usuarios/roles" className={itemLinkClasses}>
+                          <img src="/img/Icon/manage-user.png" alt="Roles usuario" className="h-5 w-5 shrink-0" />
+                          <span>Roles usuario</span>
                         </Link>
                       </li>
-                    </ul>
+                    </>
 
                   )}
 
@@ -364,22 +322,18 @@ export default function SideNav() {
 
             {hasPermission('Reporte_Usuarios') && (
 
-              <li className={`nav-item has-treeview ${expandedSections.reportes ? 'menu-open' : ''}`}>
-                <button type="button" onClick={() => toggleSection('reportes')} className="nav-link underline w-full border-0 bg-transparent text-left">
-
-                  <p>
-                    Reportes
-                    <i className={`right fas fa-angle-left transition-transform ${expandedSections.reportes ? 'rotate-[-90deg]' : ''}`}></i>
-                  </p>
+              <li>
+                <button type="button" onClick={(event) => handleSectionToggle(event, 'reportes')} className={sectionTitleClasses}>
+                  <span>Reportes</span>
+                  <i className={`fas fa-angle-left text-sm transition-transform ${expandedSections.reportes ? '-rotate-90' : ''}`}></i>
                 </button>
-                <ul className="nav nav-treeview" style={{ display: expandedSections.reportes ? 'block' : 'none' }}>
+                <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.reportes ? 'mt-2 max-h-28 opacity-100' : 'max-h-0 opacity-0'}`}>
 
                   {hasPermission('Reporte_Usuarios') && (
-                    <li className="nav-item ml-2">
-                      <Link to="/usuarios/reporte" className="nav-link flex items-center">
-                        <img src="/img/Icon/report-print.png" alt="Report" className="w-5 h-5 mr-2" />
-                        {/* <i className="fas fa-file-invoice"></i> */}
-                        <p className="ml-2">Reporte de usuarios</p>
+                    <li>
+                      <Link to="/usuarios/reporte" className={itemLinkClasses}>
+                        <img src="/img/Icon/report-print.png" alt="Reporte de usuarios" className="h-5 w-5 shrink-0" />
+                        <span>Reporte de usuarios</span>
                       </Link>
                     </li>
                   )}
@@ -391,11 +345,7 @@ export default function SideNav() {
 
           </ul>
         </nav>
-        {/* /.sidebar-menu */}
       </div>
-      {/* /.sidebar */}
-
-
-    </>
+    </div>
   )
 }

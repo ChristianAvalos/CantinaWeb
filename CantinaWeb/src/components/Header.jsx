@@ -1,10 +1,10 @@
-import { React, useState,useEffect, useRef }from 'react';
+import { React, useState, useEffect, useRef } from 'react';
 import ModalUsuarios from '../views/ModalUsuarios';
 import { useAuth } from "../hooks/useAuth";
 import ChangePasswordModal from '../views/ModalPassword';
 import { useTheme } from '../context/ThemeContext';
 
-export default function Header() {
+export default function Header({ onToggleSidebar }) {
   const { logout, user } = useAuth({ middleware: 'auth' })
   const { themes, themeName, setTheme, resetTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -20,6 +20,16 @@ export default function Header() {
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen?.();
+      return;
+    }
+
+    await document.exitFullscreen?.();
+  };
+
   const handleClickOutside = (event) => {
     // Verifica si el clic fue fuera del dropdown
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -58,37 +68,31 @@ export default function Header() {
 
   return (
     <div>
-      {/* Navbar */}
-      <nav className="main-header navbar navbar-expand g360-gradient !z-[1]">
-        {/* Left navbar links */}
-        <ul className="navbar-nav">
-          <li className="nav-item">
-            <a className="nav-link" data-widget="pushmenu" href="#" role="button"><i className="fas fa-bars" /></a>
-          </li>
-        </ul>
-        {/* Right navbar links */}
-        <ul className="navbar-nav ml-auto">
-          <li className="nav-item">
-            <a className="nav-link" data-widget="fullscreen" href="#" role="button">
-              <i className="fas fa-expand-arrows-alt" />
-            </a>
-          </li>
-          <li className="nav-item">
-            {/* Usuario logueado y menú desplegable */}
+      <nav className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-slate-200/60 g360-gradient px-4 shadow-md md:px-6">
+        <div className="flex items-center gap-2">
+          <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/15" onClick={onToggleSidebar} aria-label="Alternar menu lateral">
+            <i className="fas fa-bars" />
+          </button>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/15" onClick={toggleFullscreen} aria-label="Pantalla completa">
+            <i className="fas fa-expand-arrows-alt" />
+          </button>
+          <div className="relative">
             <div className="relative" ref={dropdownRef}>
               <button
+                type="button"
                 onClick={toggleDropdown}
-                className="nav-link font-semibold focus:outline-none flex items-center space-x-2"
+                className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 font-semibold transition hover:bg-white/15"
               >
-                {user?.name} {/* Muestra el nombre del usuario */}
+                <span>{user?.name}</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
 
-              {/* Menú desplegable */}
               {dropdownOpen && (
-                <ul className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-20 transition-all duration-200 ease-in-out border border-gray-200">
+                <ul className="absolute right-0 top-14 w-56 rounded-lg border border-gray-200 bg-white shadow-lg z-30 transition-all duration-200 ease-in-out">
                   <li className="px-4 pt-3 pb-2">
                     <div className="text-xs font-semibold text-gray-500">Tema</div>
                     <select
@@ -111,12 +115,14 @@ export default function Header() {
                   <li><hr className="my-1 border-gray-200" /></li>
                   <li>
                     <button
-                      onClick={() => openProfileModal('perfil')}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        openProfileModal('perfil');
+                      }}
                       className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors duration-150 ease-in-out"
                     > 
                     <div className='flex items-center'>
                       <img src="/img/Icon/user-man.png" alt="User" className="w-5 h-5 mr-2"  />
-                      {/* <i className="fas fa-user mr-2"></i> */}
                       Mi perfil
                     </div>
                       
@@ -125,11 +131,13 @@ export default function Header() {
                   <li>
                     <button
                       className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors duration-150 ease-in-out"
-                      onClick={() => setIsModalOpenPassword(true)}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        setIsModalOpenPassword(true);
+                      }}
                     >
                       <div className='flex items-center'>
                         <img src="/img/Icon/key-user-filled.png" alt="Change Password" className="w-5 h-5 mr-2" />
-                        {/* <i className="fas fa-key mr-2"></i> */}
                         Cambiar contraseña
                       </div>
                       
@@ -142,7 +150,6 @@ export default function Header() {
                     >
                       <div className='flex items-center'>
                         <img src="/img/Icon/exit.png" alt="Logout" className="w-5 h-5 mr-2" />
-                        {/* <i className="fas fa-sign-out-alt mr-2"></i> */}
                         Cerrar sesión
                       </div>
                       
@@ -152,12 +159,9 @@ export default function Header() {
                 </ul>
               )}
             </div>
-          </li>
-
-
-        </ul>
+          </div>
+        </div>
       </nav>
-      {/* Renderizar el modal usuario */}
       {isModalOpen && (
         <ModalUsuarios
           usuario={user}
@@ -167,7 +171,6 @@ export default function Header() {
         />
       )}
 
-      {/* Renderizar el modal de cambio de contraseña */}
       {isModalOpenPassword && (
         <ChangePasswordModal
           isOpen={isModalOpenPassword}
