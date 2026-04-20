@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --g360-from: 30 58 138; /* blue-900 */
+  --g360-to: 22 78 99; /* cyan-900 */
+  --g360-on: 255 255 255; /* texto por defecto sobre gradiente */
+}
+
+@layer utilities {
+  .g360-gradient {
+    background-image: linear-gradient(to bottom right, rgb(var(--g360-from)), rgb(var(--g360-to)));
+    color: rgb(var(--g360-on));
+  }
+
+  /* AdminLTE aplica colores/opacity a .nav-link; en temas oscuros se ve “apagado”.
+     Esto fuerza el color del texto del sidenav a nuestro color "on" del tema. */
+  .g360-sidenav,
+  .g360-sidenav .nav-link,
+  .g360-sidenav .nav-link p,
+  .g360-sidenav .nav-link i,
+  .g360-sidenav .nav-icon,
+  .g360-sidenav .nav-header {
+    color: rgb(var(--g360-on)) !important;
+  }
+
+  .g360-sidenav .nav-link {
+    opacity: 1 !important;
+  }
+
+  .g360-gradient-r {
+    background-image: linear-gradient(to right, rgb(var(--g360-from)), rgb(var(--g360-to)));
+    color: rgb(var(--g360-on));
+  }
+
+  .g360-thead-gradient > tr > th {
+    background-image: linear-gradient(to bottom right, rgb(var(--g360-from)), rgb(var(--g360-to)));
+    color: rgb(var(--g360-on));
+  }
+
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    @apply invisible;
+  }
+  input[type="month"]::-webkit-input-placeholder {
+    @apply text-gray-400;
+  }
+}
+
+/* Utilidades adicionales */
+.g360-danger {
+  background-color: rgb(239 68 68);
+  color: #fff;
+}
+.g360-danger:hover {
+  background-color: rgb(220 38 38);
+}
+
+.g360-alert-danger {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-left: 4px solid rgb(239 68 68);
+  color: rgb(127 29 29);
+}
+
+/* Quitar overlays en patrones (pace, etc.) que generan rayas */
+.pace .pace-activity,
+.pace .pace-progress,
+.pace {
+  background-image: none !important;
+  background-size: auto !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Asegurar que las utilidades de gradiente no repitan */
+.g360-gradient,
+.g360-gradient-r {
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Forzar gradiente limpio en contenedores de pantalla completa (login) */
+.min-h-screen.g360-gradient-r,
+.g360-gradient-r.min-h-screen {
+  background-image: linear-gradient(to right, rgb(var(--g360-from)), rgb(var(--g360-to))) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+}
+
+/* Override extra: neutralizar pseudo-elementos y cualquier fondo animado/pattern
+   que algunas librerías inyectan (pace, plugins). Mantenerlo lo más específico
+   y seguro posible: solo impacta a elementos con la clase `pace` y sus hijos. */
+.pace,
+.pace *,
+.pace::before,
+.pace::after,
+.pace .pace-activity::before,
+.pace .pace-activity::after,
+.pace .pace-progress:before,
+.pace .pace-progress:after {
+  background-image: none !important;
+  background: transparent !important;
+  background-repeat: no-repeat !important;
+  background-size: auto !important;
+  box-shadow: none !important;
+}
+
+/* Si la regla anterior no es suficiente, esto fuerza transparencia en
+   pseudo-elementos concretos que suelen usar `linear-gradient`. */
+.pace .pace-activity::before,
+.pace .pace-activity::after {
+  content: none !important;
+}
+
+/* Ocultar pseudo-elementos globales que puedan inyectar patrones/gradientes
+   (prueba segura: solo afecta a pseudo-elementos). Si esto quita el patrón,
+   luego podemos anularlo más específicamente por archivo/selector. */
+html::before,
+html::after,
+body::before,
+body::after,
+#root::before,
+#root::after,
+.wrapper::before,
+.wrapper::after,
+main::before,
+main::after {
+  content: "" !important;
+  display: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Regla de emergencia: si un elemento tiene inline style con `background-image`
+   y no es nuestra utilidad `.g360-gradient(-r)`, desactivar momentáneamente
+   para aislar la causa. */
+*[style*="background-image"]:not(.g360-gradient):not(.g360-gradient-r) {
+  background-image: none !important;
+  background: transparent !important;
+}

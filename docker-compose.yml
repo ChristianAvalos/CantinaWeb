@@ -1,0 +1,55 @@
+
+services:
+  # Backend: Laravel (PHP 8.5 + Apache)
+  backend:
+    build: ./CantinaWeb-Laravel
+    container_name: laravel-app-CantinaWeb
+    ports:
+      - "8005:80"
+
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db_postgres
+      - DB_PORT=5432
+      - DB_DATABASE=CantinaWeb
+      - DB_USERNAME=cantinaweb
+      - DB_PASSWORD=#Password#
+    depends_on:
+      - db_postgres
+    networks:
+      - backend-CantinaWeb
+    restart: always
+
+##  Frontend: React (con Apache sirviendo los archivos estáticos)
+  frontend:
+    build: ./CantinaWeb-React
+    container_name: react-app-CantinaWeb
+    ports:
+      - "3005:3000"
+    restart: always
+    networks:
+      - backend-CantinaWeb
+  
+
+  # Base de datos: PostgreSQL
+  db_postgres:
+    image: postgres:18
+    container_name: postgres-CantinaWeb
+    restart: always
+    ports:
+      - "5436:5432"
+    environment:
+      - POSTGRES_DB=CantinaWeb
+      - POSTGRES_USER=cantinaweb
+      - POSTGRES_PASSWORD=#Password#
+    volumes:
+      - postgres_data_CantinaWeb:/var/lib/postgresql/data
+    networks:
+      - backend-CantinaWeb
+
+volumes:
+  postgres_data_CantinaWeb:
+
+networks:
+  backend-CantinaWeb:
+    driver: bridge
