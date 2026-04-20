@@ -57,7 +57,7 @@ export default function Login() {
                             <input
                                 type="text"
                                 id="nameUser"
-                                className="pl-10 pr-3 py-3 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
+                                className="w-full rounded-lg border border-gray-300 bg-gray-50 pl-10 pr-3 py-3 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 name="nameUser"
                                 placeholder="Usuario"
                                 ref={nameUserRef}
@@ -76,7 +76,7 @@ export default function Login() {
                             <input
                                 type="password"
                                 id="password"
-                                className="pl-10 pr-3 py-3 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
+                                className="w-full rounded-lg border border-gray-300 bg-gray-50 pl-10 pr-3 py-3 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 name="password"
                                 placeholder="Contraseña"
                                 ref={passwordRef}

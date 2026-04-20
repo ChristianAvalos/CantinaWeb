@@ -79,7 +79,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                                 id="currentPassword"
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
-                                className={`border ${errores.currentPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2 focus:outline-none focus:ring focus:ring-blue-400`}
+                                className={`w-full rounded-lg border ${errores.currentPassword ? 'border-red-500' : 'border-gray-300'} bg-white p-2 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring focus:ring-blue-400`}
 
                             />
                             {errores.currentPassword && <p className="text-red-500 text-sm">{errores.currentPassword[0]}</p>}
@@ -91,7 +91,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                                 id="newPassword"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className={`border ${errores.newPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2 focus:outline-none focus:ring focus:ring-blue-400`}
+                                className={`w-full rounded-lg border ${errores.newPassword ? 'border-red-500' : 'border-gray-300'} bg-white p-2 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring focus:ring-blue-400`}
 
                             />
                             {errores.newPassword && <p className="text-red-500 text-sm">{errores.newPassword[0]}</p>}
@@ -103,7 +103,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                                 id="repeatPassword"
                                 value={repeatPassword}
                                 onChange={(e) => setRepeatPassword(e.target.value)}
-                                className={`border ${errores.repeatPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2 focus:outline-none focus:ring focus:ring-blue-400`}
+                                className={`w-full rounded-lg border ${errores.repeatPassword ? 'border-red-500' : 'border-gray-300'} bg-white p-2 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring focus:ring-blue-400`}
 
                             />
                             {errores.repeatPassword && <p className="text-red-500 text-sm">{errores.repeatPassword[0]}</p>}
