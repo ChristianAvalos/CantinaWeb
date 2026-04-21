@@ -37,6 +37,15 @@ export default function SideNav() {
   };
   const sectionTitleClasses = "mt-5 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-extrabold uppercase tracking-[0.14em] transition hover:bg-white/10";
   const itemLinkClasses = "flex items-center gap-3 rounded-xl px-3 py-2 text-[1.02rem] font-semibold transition hover:bg-white/10";
+  const getItemLinkClasses = (path) => {
+    const isActive = location.pathname === path;
+
+    if (isActive) {
+      return `${itemLinkClasses} bg-white/20 shadow-sm ring-1 ring-white/20`;
+    }
+
+    return itemLinkClasses;
+  };
 
   // Función para manejar el cambio del input de búsqueda
   const handleSearch = (e) => {
@@ -196,7 +205,7 @@ export default function SideNav() {
                 <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.operaciones ? 'mt-2 max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Compras') && (
                     <li>
-                      <Link to="/compras" className={itemLinkClasses}>
+                      <Link to="/compras" className={getItemLinkClasses('/compras')}>
                         <img src="/img/Icon/shopping-cart-arrow-in.png" alt="Compras" className="h-5 w-5 shrink-0" />
                         <span>Compras</span>
                       </Link>
@@ -205,7 +214,7 @@ export default function SideNav() {
 
                   {hasPermission('Ventas') && (
                     <li>
-                      <Link to="/ventas" className={itemLinkClasses}>
+                      <Link to="/ventas" className={getItemLinkClasses('/ventas')}>
                         <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas" className="h-5 w-5 shrink-0" />
                         <span>Ventas</span>
                       </Link>
@@ -214,7 +223,7 @@ export default function SideNav() {
 
                   {hasPermission('Ajustes') && (
                     <li>
-                      <Link to="/ajustes" className={itemLinkClasses}>
+                      <Link to="/ajustes" className={getItemLinkClasses('/ajustes')}>
                         <img src="/img/Icon/processes-filled.png" alt="Ajustes" className="h-5 w-5 shrink-0" />
                         <span>Ajustes</span>
                       </Link>
@@ -223,7 +232,7 @@ export default function SideNav() {
 
                   {hasPermission('Transacciones') && (
                     <li>
-                      <Link to="/transacciones" className={itemLinkClasses}>
+                      <Link to="/transacciones" className={getItemLinkClasses('/transacciones')}>
                         <img src="/img/Icon/sort.png" alt="Transacciones" className="h-5 w-5 shrink-0" />
                         <span>Transacciones</span>
                       </Link>
@@ -245,7 +254,7 @@ export default function SideNav() {
                             <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.definiciones ? 'mt-2 max-h-[320px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Productos') && (
                                 <li>
-                                  <Link to="/productos" className={itemLinkClasses}>
+                                  <Link to="/productos" className={getItemLinkClasses('/productos')}>
                                     <img src="/img/Icon/product-filled.bmp" alt="Productos" className="h-5 w-5 shrink-0" />
                                     <span>Productos</span>
                       </Link>
@@ -254,7 +263,7 @@ export default function SideNav() {
                   
                   {hasPermission('Categorias') && (
                                 <li>
-                                  <Link to="/categorias" className={itemLinkClasses}>
+                                  <Link to="/categorias" className={getItemLinkClasses('/categorias')}>
                                     <img src="/img/Icon/tag-filled-green.png" alt="Categorias" className="h-5 w-5 shrink-0" />
                                     <span>Categorias</span>
                       </Link>
@@ -263,7 +272,7 @@ export default function SideNav() {
 
                   {hasPermission('Personas') && (
                                 <li>
-                                  <Link to="/personas" className={itemLinkClasses}>
+                                  <Link to="/personas" className={getItemLinkClasses('/personas')}>
                                     <img src="/img/Icon/business-card-man.png" alt="Clientes y proveedores" className="h-5 w-5 shrink-0" />
                                     <span>Clientes/Proveedores</span>
                       </Link>
@@ -284,7 +293,7 @@ export default function SideNav() {
                 <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.herramientas ? 'mt-2 max-h-[320px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Organizacion') && (
                     <li>
-                      <Link to="/organizacion" className={itemLinkClasses}>
+                      <Link to="/organizacion" className={getItemLinkClasses('/organizacion')}>
                         <img src="/img/Icon/organogram.png" alt="Organizacion" className="h-5 w-5 shrink-0" />
                         <span>Organizacion</span>
                       </Link>
@@ -296,7 +305,7 @@ export default function SideNav() {
 
                     <>
                       <li>
-                        <Link to="/usuarios" className={itemLinkClasses}>
+                        <Link to="/usuarios" className={getItemLinkClasses('/usuarios')}>
                           <img src="/img/Icon/user-group.png" alt="Usuarios" className="h-5 w-5 shrink-0" />
                           <span>Usuarios</span>
                         </Link>
@@ -304,7 +313,7 @@ export default function SideNav() {
 
 
                       <li>
-                        <Link to="/usuarios/roles" className={itemLinkClasses}>
+                        <Link to="/usuarios/roles" className={getItemLinkClasses('/usuarios/roles')}>
                           <img src="/img/Icon/manage-user.png" alt="Roles usuario" className="h-5 w-5 shrink-0" />
                           <span>Roles usuario</span>
                         </Link>
@@ -331,7 +340,7 @@ export default function SideNav() {
 
                   {hasPermission('Reporte_Usuarios') && (
                     <li>
-                      <Link to="/usuarios/reporte" className={itemLinkClasses}>
+                      <Link to="/usuarios/reporte" className={getItemLinkClasses('/usuarios/reporte')}>
                         <img src="/img/Icon/report-print.png" alt="Reporte de usuarios" className="h-5 w-5 shrink-0" />
                         <span>Reporte de usuarios</span>
                       </Link>
