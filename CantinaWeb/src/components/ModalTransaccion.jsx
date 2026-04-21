@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal";
@@ -8,6 +8,11 @@ import ModalTransaccionDetalle from './ModalTransaccionDetalle';
 import { obtenerTransaccionesDetalle } from '../helpers/HelpersTransacciones';
 
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
+    const tipoPersonaFiltro = tipoTransaccion === 'compra'
+        ? 'Proveedor'
+        : tipoTransaccion === 'venta'
+            ? 'Cliente'
+            : null;
 
     //area de las transacciones
     const [form, setForm] = useState({
@@ -39,6 +44,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     });
     const [busquedaPersona, setBusquedaPersona] = useState(transaccion.persona?.nombre || '');
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+    const comboPersonaRef = useRef(null);
 
     //area del detalle
     const [transaccionDetalle, settransaccionDetalle] = useState([]);
@@ -130,44 +136,41 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     };
 
     const token = localStorage.getItem('AUTH_TOKEN');
+    const etiquetaPersona = tipoTransaccion === 'compra'
+        ? 'Proveedor'
+        : tipoTransaccion === 'venta'
+            ? 'Cliente'
+            : 'Cliente / Proveedor';
 
 
     // Efecto para cargar personas basado en la búsqueda
     useEffect(() => {
+        if (!mostrarSugerencias) {
+            return undefined;
+        }
+
         const fetchPersonas = async () => {
             const term = (busquedaPersona || '').trim();
-            const digitsOnly = term.replace(/\D/g, '');
-            const esBusquedaPorDocumento = digitsOnly.length >= 2;
-
-            if (!term || (!esBusquedaPorDocumento && term.length < 2)) {
-                setPersonas([]);
-                return;
-            }
 
             try {
-                const { data } = await clienteAxios.get(`api/personas?search=${encodeURIComponent(term)}&all=1`, {
+                const params = new URLSearchParams({ all: '1' });
+
+                if (term) {
+                    params.append('search', term);
+                }
+
+                if (tipoPersonaFiltro !== null) {
+                    params.append('tipo_persona', tipoPersonaFiltro);
+                }
+
+                const { data } = await clienteAxios.get(`api/personas?${params.toString()}`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
 
                 const lista = data?.data || data || [];
-                const normalizar = (value) => (value ?? '')
-                    .toString()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toLowerCase();
-
-                const termNorm = normalizar(term);
-                const filtrada = Array.isArray(lista)
-                    ? lista.filter((p) => {
-                        const nombre = normalizar(p?.nombre);
-                        const documento = normalizar(p?.documento);
-                        return nombre.includes(termNorm) || documento.includes(termNorm);
-                    })
-                    : [];
-
-                setPersonas(filtrada);
+                setPersonas(Array.isArray(lista) ? lista : []);
             } catch (error) {
                 console.error("Error al buscar personas", error);
                 setPersonas([]);
@@ -179,7 +182,19 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }, 300); // Debounce de 300ms
 
         return () => clearTimeout(delayDebounceFn);
-    }, [busquedaPersona]);
+    }, [busquedaPersona, mostrarSugerencias, tipoPersonaFiltro, token]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (comboPersonaRef.current && !comboPersonaRef.current.contains(event.target)) {
+                setMostrarSugerencias(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Efecto para actualizar persona cuando se edita
     useEffect(() => {
@@ -219,6 +234,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             ...prev,
             id_persona: ''
         }));
+    };
+
+    const abrirComboPersona = () => {
+        setBusquedaPersona('');
+        setMostrarSugerencias(true);
     };
 
     //funcion para obtener las transacciones detalle
@@ -573,61 +593,75 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             {/* Campo para Persona (Proveedor/Cliente) */}
                             <div className="mb-2 col-span-2 relative">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    {tipoTransaccion === 'compra' ? 'Proveedor' : 'Cliente'}
+                                    {etiquetaPersona}
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        className={`w-full px-3 py-2 border ${errores.id_persona ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                        placeholder={`Buscar ${tipoTransaccion === 'compra' ? 'proveedor' : 'cliente'}...`}
-                                        value={busquedaPersona}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            setBusquedaPersona(value);
-                                            setMostrarSugerencias(true);
-                                            if (value === '') {
-                                                setForm(prev => ({
-                                                    ...prev,
-                                                    id_persona: ''
-                                                }));
-                                                setPersonaSeleccionada({ id: '', nombre: '' });
+                                <div ref={comboPersonaRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (mostrarSugerencias) {
+                                                setMostrarSugerencias(false);
+                                            } else {
+                                                abrirComboPersona();
                                             }
                                         }}
-                                        onFocus={() => setMostrarSugerencias(true)}
-                                    />
+                                        className={`flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.id_persona ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <span className={`${personaSeleccionada.nombre ? 'text-gray-900' : 'text-gray-400'}`}>
+                                            {personaSeleccionada.nombre || `Seleccionar ${etiquetaPersona.toLowerCase()}`}
+                                        </span>
+                                        <span className="text-sm text-gray-500">▼</span>
+                                    </button>
 
-                                    {/* Botón para limpiar */}
                                     {personaSeleccionada.id && (
                                         <button
                                             type="button"
                                             onClick={limpiarPersona}
-                                            className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                         >
                                             ×
                                         </button>
                                     )}
-                                </div>
 
-                                {/* Lista de sugerencias */}
-                                {mostrarSugerencias && personas.length > 0 && (
-                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-60 overflow-auto shadow-lg">
-                                        {personas.map((persona) => (
-                                            <li
-                                                key={persona.id}
-                                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                                onClick={() => seleccionarPersona(persona)}
-                                            >
-                                                <div className="font-medium">{persona.nombre}</div>
-                                                {persona.documento && (
-                                                    <div className="text-sm text-gray-600">Doc: {persona.documento}</div>
+                                    {mostrarSugerencias && (
+                                        <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
+                                            <div className="border-b border-gray-200 p-2">
+                                                <input
+                                                    type="text"
+                                                    autoFocus
+                                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder={`Buscar ${etiquetaPersona.toLowerCase()}...`}
+                                                    value={busquedaPersona}
+                                                    onChange={(e) => setBusquedaPersona(e.target.value)}
+                                                />
+                                            </div>
+
+                                            <ul className="max-h-60 overflow-auto">
+                                                {personas.length > 0 ? (
+                                                    personas.map((persona) => (
+                                                        <li
+                                                            key={persona.id}
+                                                            className="cursor-pointer border-b border-gray-100 px-3 py-2 hover:bg-blue-50 last:border-b-0"
+                                                            onClick={() => seleccionarPersona(persona)}
+                                                        >
+                                                            <div className="font-medium">{persona.nombre}</div>
+                                                            {persona.documento && (
+                                                                <div className="text-sm text-gray-600">Doc: {persona.documento}</div>
+                                                            )}
+                                                            {persona.email && (
+                                                                <div className="text-sm text-gray-600">Email: {persona.email}</div>
+                                                            )}
+                                                        </li>
+                                                    ))
+                                                ) : (
+                                                    <li className="px-3 py-3 text-sm text-gray-500">
+                                                        No se encontraron {etiquetaPersona.toLowerCase()}s.
+                                                    </li>
                                                 )}
-                                                {persona.email && (
-                                                    <div className="text-sm text-gray-600">Email: {persona.email}</div>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {errores.id_persona && (
                                     <p className="text-red-500 text-sm">{errores.id_persona[0]}</p>

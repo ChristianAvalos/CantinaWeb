@@ -19,7 +19,9 @@ class PersonaController extends Controller
     {
         //$id_organizacion = Auth::user()->id_organizacion;
         $search = $request->input('search');
-        $all = $request->input('all');
+        $all = $request->boolean('all');
+        $idTipoPersona = $request->input('id_tipo_persona');
+        $tipoPersona = $request->input('tipo_persona');
 
         $search = is_string($search) ? trim(preg_replace('/\s+/', ' ', $search)) : $search;
         $searchLower = is_string($search) ? mb_strtolower($search) : $search;
@@ -27,25 +29,37 @@ class PersonaController extends Controller
         $driver = DB::getDriverName();
 
         $personasQuery = Persona::with('TipoPersona') 
+            ->when(is_numeric($idTipoPersona), function ($query) use ($idTipoPersona) {
+                $query->where('id_tipo_persona', (int) $idTipoPersona);
+            })
+            ->when(is_string($tipoPersona) && trim($tipoPersona) !== '', function ($query) use ($tipoPersona) {
+                $tipoPersonaLower = mb_strtolower(trim($tipoPersona));
+
+                $query->whereHas('TipoPersona', function ($tipoPersonaQuery) use ($tipoPersonaLower) {
+                    $tipoPersonaQuery->whereRaw('LOWER(nombre) = ?', [$tipoPersonaLower]);
+                });
+            })
 
             ->when($searchLower, function ($query) use ($searchLower, $digitsOnly, $driver) {
                 $like = '%' . $searchLower . '%';
 
-                $query->whereRaw('LOWER(nombre) LIKE ?', [$like])
-                    ->orWhereRaw('LOWER(documento) LIKE ?', [$like])
-                    ->orWhereHas('TipoPersona', function ($q2) use ($like) {
-                        $q2->whereRaw('LOWER(nombre) LIKE ?', [$like]);
-                    });
+                $query->where(function ($searchQuery) use ($like, $digitsOnly, $driver) {
+                    $searchQuery->whereRaw('LOWER(nombre) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(documento) LIKE ?', [$like])
+                        ->orWhereHas('TipoPersona', function ($q2) use ($like) {
+                            $q2->whereRaw('LOWER(nombre) LIKE ?', [$like]);
+                        });
 
-                if (is_string($digitsOnly) && $digitsOnly !== '') {
-                    // Comparar documento ignorando separadores comunes (para formatos tipo 1.234.567-8)
-                    if ($driver === 'pgsql') {
-                        $query->orWhereRaw("regexp_replace(coalesce(documento,''), '\\D', '', 'g') LIKE ?", ['%' . $digitsOnly . '%']);
-                    } else {
-                        $expr = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(coalesce(documento,''),'.',''),'-',''),' ',''),'/', ''),'(',''),')','')";
-                        $query->orWhereRaw("{$expr} LIKE ?", ['%' . $digitsOnly . '%']);
+                    if (is_string($digitsOnly) && $digitsOnly !== '') {
+                        // Comparar documento ignorando separadores comunes (para formatos tipo 1.234.567-8)
+                        if ($driver === 'pgsql') {
+                            $searchQuery->orWhereRaw("regexp_replace(coalesce(documento,''), '\\D', '', 'g') LIKE ?", ['%' . $digitsOnly . '%']);
+                        } else {
+                            $expr = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(coalesce(documento,''),'.',''),'-',''),' ',''),'/', ''),'(',''),')','')";
+                            $searchQuery->orWhereRaw("{$expr} LIKE ?", ['%' . $digitsOnly . '%']);
+                        }
                     }
-                }
+                });
             })
         ->orderBy('id', 'desc');
         if ($all) {
