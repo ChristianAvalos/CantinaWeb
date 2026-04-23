@@ -1,5 +1,5 @@
 # Etapa de build
-FROM node:20-alpine as build
+FROM node:20-bookworm-slim AS build
 
 WORKDIR /app
 COPY . .
@@ -8,7 +8,7 @@ RUN npm install
 RUN npm run build
 
 # Etapa final: usar "serve" para servir el contenido estático de Vite
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
