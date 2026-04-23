@@ -29,7 +29,7 @@ const ProtectedRoute = ({ permission, children }) => {
     }
 
     if (connectionError) {
-        return children;
+        return <Navigate to="/auth/login" replace />;
     }
 
 
