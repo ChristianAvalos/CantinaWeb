@@ -65,7 +65,7 @@ export default function Ajustes() {
             setTotalPaginas(ajustes.transacciones.last_page);
             setTotalRegistros(ajustes.transacciones.total);
             setPaginaActual(ajustes.transacciones.current_page);
-            setSubTotal(ajustes.transacciones.subtotal);
+            setSubTotal(ajustes.subtotal ?? ajustes.transacciones?.subtotal ?? 0);
         } catch (error) {
             console.error('Error al cargar los ajustes:', error);
         }

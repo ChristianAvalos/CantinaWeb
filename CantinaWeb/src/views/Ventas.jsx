@@ -65,7 +65,7 @@ export default function Ventas() {
             setTotalPaginas(ventas.transacciones.last_page);
             setTotalRegistros(ventas.transacciones.total);
             setPaginaActual(ventas.transacciones.current_page);
-            setSubTotal(ventas.transacciones.subtotal);
+            setSubTotal(ventas.subtotal ?? ventas.transacciones?.subtotal ?? 0);
         } catch (error) {
             console.error('Error al cargar las ventas:', error);
         }

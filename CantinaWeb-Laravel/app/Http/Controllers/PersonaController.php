@@ -22,6 +22,7 @@ class PersonaController extends Controller
         $all = $request->boolean('all');
         $idTipoPersona = $request->input('id_tipo_persona');
         $tipoPersona = $request->input('tipo_persona');
+        $idTipoEstado = $request->input('id_tipoestado');
 
         $search = is_string($search) ? trim(preg_replace('/\s+/', ' ', $search)) : $search;
         $searchLower = is_string($search) ? mb_strtolower($search) : $search;
@@ -37,7 +38,10 @@ class PersonaController extends Controller
 
                 $query->whereHas('TipoPersona', function ($tipoPersonaQuery) use ($tipoPersonaLower) {
                     $tipoPersonaQuery->whereRaw('LOWER(nombre) = ?', [$tipoPersonaLower]);
-                });
+                });  
+            })
+            ->when(is_numeric($idTipoEstado), function ($query) use ($idTipoEstado) {
+                $query->where('id_tipoestado', (int) $idTipoEstado);
             })
 
             ->when($searchLower, function ($query) use ($searchLower, $digitsOnly, $driver) {

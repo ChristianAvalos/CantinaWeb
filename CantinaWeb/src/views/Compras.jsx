@@ -69,7 +69,7 @@ export default function Compras() {
             setTotalPaginas(compras.transacciones.last_page);
             setTotalRegistros(compras.transacciones.total);
             setPaginaActual(compras.transacciones.current_page);
-            setSubTotal(compras.transacciones.subtotal);
+            setSubTotal(compras.subtotal ?? compras.transacciones?.subtotal ?? 0);
         } catch (error) {
             console.error('Error al cargar las compras:', error);
         }

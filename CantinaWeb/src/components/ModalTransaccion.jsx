@@ -162,6 +162,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 if (tipoPersonaFiltro !== null) {
                     params.append('tipo_persona', tipoPersonaFiltro);
                 }
+                //en el combo muestro solo los activos, por eso el filtro de estado 1=activo
+                params.append('id_tipoestado', '1');
+                
 
                 const { data } = await clienteAxios.get(`api/personas?${params.toString()}`, {
                     headers: {
