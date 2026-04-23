@@ -59,5 +59,48 @@ export function formatearGuarani(valor) {
     return numero.toLocaleString('es-PY');
 }
 
+export function formatearDecimalSinCeros(valor) {
+    if (valor === '' || valor === null || valor === undefined) return '';
+    const s = String(valor).trim();
+
+    // Determinar cuál es el separador decimal observando la última aparición
+    const lastDot = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    let normalized = s;
+
+    if (lastDot > lastComma) {
+        // El punto aparece más tarde -> punto como separador decimal
+        normalized = s.replace(/,/g, '');
+    } else if (lastComma > lastDot) {
+        // La coma aparece más tarde -> coma como separador decimal
+        normalized = s.replace(/\./g, '').replace(',', '.');
+    } else {
+        // Sólo un tipo o ninguno
+        if (s.indexOf(',') !== -1 && s.indexOf('.') === -1) {
+            // Sólo comas: asumir coma decimal si hay una sola coma y pocos decimales
+            const parts = s.split(',');
+            if (parts.length === 2 && parts[1].length <= 3) {
+                normalized = s.replace(',', '.');
+            } else {
+                normalized = s.replace(/,/g, '');
+            }
+        } else {
+            // Ningún separador o sólo puntos -> eliminar comas si las hay
+            normalized = s.replace(/,/g, '');
+        }
+    }
+
+    const n = Number(normalized);
+    if (Number.isNaN(n)) return s;
+    if (Number.isInteger(n)) return n.toString();
+
+    // Para decimales: eliminar ceros finales innecesarios
+    let str = n.toString();
+    if (str.indexOf('.') !== -1) {
+        str = str.replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+    }
+    return str;
+}
+
 
 

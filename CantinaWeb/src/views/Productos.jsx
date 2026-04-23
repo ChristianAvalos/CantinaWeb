@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerProductos } from '../helpers/HelperProductos';
 import SearchBar from "../components/SearchBar";
-import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
+import { formatearMiles, formatearGuarani, formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
 
@@ -244,7 +244,7 @@ export default function Productos() {
                                                     <td>{producto.nombre}</td>
                                                     <td>{producto.descripcion}</td>
                                                     <td className="text-center">{producto.categoria ? producto.categoria.nombre : 'Sin categoria'}</td>
-                                                    <td className="text-center">{producto.cantidad_unidad}</td>
+                                                    <td className="text-center">{formatearDecimalSinCeros(producto.cantidad_unidad)}</td>
                                                     <td className="text-center">{producto.unidad_medida ? producto.unidad_medida.nombre : 'Sin unidad'}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_compra)}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_venta)}</td>

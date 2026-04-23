@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
-import { formatearMiles, formatearGuarani, limpiarFormato } from '../helpers/HelpersNumeros';
+import { formatearMiles, formatearGuarani, limpiarFormato,formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import { formatDateToInput } from '../helpers/HelpersFechas';
 
 export default function ModalProducto({ onClose, modo, producto = {}, refrescarProductos }) {
@@ -299,7 +299,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                     min="0"
                                     className={`w-full px-3 py-2 border ${errores.cantidad_unidad ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     placeholder="Introduce la cantidad"
-                                    value={form.cantidad_unidad}
+                                    value={formatearDecimalSinCeros(form.cantidad_unidad)}
                                     onChange={(e) => setForm({ ...form, cantidad_unidad: e.target.value })}
                                 />
                                 {errores.cantidad_unidad && <p className="text-red-500 text-sm">{errores.cantidad_unidad[0]}</p>}
