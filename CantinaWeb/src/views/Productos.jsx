@@ -198,7 +198,6 @@ export default function Productos() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>Imagen</th>
                                             <th>ID</th>
-                                            <th>Organización</th>
                                             <th>Codigo interno</th>
                                             <th>Codigo de barra</th>
                                             <th>Nombre</th>
@@ -238,7 +237,6 @@ export default function Productos() {
                                                         )}
                                                     </td>
                                                     <td>{producto.id}</td>
-                                                    <td>{producto.id_organizacion}</td>
                                                     <td>{producto.codigo_interno}</td>
                                                     <td>{producto.codigo_barras}</td>
                                                     <td>{producto.nombre}</td>
