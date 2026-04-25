@@ -693,21 +693,23 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
 
-                            {/* Campo para Descripcion */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.descripcion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Introduce la descripción"
-                                    value={form.descripcion}
-                                    onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                                />
-                                {errores.descripcion && <p className="text-red-500 text-sm">{errores.descripcion[0]}</p>}
-                            </div>
+                            {/* Descripción movida abajo como textarea */}
                         </div>
                     </div>
 
+
+                    {/* Campo para Descripción: textarea ubicado debajo de los inputs y antes de la grilla */}
+                    <div className="mb-4 w-full">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <textarea
+                            rows={3}
+                            className={`w-full px-3 py-2 border ${errores.descripcion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            placeholder="Introduce la descripción"
+                            value={form.descripcion}
+                            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                        />
+                        {errores.descripcion && <p className="text-red-500 text-sm">{errores.descripcion[0]}</p>}
+                    </div>
 
                     {/* Grilla de detalles */}
                     <div className="mt-1">
