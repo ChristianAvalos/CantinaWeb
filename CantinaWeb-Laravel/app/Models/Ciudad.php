@@ -35,4 +35,10 @@ class Ciudad extends Model
     {
         return $this->belongsTo(Departamento::class, 'departamento_id');
     }
+
+    //relacion con organizacion
+    public function Organizacion()
+    {
+        return $this->hasMany(Organizacion::class, 'Ciudad_id');
+    }
 }

@@ -25,8 +25,8 @@ class OrganizacionRequest extends FormRequest
         return [
             'name' => ['required','string'],
             'email' => ['required','email','unique:organizacion,email'],
-            'pais_id' => ['required', 'exists:Pais,id'],
-            'ciudad_id' => ['required', 'exists:Ciudad,id'],
+            'pais_id' => ['required', 'exists:pais,id'],
+            'ciudad_id' => ['required', 'exists:ciudad,id'],
             'ruc' => ['required','string'],
             'direccion' => ['required','string'],
             'telefono1' => 'nullable|string',

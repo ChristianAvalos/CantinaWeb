@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Organizacion;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Pais extends Model
 {
@@ -28,5 +29,11 @@ class Pais extends Model
         $fechaFormateada = Carbon::parse($this->UrevFechaHora)->format('d/m/Y H:i');
 
         return "{$this->UrevUsuario} - {$fechaFormateada}";
+    }
+
+    //relacion con organizacion
+    public function Organizacion()
+    {
+        return $this->hasMany(Organizacion::class, 'Pais_id');
     }
 }
