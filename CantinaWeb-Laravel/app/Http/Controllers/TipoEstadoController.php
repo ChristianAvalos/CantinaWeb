@@ -15,8 +15,8 @@ class TipoEstadoController extends Controller
     {
         $id_organizacion = Auth::user()->id_organizacion;
 
-        $query = TipoEstado::where('id_organizacion', $id_organizacion);
-
+        $query = TipoEstado::whereNull('id_organizacion')
+                ->orWhere('id_organizacion', $id_organizacion);
 
 
         if ($request->get('filtro') === 'basico') {

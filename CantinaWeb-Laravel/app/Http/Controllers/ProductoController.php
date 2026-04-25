@@ -34,7 +34,8 @@ class ProductoController extends Controller
         }
 
         $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida'])
-            ->where('id_organizacion', $id_organizacion)
+            ->whereNull('id_organizacion')
+                ->orWhere('id_organizacion', $id_organizacion)
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
                     $q->where('nombre', 'like', '%' . $search . '%')
@@ -108,7 +109,7 @@ class ProductoController extends Controller
 
         // Crear el producto
         $producto = Producto::create([
-            'id_organizacion' => Auth::user()->id_organizacion,
+            'id_organizacion' => null, 
             'codigo_interno' => $data['codigo_interno'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nombre' => $data['nombre'],

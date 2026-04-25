@@ -14,7 +14,7 @@ return new class extends Migration
     {
             Schema::create('productos', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_organizacion');
+            $table->unsignedBigInteger('id_organizacion')->nullable();
             
             $table->string('codigo_interno', 50)->unique()->nullable();         
             $table->string('codigo_barras', 100)->nullable();  

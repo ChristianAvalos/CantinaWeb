@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('categorias', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_organizacion');
+            $table->unsignedBigInteger('id_organizacion')->nullable();
             $table->string('nombre');
             $table->string('UrevUsuario')->nullable(); 
             $table->dateTime('UrevFechaHora')->nullable();

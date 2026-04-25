@@ -25,7 +25,7 @@ class CategoriasSeeder extends Seeder
 
         $data = array_map(function ($nombre) use ($now) {
             return [
-                'id_organizacion' => 1,
+                'id_organizacion' => null,
                 'nombre' => $nombre,
                 'UrevUsuario' => 'Admin',
                 'UrevFechaHora' => $now,
