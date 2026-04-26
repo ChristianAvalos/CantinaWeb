@@ -34,7 +34,7 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
         fetchRoles();
     }, []);
 
-    // Cargar los roles desde la API al cargar el componente
+    // Cargar los organizacion desde la API al cargar el componente
     useEffect(() => {
         const fetchOrganizacion = async () => {
             try {
@@ -223,7 +223,7 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                         </>
                     )}
 
-                    {/* Combo para seleccionar Rol */}
+                    {/* Combo para seleccionar organizacion */}
                     {!ocultarRolesYOrganizaciones && (
                         <>
                             <div className="mb-4">

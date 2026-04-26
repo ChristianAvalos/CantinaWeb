@@ -247,12 +247,10 @@ class ProductoController extends Controller
     public function buscarPorCodigoBarras(Request $request)
     {
         $codigo_barras = $request->query('codigo_barras');
-        $id_organizacion = Auth::user()->id_organizacion;
         if (!$codigo_barras) {
             return response()->json(['message' => 'Código de barras requerido'], 400);
         }
         $producto = Producto::where('codigo_barras', $codigo_barras)
-            ->where('id_organizacion', $id_organizacion)
             ->first();
         if ($producto) {
             return response()->json(['producto' => $producto], 200);

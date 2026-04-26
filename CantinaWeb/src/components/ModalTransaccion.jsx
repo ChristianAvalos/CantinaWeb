@@ -18,6 +18,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [form, setForm] = useState({
         nombre: transaccion.nombre || '',
         descripcion: transaccion.descripcion || '',
+        id_organizacion: transaccion.id_organizacion || '',
         monto: transaccion.monto ?? 0,
         lote: transaccion.lote || '',
         nro_comprobante: transaccion.nro_comprobante || '',
@@ -73,6 +74,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     //apertura del modal del detalle
     const [isModalOpen, setModalOpen] = useState(false);
 
+    //organizacion seleccionada
+    const [organizacionSeleccionada, setorganizacionSeleccionada] = useState(transaccion.id_organizacion || '');
+    const [organizaciones, setOrganizacion] = useState([]);
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -285,6 +289,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         if (modo === 'editar') {
             setForm({
                 nombre: transaccion.nombre || '',
+                id_organizacion: transaccion.id_organizacion || '',
                 descripcion: transaccion.descripcion || '',
                 monto: transaccion.monto ?? 0,
                 id_TipoEstado: transaccion.id_TipoEstado || '',
@@ -449,6 +454,26 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setMostrarAlertaModal(false);
         setAccionConfirmadaModal(null);
     };
+
+        // Cargar los organizacion desde la API al cargar el componente
+    useEffect(() => {
+        const fetchOrganizacion = async () => {
+            try {
+
+                const { data } = await clienteAxios.get('api/organizacion?all=true', {
+                    headers: {
+                        Authorization: `Bearer ${token}` // Configurar el token en los headers
+                    }
+                });
+                setOrganizacion(data);
+            } catch (error) {
+                console.error("Error al cargar las organizaciones", error);
+            }
+        };
+
+        fetchOrganizacion();
+    }, []);
+
 
 
     return (
@@ -693,7 +718,26 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
 
-                            {/* Descripción movida abajo como textarea */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
+                                <select
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    value={organizacionSeleccionada}
+                                    onChange={(e) => {
+                                        const id = e.target.value;
+                                        setorganizacionSeleccionada(id);
+                                        setForm(prev => ({ ...prev, id_organizacion: id }));
+                                    }}
+                                >
+                                    <option value="">Seleccione una organizacion</option>
+                                    {organizaciones.map((organizacion) => (
+                                        <option key={organizacion.id} value={organizacion.id}>
+                                            {organizacion.RazonSocial}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
+                            </div>
                         </div>
                     </div>
 

@@ -25,6 +25,7 @@ class UpdateTransaccionRequest extends FormRequest
             'nombre' => 'required|string|max:255',
             'fecha' => 'required|date',
             'lote' => 'nullable',
+            'id_organizacion' => 'required|exists:organizacion,id',
             'descripcion' => 'nullable|string|max:1000',
             'monto' => 'nullable|numeric',
             'id_TipoEstado' => 'required|exists:tipo_estados,id',
@@ -45,6 +46,9 @@ class UpdateTransaccionRequest extends FormRequest
             'nombre.required' => 'El campo nombre es obligatorio.',
             'nombre.string' => 'El nombre debe ser una cadena de texto.',
             'nombre.max' => 'El nombre no debe exceder los 255 caracteres.',
+
+            'id_organizacion.required' => 'Debe seleccionar una organización.',
+            'id_organizacion.exists' => 'La organización seleccionada no existe.',
 
             'descripcion.max' => 'La descripción no debe exceder los 1000 caracteres.',
 

@@ -30,7 +30,6 @@ class TransaccionesDetalleController extends Controller
      */
     public function index(Request $request)
     {
-        $id_organizacion = Auth::user()->id_organizacion;
         $search = $request->input('search');
         $id_transaccion = $request->input('id_transaccion');
 
@@ -47,8 +46,7 @@ class TransaccionesDetalleController extends Controller
         }
 
         $transaccionesDetalle = TransaccionesDetalle::with(['producto'])
-            ->whereHas('transaccion', function ($query) use ($id_organizacion, $id_transaccion) {
-                $query->where('id_organizacion', $id_organizacion);
+            ->whereHas('transaccion', function ($query) use ( $id_transaccion) {
                 if ($id_transaccion) {
                     $query->where('id', $id_transaccion);
                 }
@@ -66,8 +64,7 @@ class TransaccionesDetalleController extends Controller
             ->paginate(5);
 
         $subtotal = TransaccionesDetalle::where('id_transaccion', $id_transaccion)
-            ->whereHas('transaccion', function ($query) use ($id_organizacion) {
-                $query->where('id_organizacion', $id_organizacion);
+            ->whereHas('transaccion', function ($query) {
             })
             ->sum('subtotal');
 
@@ -84,12 +81,10 @@ class TransaccionesDetalleController extends Controller
     {
         $data = $request->validated();
 
-        $id_organizacion = Auth::user()->id_organizacion;
         $usuario = Auth::user()->name;
 
         // Buscar el producto por código de barras y organización
         $producto = \App\Models\Producto::where('codigo_barras', $request->codigo_barras)
-            ->where('id_organizacion', $id_organizacion)
             ->first();
         if (!$producto) {
             return response()->json(['message' => 'Producto no encontrado'], 404);
@@ -156,12 +151,10 @@ class TransaccionesDetalleController extends Controller
         $data = $request->validated();
         $detalle = TransaccionesDetalle::findOrFail($id);
 
-        $id_organizacion = Auth::user()->id_organizacion;
         $usuario = Auth::user()->name;
 
         // Buscar el producto por código de barras y organización
         $producto = \App\Models\Producto::where('codigo_barras', $data['codigo_barras'])
-            ->where('id_organizacion', $id_organizacion)
             ->first();
 
         if (!$producto) {

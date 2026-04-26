@@ -18,7 +18,9 @@ class TransaccionesController extends Controller
      */
     public function index(Request $request)
     {
-        $id_organizacion = Auth::user()->id_organizacion;
+        $user = Auth::user();
+        $isAdmin = isset($user->rol_id) ? ($user->rol_id === 1) : false;
+
         $search = $request->input('search');
         $mes = $request->input('mes');
         $tipo = $request->input('tipo');
@@ -46,11 +48,15 @@ class TransaccionesController extends Controller
             'formaPago',
             'organizacion',
             'caja'
-        ])
-            ->where('id_organizacion', $id_organizacion)
-            ->when($search, function ($query, $search) use ($searchFecha) {
-                $query->where(function ($q) use ($search, $searchFecha) {
-                    $q->where('nombre', 'like', '%' . $search . '%')
+        ]);
+        // Si NO es admin, limitar por la organización del usuario
+        if (! $isAdmin) {
+            $transacciones->where('id_organizacion', $user->id_organizacion);
+        }
+
+        $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
+                $q->where(function ($s) use ($search, $searchFecha) {
+                    $s->where('nombre', 'like', '%' . $search . '%')
                         ->orWhere('monto', 'like', '%' . $search . '%')
                         ->orWhereHas('persona', function ($q2) use ($search) {
                             $q2->where('nombre', 'like', '%' . $search . '%');
@@ -59,28 +65,27 @@ class TransaccionesController extends Controller
                             $q3->where('nombre', 'like', '%' . $search . '%');
                         });
 
-
-
                     // Si el search es una fecha válida, buscar por fecha exacta
                     if ($searchFecha) {
-                        $q->orWhereDate('UrevFechaHora', $searchFecha);
+                        $s->orWhereDate('UrevFechaHora', $searchFecha);
                     }
                 });
             })
-            ->when($tipo, function ($query, $tipo) {
-                $query->where('id_TipoMovimiento', $tipo);
+            ->when($tipo, function ($q, $tipo) {
+                $q->where('id_TipoMovimiento', $tipo);
             })
             // Filtro por mes si viene el parámetro
-            ->when($mes, function ($query, $mes) {
+            ->when($mes, function ($q, $mes) {
                 [$anio, $mesNum] = explode('-', $mes); // $mes debe venir como 'YYYY-MM'
-                $query->whereYear('UrevFechaHora', $anio)
+                $q->whereYear('UrevFechaHora', $anio)
                     ->whereMonth('UrevFechaHora', $mesNum);
             })
             ->orderBy('id', 'desc')
             ->paginate(10);
 
-        //sumo los montos de las transacciones
-        $subtotal = $transacciones->sum('monto');
+        // sumo los montos de la página devuelta
+        $subtotal = $transacciones->getCollection()->sum('monto');
+
 
 
         return response()->json([
@@ -103,7 +108,7 @@ class TransaccionesController extends Controller
             'descripcion' => $data['descripcion'] ?? null,
             'fecha' => $data['fecha'],
             'lote' => $data['lote'] ?? null,
-            'id_organizacion' => Auth::user()->id_organizacion,
+            'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
             'id_persona' => $data['id_persona'],
             'id_TipoEstado' => $data['id_TipoEstado'],
             'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
@@ -178,7 +183,7 @@ class TransaccionesController extends Controller
             'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
             'id_Caja' => $data['id_Caja'] ?? null,
             'id_Banco' => $data['id_Banco'] ?? null,
-            'id_Organizacion' => Auth::user()->id_organizacion,
+            'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
             'id_usuario' => Auth::user()->id,
             'id_TipoMovimiento' => $data['id_TipoMovimiento'],
             'monto' => $montoNormalizado,
