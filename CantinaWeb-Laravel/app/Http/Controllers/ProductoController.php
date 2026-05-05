@@ -251,6 +251,7 @@ class ProductoController extends Controller
             return response()->json(['message' => 'Código de barras requerido'], 400);
         }
         $producto = Producto::where('codigo_barras', $codigo_barras)
+            ->where('id_TipoEstado', 1)
             ->first();
         if ($producto) {
             return response()->json(['producto' => $producto], 200);
