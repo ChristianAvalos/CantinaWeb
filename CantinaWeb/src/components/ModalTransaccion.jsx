@@ -536,7 +536,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de comprobante</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_TipoComprobante}
                                     onChange={(e) => setForm({ ...form, id_TipoComprobante: e.target.value })}
                                 >
@@ -555,7 +555,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Nro Comprobante</label>
                                 <input
                                     type="text"
-                                    className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     placeholder="Introduce el comprobante"
                                     value={form.nro_comprobante}
                                     onChange={(e) => setForm({ ...form, nro_comprobante: e.target.value })}
@@ -567,7 +567,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Forma de pago</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_FormaPago}
                                     onChange={(e) => setForm({ ...form, id_FormaPago: e.target.value })}
                                 >
@@ -585,7 +585,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de pago</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_TipoPago}
                                     onChange={(e) => setForm({ ...form, id_TipoPago: e.target.value })}
                                 >
@@ -603,7 +603,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_TipoEstado}
                                     onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
                                 >
@@ -721,7 +721,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={organizacionSeleccionada}
                                     onChange={(e) => {
                                         const id = e.target.value;
