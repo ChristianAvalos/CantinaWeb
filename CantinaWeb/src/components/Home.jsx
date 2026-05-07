@@ -116,8 +116,8 @@ export default function Home() {
     obtenerDatosGastos(mesSeleccionado);
   }, [mesSeleccionado]);
 
-  const handleMesChange = (e) => {
-    setMesSeleccionado(e.target.value);
+  const handleMesChange = (valor) => {
+    setMesSeleccionado(valor);
   };
 
 

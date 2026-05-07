@@ -34,8 +34,10 @@ class ProductoController extends Controller
         }
 
         $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida'])
-            ->whereNull('id_organizacion')
-                ->orWhere('id_organizacion', $id_organizacion)
+            ->where(function ($query) use ($id_organizacion) {
+                $query->whereNull('id_organizacion')
+                    ->orWhere('id_organizacion', $id_organizacion);
+            })
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
                     $q->where('nombre', 'like', '%' . $search . '%')

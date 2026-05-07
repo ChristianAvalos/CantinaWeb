@@ -1,5 +1,5 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import ModalTransaccion from '../components/ModalTransaccion';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
@@ -9,6 +9,7 @@ import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
+import MonthPicker from "../components/MonthPicker";
 
 export default function Transacciones() {
     //grilla de transacciones 
@@ -42,7 +43,6 @@ export default function Transacciones() {
 
     // Estado para el mes seleccionado
     const [mesSeleccionado, setMesSeleccionado] = useState(dayjs().format('YYYY-MM'));
-    const inputRef = useRef(null);
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -80,8 +80,8 @@ export default function Transacciones() {
     }, [paginaActual, mesSeleccionado]);
 
     // Maneja el cambio de mes
-    const handleMesChange = (e) => {
-        setMesSeleccionado(e.target.value);
+    const handleMesChange = (valor) => {
+        setMesSeleccionado(valor);
         setPaginaActual(1); // Reinicia a la primera página al cambiar de mes
     };
 
@@ -172,33 +172,7 @@ export default function Transacciones() {
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
                             {/* Selector de mes */}
-                            <div className="flex justify-end mb-2">
-                                <label className="mr-2 font-semibold text-gray-700 whitespace-nowrap">Selecciona el mes:</label>
-                                <div className="relative">
-                                    <input
-                                        type="month"
-                                        ref={inputRef}
-                                        value={mesSeleccionado}
-                                        onChange={handleMesChange}
-                                        className="border rounded px-2 py-1"
-                                    />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
-                                        onClick={() => {
-                                            if (inputRef.current) {
-                                                if (inputRef.current.showPicker) {
-                                                    inputRef.current.showPicker();
-                                                } else {
-                                                    inputRef.current.focus();
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </span>
-                                </div>
-                            </div>
+                            <MonthPicker value={mesSeleccionado} onChange={handleMesChange} />
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>

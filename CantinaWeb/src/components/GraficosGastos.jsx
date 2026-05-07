@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatearGuarani } from '../helpers/HelpersNumeros';
+import MonthPicker from './MonthPicker';
 
 const GraficoGastos = ({ datos, restante, acumulado, ingresoMes, egresoMes, mesSeleccionado, handleMesChange }) => {
     const [ChartModule, setChartModule] = useState(null);
     const canvasRef = useRef(null);
-    const inputRef = useRef(null);
     const chartRef = useRef(null);
 
     useEffect(() => {
@@ -104,30 +104,7 @@ const GraficoGastos = ({ datos, restante, acumulado, ingresoMes, egresoMes, mesS
             {/* Encabezado y selector de mes */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
                 <h3 className="font-bold text-lg text-gray-700">Gastos por Categoría</h3>
-                <div className="relative">
-                    <input
-                        type="month"
-                        ref={inputRef}
-                        value={mesSeleccionado}
-                        onChange={handleMesChange}
-                        className="border rounded px-2 py-1 pr-8"
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
-                        onClick={() => {
-                            if (inputRef.current) {
-                                if (inputRef.current.showPicker) {
-                                    inputRef.current.showPicker();
-                                } else {
-                                    inputRef.current.focus();
-                                }
-                            }
-                        }}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </span>
-                </div>
+                <MonthPicker value={mesSeleccionado} onChange={handleMesChange} label="" className="mb-0" />
             </div>
             <hr className="border-gray-300 mb-4" />
             {/* Gráfico */}
