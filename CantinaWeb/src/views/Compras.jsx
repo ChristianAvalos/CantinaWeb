@@ -201,12 +201,11 @@ export default function Compras() {
                                             <th>Organización</th>
                                             <th>Nro. Lote</th>
                                             <th>Nro. Comprobante</th>
-                                            <th>Tipo</th>
-                                            <th>Estado</th>
                                             <th>Nombre</th>
                                             <th>Descripcción</th>
                                             <th>Proveedor</th>
                                             <th>Monto</th>
+                                            <th>Estado</th>
                                             <th>Urev</th>
                                             <th>Utilidades</th>
                                         </tr>
@@ -222,12 +221,11 @@ export default function Compras() {
                                                     <td className="text-center">{compra.organizacion.RazonSocial}</td>
                                                     <td className="text-center">{compra.lote}</td>
                                                     <td className="text-center">{compra.nro_comprobante}</td>
-                                                    <td>{compra.tipo_movimiento.nombre}</td>
-                                                    <td>{compra.tipo_estado.descripcion}</td>
                                                     <td>{compra.nombre}</td>
                                                     <td>{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(compra.monto)}</td>
+                                                    <td>{compra.tipo_estado.descripcion}</td>
                                                     <td className="text-center">{compra.UrevCalc}</td>
                                                     <td>
                                                         <div className="flex space-x-2">
