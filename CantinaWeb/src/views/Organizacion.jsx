@@ -1,10 +1,23 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal";
 import ModalOrganizacion from "./ModalOrganizacion";
-import SearchBar from "../components/SearchBar";
 import NoExistenDatos from "../components/NoExistenDatos";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_ORGANIZACION = [
+    {
+        key: 'search',
+        label: 'Buscar organización',
+        type: 'text',
+        placeholder: 'Buscar organización...',
+    },
+];
+
+const FILTROS_ORGANIZACION_INICIALES = {
+    search: '',
+};
 
 
 export default function Organizacion() {
@@ -27,14 +40,15 @@ export default function Organizacion() {
     //session total
     const [totalRegistros, setTotalRegistros] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_ORGANIZACION_INICIALES }));
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
 
     //funcion para obtener las organizaciones
-    const fetchOrganizacion = async (page = 1, search = '') => {
+    const fetchOrganizacion = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
+            const search = filtros.search ?? '';
 
             // Realizar la solicitud a la API
             const { data } = await clienteAxios.get(`api/organizacion?page=${page}&search=${search}`, {
@@ -53,13 +67,12 @@ export default function Organizacion() {
             console.error('Error al obtener las organizaciones:', error);
             throw error; // Lanza el error para manejarlo donde sea llamado
         }
-    };
+    }, [filtrosAplicados, token]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchOrganizacion(paginaActual);
-    }, [paginaActual]);
+        fetchOrganizacion(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchOrganizacion]);
 
 
 
@@ -88,6 +101,11 @@ export default function Organizacion() {
     };
 
 
+
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
+    };
 
     //para la eliminacion de organizacion
     const handleDelete = async (id) => {
@@ -130,12 +148,6 @@ export default function Organizacion() {
     };
 
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-       // console.log("Buscando:", term); // Reemplaza con tu lógica de búsqueda
-        fetchOrganizacion(1, term);
-    };
-
     const handleAdd = () => {
         openModal('crear')// Reemplaza con tu lógica para agregar
     };
@@ -148,12 +160,13 @@ export default function Organizacion() {
             <section className="content">
                 <div className="container-fluid">
                     <div className="card">
-                        <SearchBar
+                        <FiltrosBar
                             title="Organización"
-                            placeholder="Buscar organización..."
                             buttonLabel="Añadir organización"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_ORGANIZACION}
+                            initialValues={FILTROS_ORGANIZACION_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
                         <div className="card-body">
                             <div className="overflow-x-auto">

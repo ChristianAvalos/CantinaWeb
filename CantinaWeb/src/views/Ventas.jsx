@@ -1,15 +1,33 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from "../components/ModalTransaccion";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones.jsx';
-import SearchBar from "../components/SearchBar";
 import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
-import MonthPicker from "../components/MonthPicker";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_VENTAS = [
+    {
+        key: 'search',
+        label: 'Buscar venta',
+        type: 'text',
+        placeholder: 'Buscar venta...',
+    },
+    {
+        key: 'mes',
+        label: 'Mes seleccionado',
+        type: 'month',
+    },
+];
+
+const FILTROS_VENTAS_INICIALES = {
+    search: '',
+    mes: dayjs().format('YYYY-MM'),
+};
 
 export default function Ventas() {
     //grilla de las ventas 
@@ -24,8 +42,8 @@ export default function Ventas() {
     const [totalRegistros, setTotalRegistros] = useState(0);
     const [subTotal, setSubTotal] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_VENTAS_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -37,9 +55,6 @@ export default function Ventas() {
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('crear');
-
-    // Estado para el mes seleccionado
-    const [mesSeleccionado, setMesSeleccionado] = useState(dayjs().format('YYYY-MM'));
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -58,9 +73,9 @@ export default function Ventas() {
 
     //funcion para obtener las ventas
     //Tipo de movimientos 1=compra 2=venta 3=ajustes
-    const fetchVentas = async (page = 1, search = '', mes = mesSeleccionado,tipo=2) => {
+    const fetchVentas = useCallback(async (page = 1, filtros = filtrosAplicados, tipo = 2) => {
         try {
-            const ventas = await obtenerTransacciones(page, search, mes,tipo);
+            const ventas = await obtenerTransacciones(page, '', '', tipo, filtros);
             setVentas(ventas.transacciones.data);
             setTotalPaginas(ventas.transacciones.last_page);
             setTotalRegistros(ventas.transacciones.total);
@@ -69,19 +84,12 @@ export default function Ventas() {
         } catch (error) {
             console.error('Error al cargar las ventas:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchVentas(paginaActual, searchTerm, mesSeleccionado);
-    }, [paginaActual, mesSeleccionado]);
-
-    // Maneja el cambio de mes
-    const handleMesChange = (valor) => {
-        setMesSeleccionado(valor);
-        setPaginaActual(1); // Reinicia a la primera página al cambiar de mes
-    };
+        fetchVentas(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchVentas]);
 
     // Función para manejar el cambio de página
     const handlePageChange = (newPage) => {
@@ -133,10 +141,9 @@ export default function Ventas() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchVentas(1, term, mesSeleccionado);
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     const handleAdd = () => {
@@ -150,19 +157,18 @@ export default function Ventas() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Ventas"
-                            placeholder="Buscar venta..."
                             buttonLabel="Añadir venta"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_VENTAS}
+                            initialValues={FILTROS_VENTAS_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
 
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
-                            {/* Selector de mes */}
-                            <MonthPicker value={mesSeleccionado} onChange={handleMesChange} />
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>

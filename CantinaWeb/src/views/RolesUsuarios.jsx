@@ -1,12 +1,25 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import ModalRol from './ModalRol';
 import ModalRolPermisos from './ModalRolPermisos';
-import SearchBar from "../components/SearchBar";
 import { obtenerRoles } from '../helpers/HelpersUsuarios';
 import NoExistenDatos from "../components/NoExistenDatos";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_ROLES = [
+    {
+        key: 'search',
+        label: 'Buscar rol',
+        type: 'text',
+        placeholder: 'Buscar rol...',
+    },
+];
+
+const FILTROS_ROLES_INICIALES = {
+    search: '',
+};
 
 
 export default function Roles() {
@@ -29,14 +42,15 @@ export default function Roles() {
     //session total
     const [totalRegistros, setTotalRegistros] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_ROLES_INICIALES }));
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
 
     //funcion para obtener los roles
-    const fetchRoles = async (page = 1, search = '') => {
+    const fetchRoles = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
+            const search = filtros.search ?? '';
 
             // Realizar la solicitud a la API
             const data = await obtenerRoles(page, search);
@@ -50,13 +64,12 @@ export default function Roles() {
             console.error('Error al obtener los roles:', error);
             throw error; // Lanza el error para manejarlo donde sea llamado
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchRoles(paginaActual);
-    }, [paginaActual]);
+        fetchRoles(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchRoles]);
 
 
 
@@ -66,6 +79,11 @@ export default function Roles() {
         if (newPage > 0 && newPage <= totalPaginas) {
             setPaginaActual(newPage); // Actualizar la página actual
         }
+    };
+
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     //apertura del modal
@@ -134,12 +152,6 @@ export default function Roles() {
         confirmarEliminacion();
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); // Reemplaza con tu lógica de búsqueda
-        fetchRoles(1, term);
-    };
-
     const handleAdd = () => {
         openModal('crear')// Reemplaza con tu lógica para agregar
     };
@@ -149,12 +161,13 @@ export default function Roles() {
             <section className="content">
                 <div className="container-fluid">
                     <div className="card">
-                        <SearchBar
+                        <FiltrosBar
                             title="Roles"
-                            placeholder="Buscar roles..."
                             buttonLabel="Añadir rol"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_ROLES}
+                            initialValues={FILTROS_ROLES_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
                         <div className="card-body">
                             <div className="overflow-x-auto">

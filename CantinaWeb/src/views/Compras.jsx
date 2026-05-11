@@ -1,23 +1,37 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from "../components/ModalTransaccion";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones.jsx';
-import SearchBar from "../components/SearchBar";
-import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
+import { formatearGuarani } from '../helpers/HelpersNumeros';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
-import MonthPicker from "../components/MonthPicker";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_COMPRAS = [
+    {
+        key: 'search',
+        label: 'Buscar compra',
+        type: 'text',
+        placeholder: 'Buscar compra...',
+    },
+    {
+        key: 'mes',
+        label: 'Mes seleccionado',
+        type: 'month',
+    },
+];
+
+const FILTROS_COMPRAS_INICIALES = {
+    search: '',
+    mes: dayjs().format('YYYY-MM'),
+};
 
 export default function Compras() {
     //grilla de las compras 
     const [compras, setCompras] = useState([]);
     const [compraSeleccionado, setCompraSeleccionado] = useState(null);
-    //base url
-    const baseURL = clienteAxios.defaults.baseURL;
-    //tipo estado de la compra
-    const [tipoEstadoSeleccionado, setTipoEstadoSeleccionado] = useState(null);
 
 
     //paginacion
@@ -28,8 +42,8 @@ export default function Compras() {
     const [totalRegistros, setTotalRegistros] = useState(0);
     const [subTotal, setSubTotal] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_COMPRAS_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -41,9 +55,6 @@ export default function Compras() {
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('crear');
-
-    // Estado para el mes seleccionado
-    const [mesSeleccionado, setMesSeleccionado] = useState(dayjs().format('YYYY-MM'));
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -62,9 +73,9 @@ export default function Compras() {
 
     //funcion para obtener las compras
     //Tipo de movimientos 1=compra 2=venta 3=ajustes
-    const fetchCompras = async (page = 1, search = '', mes = mesSeleccionado,tipo=1) => {
+    const fetchCompras = useCallback(async (page = 1, filtros = filtrosAplicados, tipo = 1) => {
         try {
-            const compras = await obtenerTransacciones(page, search, mes,tipo);
+            const compras = await obtenerTransacciones(page, '', '', tipo, filtros);
             setCompras(compras.transacciones.data);
             setTotalPaginas(compras.transacciones.last_page);
             setTotalRegistros(compras.transacciones.total);
@@ -73,13 +84,12 @@ export default function Compras() {
         } catch (error) {
             console.error('Error al cargar las compras:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchCompras(paginaActual, searchTerm, mesSeleccionado);
-    }, [paginaActual, mesSeleccionado]);
+        fetchCompras(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchCompras]);
 
     // Función para manejar el cambio de página
     const handlePageChange = (newPage) => {
@@ -100,7 +110,7 @@ export default function Compras() {
 
     const confirmarEliminacion = async () => {
         try {
-            const response = await clienteAxios.delete(`api/transacciones/${compraAEliminar}`, {
+            await clienteAxios.delete(`api/transacciones/${compraAEliminar}`, {
                 headers: {
                     Authorization: `Bearer ${token}` // Configurar el token en los headers
                 }
@@ -108,7 +118,7 @@ export default function Compras() {
 
             toast.success('Compra eliminada correctamente.');
             fetchCompras();
-        } catch (error) {
+        } catch {
             setTipoAlertaModal('informativo');
             setMensajeAlertaModal('Hubo un problema al eliminar la compra.');
             setMostrarAlertaModal(true);
@@ -131,10 +141,9 @@ export default function Compras() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchCompras(1, term, mesSeleccionado);
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     const handleAdd = () => {
@@ -148,22 +157,18 @@ export default function Compras() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Compras"
-                            placeholder="Buscar compra..."
                             buttonLabel="Añadir compra"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_COMPRAS}
+                            initialValues={FILTROS_COMPRAS_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
 
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
-                            {/* Selector de mes */}
-                            <MonthPicker value={mesSeleccionado} onChange={(valor) => {
-                                setMesSeleccionado(valor);
-                                setPaginaActual(1);
-                            }} />
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>

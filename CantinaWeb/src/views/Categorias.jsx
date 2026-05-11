@@ -1,11 +1,24 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalCategoria from "../components/ModalCategoria";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerCategorias } from '../helpers/HelpersUsuarios';
-import SearchBar from "../components/SearchBar";
 import NoExistenDatos from "../components/NoExistenDatos";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_CATEGORIAS = [
+    {
+        key: 'search',
+        label: 'Buscar categoria',
+        type: 'text',
+        placeholder: 'Buscar categoria...',
+    },
+];
+
+const FILTROS_CATEGORIAS_INICIALES = {
+    search: '',
+};
 
 
 
@@ -24,8 +37,8 @@ export default function Categoria() {
     //session total
     const [totalRegistros, setTotalRegistros] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_CATEGORIAS_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -54,9 +67,9 @@ export default function Categoria() {
 
 
     //funcion para obtener las categorias
-    const fetchCategorias = async (page = 1, search = '') => {
+    const fetchCategorias = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
-            const categorias = await obtenerCategorias(page, search);        
+            const categorias = await obtenerCategorias(page, filtros.search ?? '');        
             setCategorias(categorias.data);
             setTotalPaginas(categorias.last_page);
             setTotalRegistros(categorias.total);
@@ -65,13 +78,12 @@ export default function Categoria() {
         } catch (error) {
             console.error('Error al cargar las categorias:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchCategorias(paginaActual);
-    }, [paginaActual]);
+        fetchCategorias(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchCategorias]);
 
 
     // Función para manejar el cambio de página
@@ -124,14 +136,13 @@ export default function Categoria() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchCategorias(1, term);
-    };
-
     const handleAdd = () => {
         openModal('crear')
+    };
+
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
 
@@ -141,12 +152,13 @@ export default function Categoria() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Categorías"
-                            placeholder="Buscar categoria..."
                             buttonLabel="Añadir categoria"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_CATEGORIAS}
+                            initialValues={FILTROS_CATEGORIAS_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
                         {/* Aqui comienza la tabla  */}

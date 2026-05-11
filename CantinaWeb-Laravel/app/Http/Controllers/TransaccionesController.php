@@ -21,9 +21,20 @@ class TransaccionesController extends Controller
         $user = Auth::user();
         $isAdmin = isset($user->rol_id) ? ($user->rol_id === 1) : false;
 
-        $search = $request->input('search');
-        $mes = $request->input('mes');
-        $tipo = $request->input('tipo');
+        $filtros = $request->input('filtros', []);
+
+        if (is_string($filtros)) {
+            $filtrosDecodificados = json_decode($filtros, true);
+            $filtros = is_array($filtrosDecodificados) ? $filtrosDecodificados : [];
+        }
+
+        if (!is_array($filtros)) {
+            $filtros = [];
+        }
+
+        $search = $filtros['search'] ?? $request->input('search');
+        $mes = $filtros['mes'] ?? $request->input('mes');
+        $tipo = $filtros['tipo'] ?? $request->input('tipo');
 
         // Si el search es una fecha en formato dd/mm/yyyy, la convertimos a yyyy-mm-dd
         if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $search)) {
@@ -79,6 +90,30 @@ class TransaccionesController extends Controller
                 [$anio, $mesNum] = explode('-', $mes); // $mes debe venir como 'YYYY-MM'
                 $q->whereYear('UrevFechaHora', $anio)
                     ->whereMonth('UrevFechaHora', $mesNum);
+            })
+            ->when(!empty($filtros['ejercicio']), function ($q) use ($filtros) {
+                $q->whereYear('UrevFechaHora', $filtros['ejercicio']);
+            })
+            ->when(!empty($filtros['nombre']), function ($q) use ($filtros) {
+                $q->where('nombre', 'like', '%' . $filtros['nombre'] . '%');
+            })
+            ->when(!empty($filtros['descripcion']), function ($q) use ($filtros) {
+                $q->where('descripcion', 'like', '%' . $filtros['descripcion'] . '%');
+            })
+            ->when(!empty($filtros['lote']), function ($q) use ($filtros) {
+                $q->where('lote', 'like', '%' . $filtros['lote'] . '%');
+            })
+            ->when(!empty($filtros['nro_comprobante']), function ($q) use ($filtros) {
+                $q->where('nro_comprobante', 'like', '%' . $filtros['nro_comprobante'] . '%');
+            })
+            ->when(!empty($filtros['id_persona']), function ($q) use ($filtros) {
+                $q->where('id_persona', $filtros['id_persona']);
+            })
+            ->when(!empty($filtros['id_TipoEstado']), function ($q) use ($filtros) {
+                $q->where('id_TipoEstado', $filtros['id_TipoEstado']);
+            })
+            ->when(!empty($filtros['id_TipoMovimiento']), function ($q) use ($filtros) {
+                $q->where('id_TipoMovimiento', $filtros['id_TipoMovimiento']);
             })
             ->orderBy('id', 'desc')
             ->paginate(10);

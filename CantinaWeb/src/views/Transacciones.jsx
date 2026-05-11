@@ -1,15 +1,33 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from '../components/ModalTransaccion';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones';
-import SearchBar from "../components/SearchBar";
 import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
-import MonthPicker from "../components/MonthPicker";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_TRANSACCIONES = [
+    {
+        key: 'search',
+        label: 'Buscar transacción',
+        type: 'text',
+        placeholder: 'Buscar transacciones...',
+    },
+    {
+        key: 'mes',
+        label: 'Mes seleccionado',
+        type: 'month',
+    },
+];
+
+const FILTROS_TRANSACCIONES_INICIALES = {
+    search: '',
+    mes: dayjs().format('YYYY-MM'),
+};
 
 export default function Transacciones() {
     //grilla de transacciones 
@@ -27,8 +45,8 @@ export default function Transacciones() {
     const [totalRegistros, setTotalRegistros] = useState(0);
     const [subTotal, setSubTotal] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_TRANSACCIONES_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -40,9 +58,6 @@ export default function Transacciones() {
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('crear');
-
-    // Estado para el mes seleccionado
-    const [mesSeleccionado, setMesSeleccionado] = useState(dayjs().format('YYYY-MM'));
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -60,9 +75,9 @@ export default function Transacciones() {
 
 
     //funcion para obtener las transacciones
-    const fetchTransacciones = async (page = 1, search = '', mes = mesSeleccionado) => {
+    const fetchTransacciones = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
-            const transacciones = await obtenerTransacciones(page, search, mes);
+            const transacciones = await obtenerTransacciones(page, '', '', '', filtros);
             setTransacciones(transacciones.transacciones.data);
             setTotalPaginas(transacciones.transacciones.last_page);
             setTotalRegistros(transacciones.transacciones.total);
@@ -71,19 +86,12 @@ export default function Transacciones() {
         } catch (error) {
             console.error('Error al cargar las transacciones:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchTransacciones(paginaActual, searchTerm, mesSeleccionado);
-    }, [paginaActual, mesSeleccionado]);
-
-    // Maneja el cambio de mes
-    const handleMesChange = (valor) => {
-        setMesSeleccionado(valor);
-        setPaginaActual(1); // Reinicia a la primera página al cambiar de mes
-    };
+        fetchTransacciones(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchTransacciones]);
 
     // Función para manejar el cambio de página
     const handlePageChange = (newPage) => {
@@ -143,10 +151,9 @@ export default function Transacciones() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchTransacciones(1, term, mesSeleccionado);
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     const handleAdd = () => {
@@ -160,19 +167,18 @@ export default function Transacciones() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Transacciones"
-                            placeholder="Buscar transacciones..."
                             buttonLabel="Añadir transaccion"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_TRANSACCIONES}
+                            initialValues={FILTROS_TRANSACCIONES_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
 
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
-                            {/* Selector de mes */}
-                            <MonthPicker value={mesSeleccionado} onChange={handleMesChange} />
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>

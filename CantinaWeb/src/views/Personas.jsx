@@ -1,13 +1,26 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalPersona from "../components/ModalPersona";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerPersonas } from '../helpers/HelperPersonas';
-import SearchBar from "../components/SearchBar";
 import NoExistenDatos from "../components/NoExistenDatos";
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_PERSONAS = [
+    {
+        key: 'search',
+        label: 'Buscar persona',
+        type: 'text',
+        placeholder: 'Buscar persona...',
+    },
+];
+
+const FILTROS_PERSONAS_INICIALES = {
+    search: '',
+};
 
 
 
@@ -26,8 +39,8 @@ export default function Personas() {
     //session total
     const [totalRegistros, setTotalRegistros] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_PERSONAS_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -56,9 +69,9 @@ export default function Personas() {
 
 
     //funcion para obtener las personas
-    const fetchPersonas = async (page = 1, search = '') => {
+    const fetchPersonas = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
-            const personas = await obtenerPersonas(page, search);        
+            const personas = await obtenerPersonas(page, filtros.search ?? '');        
             setPersonas(personas.data);
             setTotalPaginas(personas.last_page);
             setTotalRegistros(personas.total);
@@ -67,13 +80,12 @@ export default function Personas() {
         } catch (error) {
             console.error('Error al cargar las personas:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchPersonas(paginaActual);
-    }, [paginaActual]);
+        fetchPersonas(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchPersonas]);
 
 
     // Función para manejar el cambio de página
@@ -130,14 +142,13 @@ export default function Personas() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchPersonas(1, term);
-    };
-
     const handleAdd = () => {
         openModal('crear')
+    };
+
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     //para activar/desactivar personas
@@ -180,12 +191,13 @@ export default function Personas() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Clientes/Proveedores"
-                            placeholder="Buscar persona..."
                             buttonLabel="Añadir persona"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_PERSONAS}
+                            initialValues={FILTROS_PERSONAS_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
                         {/* Aqui comienza la tabla  */}

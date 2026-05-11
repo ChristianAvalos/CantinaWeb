@@ -1,15 +1,33 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from "../components/ModalTransaccion";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones.jsx';
-import SearchBar from "../components/SearchBar";
 import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
-import MonthPicker from "../components/MonthPicker";
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_AJUSTES = [
+    {
+        key: 'search',
+        label: 'Buscar ajuste',
+        type: 'text',
+        placeholder: 'Buscar ajuste...',
+    },
+    {
+        key: 'mes',
+        label: 'Mes seleccionado',
+        type: 'month',
+    },
+];
+
+const FILTROS_AJUSTES_INICIALES = {
+    search: '',
+    mes: dayjs().format('YYYY-MM'),
+};
 
 export default function Ajustes() {
     //grilla de los ajustes 
@@ -24,8 +42,8 @@ export default function Ajustes() {
     const [totalRegistros, setTotalRegistros] = useState(0);
     const [subTotal, setSubTotal] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_AJUSTES_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -37,9 +55,6 @@ export default function Ajustes() {
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('crear');
-
-    // Estado para el mes seleccionado
-    const [mesSeleccionado, setMesSeleccionado] = useState(dayjs().format('YYYY-MM'));
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -58,9 +73,9 @@ export default function Ajustes() {
 
     //funcion para obtener los ajustes
     //Tipo de movimientos 1=compra 2=venta 3=ajustes
-    const fetchAjustes = async (page = 1, search = '', mes = mesSeleccionado,tipo=3) => {
+    const fetchAjustes = useCallback(async (page = 1, filtros = filtrosAplicados, tipo = 3) => {
         try {
-            const ajustes = await obtenerTransacciones(page, search, mes,tipo);
+            const ajustes = await obtenerTransacciones(page, '', '', tipo, filtros);
             setAjustes(ajustes.transacciones.data);
             setTotalPaginas(ajustes.transacciones.last_page);
             setTotalRegistros(ajustes.transacciones.total);
@@ -69,19 +84,12 @@ export default function Ajustes() {
         } catch (error) {
             console.error('Error al cargar los ajustes:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchAjustes(paginaActual, searchTerm, mesSeleccionado);
-    }, [paginaActual, mesSeleccionado]);
-
-    // Maneja el cambio de mes
-    const handleMesChange = (valor) => {
-        setMesSeleccionado(valor);
-        setPaginaActual(1); // Reinicia a la primera página al cambiar de mes
-    };
+        fetchAjustes(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchAjustes]);
 
     // Función para manejar el cambio de página
     const handlePageChange = (newPage) => {
@@ -133,10 +141,9 @@ export default function Ajustes() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); 
-        fetchAjustes(1, term, mesSeleccionado);
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
     };
 
     const handleAdd = () => {
@@ -150,19 +157,18 @@ export default function Ajustes() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Ajustes"
-                            placeholder="Buscar ajuste..."
                             buttonLabel="Añadir ajuste"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_AJUSTES}
+                            initialValues={FILTROS_AJUSTES_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
 
 
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
-                            {/* Selector de mes */}
-                            <MonthPicker value={mesSeleccionado} onChange={handleMesChange} />
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>

@@ -1,11 +1,24 @@
 import clienteAxios from "../config/axios";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ModalUsuarios from './ModalUsuarios';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerUsuarios } from '../helpers/HelpersUsuarios';
-import SearchBar from "../components/SearchBar";
 import NoExistenDatos from '../components/NoExistenDatos';
+import FiltrosBar from "../components/FiltrosBar";
+
+const FILTROS_USUARIOS = [
+    {
+        key: 'search',
+        label: 'Buscar usuario',
+        type: 'text',
+        placeholder: 'Buscar usuario...',
+    },
+];
+
+const FILTROS_USUARIOS_INICIALES = {
+    search: '',
+};
 
 
 
@@ -24,8 +37,8 @@ export default function Usuarios() {
     //session total
     const [totalRegistros, setTotalRegistros] = useState(0);
 
-    //buscador 
-    const [searchTerm, setSearchTerm] = useState('');
+    // filtros aplicados
+    const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({ ...FILTROS_USUARIOS_INICIALES }));
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -54,9 +67,9 @@ export default function Usuarios() {
 
 
     //funcion para obtener los usuarios
-    const fetchUsuarios = async (page = 1, search = '') => {
+    const fetchUsuarios = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
-            const usuarios = await obtenerUsuarios(page, search);
+            const usuarios = await obtenerUsuarios(page, filtros.search ?? '');
             setUsuarios(usuarios.usuarios.data);
             setTotalPaginas(usuarios.usuarios.last_page);
             setTotalRegistros(usuarios.usuarios.total);
@@ -68,13 +81,12 @@ export default function Usuarios() {
         } catch (error) {
             console.error('Error al cargar los usuarios:', error);
         }
-    };
+    }, [filtrosAplicados]);
 
     //llamo con la pagina para obtener la lista 
     useEffect(() => {
-
-        fetchUsuarios(paginaActual);
-    }, [paginaActual]);
+        fetchUsuarios(paginaActual, filtrosAplicados);
+    }, [paginaActual, filtrosAplicados, fetchUsuarios]);
 
 
     // Función para manejar el cambio de página
@@ -113,6 +125,11 @@ export default function Usuarios() {
             setUsuarioAEliminar(null);
         }
     }
+
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFiltrosAplicados(nuevosFiltros);
+        setPaginaActual(1);
+    };
 
     //para resetear contraseña de usuario
     const handleResetPassword = async (id) => {
@@ -196,12 +213,6 @@ export default function Usuarios() {
 
     };
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        // console.log("Buscando:", term); // Reemplaza con tu lógica de búsqueda
-        fetchUsuarios(1, term);
-    };
-
     const handleAdd = () => {
         openModal('crear')// Reemplaza con tu lógica para agregar
     };
@@ -213,12 +224,13 @@ export default function Usuarios() {
                 <div className="container-fluid">
                     <div className="card">
 
-                        <SearchBar
+                        <FiltrosBar
                             title="Usuarios"
-                            placeholder="Buscar usuarios..."
                             buttonLabel="Añadir usuarios"
-                            onSearch={handleSearch}
                             onAdd={handleAdd}
+                            filterDefinitions={FILTROS_USUARIOS}
+                            initialValues={FILTROS_USUARIOS_INICIALES}
+                            onApply={handleAplicarFiltros}
                         />
                         {/* Aqui comienza la tabla  */}
                         <div className="card-body">
