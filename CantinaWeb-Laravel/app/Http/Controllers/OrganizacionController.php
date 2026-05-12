@@ -7,22 +7,38 @@ use App\Models\Organizacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\OrganizacionRequest;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class OrganizacionController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
+
         if ($request->query('all')) {
-            $organizaciones = Organizacion::with(['ciudad', 'pais'])->get();
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais']);
+            if (!empty($filtros)) {
+                $this->aplicarFiltrosDinamicos($organizacionesQuery, $filtros, ['search', 'all']);
+            }
+            $organizaciones = $organizacionesQuery->get();
         } else {
-            $organizaciones = Organizacion::with(['ciudad', 'pais'])
-            ->when($search, function ($query, $search) {
-                return $query->where('RazonSocial', 'ilike', '%' . $search . '%');
-            })->paginate(10);
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais']);
+
+            if ($search) {
+                $organizacionesQuery->where('RazonSocial', 'ilike', '%' . $search . '%');
+            }
+
+            if (!empty($filtros)) {
+                $this->aplicarFiltrosDinamicos($organizacionesQuery, $filtros, ['search', 'all']);
+            }
+
+            $organizaciones = $organizacionesQuery->paginate(10);
         }
         return response()->json($organizaciones);
 

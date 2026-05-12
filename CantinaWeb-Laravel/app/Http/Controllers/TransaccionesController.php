@@ -8,11 +8,14 @@ use App\Models\Transacciones;
 use App\Models\TransaccionesDetalle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
 
 class TransaccionesController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     /**
      * Display a listing of the resource.
      */
@@ -21,16 +24,7 @@ class TransaccionesController extends Controller
         $user = Auth::user();
         $isAdmin = isset($user->rol_id) ? ($user->rol_id === 1) : false;
 
-        $filtros = $request->input('filtros', []);
-
-        if (is_string($filtros)) {
-            $filtrosDecodificados = json_decode($filtros, true);
-            $filtros = is_array($filtrosDecodificados) ? $filtrosDecodificados : [];
-        }
-
-        if (!is_array($filtros)) {
-            $filtros = [];
-        }
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $search = $filtros['search'] ?? $request->input('search');
         $mes = $filtros['mes'] ?? $request->input('mes');
@@ -67,13 +61,13 @@ class TransaccionesController extends Controller
 
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
                 $q->where(function ($s) use ($search, $searchFecha) {
-                    $s->where('nombre', 'like', '%' . $search . '%')
-                        ->orWhere('monto', 'like', '%' . $search . '%')
+                    $s->where('nombre', 'ilike', '%' . $search . '%')
+                        ->orWhere('monto', 'ilike', '%' . $search . '%')
                         ->orWhereHas('persona', function ($q2) use ($search) {
-                            $q2->where('nombre', 'like', '%' . $search . '%');
+                            $q2->where('nombre', 'ilike', '%' . $search . '%');
                         })
                         ->orWhereHas('tipoMovimiento', function ($q3) use ($search) {
-                            $q3->where('nombre', 'like', '%' . $search . '%');
+                            $q3->where('nombre', 'ilike', '%' . $search . '%');
                         });
 
                     // Si el search es una fecha válida, buscar por fecha exacta
@@ -91,29 +85,8 @@ class TransaccionesController extends Controller
                 $q->whereYear('UrevFechaHora', $anio)
                     ->whereMonth('UrevFechaHora', $mesNum);
             })
-            ->when(!empty($filtros['ejercicio']), function ($q) use ($filtros) {
-                $q->whereYear('UrevFechaHora', $filtros['ejercicio']);
-            })
-            ->when(!empty($filtros['nombre']), function ($q) use ($filtros) {
-                $q->where('nombre', 'like', '%' . $filtros['nombre'] . '%');
-            })
-            ->when(!empty($filtros['descripcion']), function ($q) use ($filtros) {
-                $q->where('descripcion', 'like', '%' . $filtros['descripcion'] . '%');
-            })
-            ->when(!empty($filtros['lote']), function ($q) use ($filtros) {
-                $q->where('lote', 'like', '%' . $filtros['lote'] . '%');
-            })
-            ->when(!empty($filtros['nro_comprobante']), function ($q) use ($filtros) {
-                $q->where('nro_comprobante', 'like', '%' . $filtros['nro_comprobante'] . '%');
-            })
-            ->when(!empty($filtros['id_persona']), function ($q) use ($filtros) {
-                $q->where('id_persona', $filtros['id_persona']);
-            })
-            ->when(!empty($filtros['id_TipoEstado']), function ($q) use ($filtros) {
-                $q->where('id_TipoEstado', $filtros['id_TipoEstado']);
-            })
-            ->when(!empty($filtros['id_TipoMovimiento']), function ($q) use ($filtros) {
-                $q->where('id_TipoMovimiento', $filtros['id_TipoMovimiento']);
+            ->when(!empty($filtros), function ($q) use ($filtros) {
+                return $this->aplicarFiltrosDinamicos($q, $filtros, ['search', 'mes', 'tipo', 'ejercicio']);
             })
             ->orderBy('id', 'desc')
             ->paginate(10);

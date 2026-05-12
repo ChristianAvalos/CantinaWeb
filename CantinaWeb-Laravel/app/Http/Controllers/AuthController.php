@@ -13,18 +13,32 @@ use App\Http\Requests\RegistroRequest;
 use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\CambiarPasswordRequest;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 
 class AuthController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $usuarios = User::with('role', 'organizacion')->when($search, function ($query, $search) {
-            return $query->where('name', 'ilike', '%' . $search . '%')
-                ->orWhere('email', 'ilike', '%' . $search . '%');
-        })
-            ->paginate(10);
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
+
+        $usuarios = User::with('role', 'organizacion');
+
+        if ($search) {
+            $usuarios->where(function ($query) use ($search) {
+                $query->where('name', 'ilike', '%' . $search . '%')
+                    ->orWhere('email', 'ilike', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filtros)) {
+            $this->aplicarFiltrosDinamicos($usuarios, $filtros, ['search']);
+        }
+
+        $usuarios = $usuarios->paginate(10);
         //$cantidadUsuarios = User::all()->count(); 
         return response()->json([
             'usuarios' => $usuarios/*,

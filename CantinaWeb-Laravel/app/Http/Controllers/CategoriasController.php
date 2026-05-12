@@ -6,9 +6,12 @@ use App\Models\Categorias;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CategoriaRequest;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class CategoriasController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     /**
      * Display a listing of the resource.
      */
@@ -17,6 +20,7 @@ class CategoriasController extends Controller
         $id_organizacion = Auth::user()->id_organizacion;
         $search = $request->input('search');
         $all = $request->input('all');
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $categoriasQuery = Categorias::where(function ($query) use ($id_organizacion) {
             $query->whereNull('id_organizacion')
@@ -25,6 +29,11 @@ class CategoriasController extends Controller
             ->when($search, function ($query, $search) {
                 $query->where('nombre', 'like', '%' . $search . '%');
             });
+
+        if (!empty($filtros)) {
+            $this->aplicarFiltrosDinamicos($categoriasQuery, $filtros, ['search', 'all']);
+        }
+
         if ($all) {
             $categorias = $categoriasQuery->get();
             return response()->json(['data' => $categorias]);

@@ -9,9 +9,12 @@ use App\Models\Persona;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class PersonaController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     /**
      * Display a listing of the resource.
      */
@@ -23,6 +26,7 @@ class PersonaController extends Controller
         $idTipoPersona = $request->input('id_tipo_persona');
         $tipoPersona = $request->input('tipo_persona');
         $idTipoEstado = $request->input('id_tipoestado');
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $search = is_string($search) ? trim(preg_replace('/\s+/', ' ', $search)) : $search;
         $searchLower = is_string($search) ? mb_strtolower($search) : $search;
@@ -64,6 +68,9 @@ class PersonaController extends Controller
                         }
                     }
                 });
+            })
+            ->when(!empty($filtros), function ($query) use ($filtros) {
+                return $this->aplicarFiltrosDinamicos($query, $filtros, ['search', 'all', 'id_tipo_persona', 'tipo_persona', 'id_tipoestado']);
             })
         ->orderBy('id', 'desc');
         if ($all) {

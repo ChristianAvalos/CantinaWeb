@@ -9,9 +9,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CreateProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class ProductoController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     /**
      * Display a listing of the resource.
      */
@@ -20,6 +23,7 @@ class ProductoController extends Controller
         $search = $request->input('search');
         $mes = $request->input('mes');
         $id_organizacion = Auth::user()->id_organizacion;
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         // Si el search es una fecha en formato dd/mm/yyyy, la convertimos a yyyy-mm-dd
         if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $search)) {
@@ -60,6 +64,9 @@ class ProductoController extends Controller
                 [$anio, $mesNum] = explode('-', $mes); // $mes debe venir como 'YYYY-MM'
                 $query->whereYear('UrevFechaHora', $anio)
                     ->whereMonth('UrevFechaHora', $mesNum);
+            })
+            ->when(!empty($filtros), function ($query) use ($filtros) {
+                return $this->aplicarFiltrosDinamicos($query, $filtros, ['search', 'mes']);
             })
             ->orderBy('id', 'desc')
             ->paginate(10);

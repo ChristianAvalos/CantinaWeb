@@ -17,6 +17,18 @@ const FILTROS_COMPRAS = [
         placeholder: 'Buscar compra...',
     },
     {
+        key: 'lote',
+        label: 'Lote',
+        type: 'text',
+        placeholder: 'Número de lote...',
+    },
+    {
+        key: 'nro_comprobante',
+        label: 'Número de comprobante',
+        type: 'text',
+        placeholder: 'Número de comprobante...',
+    },
+    {
         key: 'mes',
         label: 'Mes seleccionado',
         type: 'month',

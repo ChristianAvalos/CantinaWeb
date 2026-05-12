@@ -8,9 +8,12 @@ use App\Models\Transacciones;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateTransaccionDetalleRequest; 
 use App\Http\Requests\CreateTransaccionDetalleRequest; 
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class TransaccionesDetalleController extends Controller
 {
+    use AplicaFiltrosDinamicos;
+
     private function recalcularMontoCabecera($idTransaccion): float
     {
         $subtotal = TransaccionesDetalle::where('id_transaccion', $idTransaccion)->sum('subtotal');
@@ -32,6 +35,7 @@ class TransaccionesDetalleController extends Controller
     {
         $search = $request->input('search');
         $id_transaccion = $request->input('id_transaccion');
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         // Si no hay id_transaccion, retornar vacío
         if (!$id_transaccion) {
@@ -59,6 +63,9 @@ class TransaccionesDetalleController extends Controller
                             $q2->where('nombre', 'like', '%' . $search . '%');
                         });
                 });
+            })
+            ->when(!empty($filtros), function ($query) use ($filtros) {
+                return $this->aplicarFiltrosDinamicos($query, $filtros, ['search', 'id_transaccion']);
             })
             ->orderBy('id', 'desc')
             ->paginate(5);
