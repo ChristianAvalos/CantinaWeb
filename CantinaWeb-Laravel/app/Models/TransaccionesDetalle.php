@@ -16,6 +16,8 @@ class   TransaccionesDetalle extends Model
         'id_transaccion',
         'id_producto',
         'cantidad',
+        'lote',
+        'fecha_vencimiento',
         'precio_unitario',
         'subtotal',
         'UrevUsuario',

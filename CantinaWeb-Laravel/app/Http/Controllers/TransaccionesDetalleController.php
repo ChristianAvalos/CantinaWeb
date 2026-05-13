@@ -113,6 +113,8 @@ class TransaccionesDetalleController extends Controller
             'cantidad' => $cantidad,
             'precio_unitario' => $precioUnitario,
             'subtotal' => $subtotal,
+            'lote' => isset($data['lote']) ? (float) $data['lote'] : null,
+            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
             'UrevUsuario' => $usuario,
             'UrevFechaHora' => $request->Fecha ?? now(),
         ]);
@@ -176,6 +178,8 @@ class TransaccionesDetalleController extends Controller
         $detalle->update([
             'id_producto' => $producto->id,
             'cantidad' => $cantidad,
+            'lote' => isset($data['lote']) ? (float) $data['lote'] : null,
+            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
             'precio_unitario' => $precioUnitario,
             'subtotal' => $subtotal,
             'UrevUsuario' => $usuario,

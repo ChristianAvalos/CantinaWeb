@@ -800,10 +800,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <table className="min-w-full border border-gray-300 rounded-lg">
                                 <thead className="bg-gray-300">
                                     <tr>
+                                        <th className="px-2 py-2 border">Lote</th>
                                         <th className="px-2 py-2 border">Codigo de barra</th>
                                         <th className="px-3 py-2 border">Producto</th>
                                         <th className="px-3 py-2 border">Cantidad</th>
                                         <th className="px-3 py-2 border">Precio unitario</th>
+                                        <th className="px-3 py-2 border">Vencimineto</th>
                                         <th className="px-3 py-2 border">Sub total</th>
                                         <th className="px-3 py-2 border">Acciones</th>
                                     </tr>
@@ -813,10 +815,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     {transaccionDetalle && transaccionDetalle.length > 0 ? (
                                         transaccionDetalle.map((detalle, id) => (
                                             <tr key={id}>
+                                                <td className="px-3 py-2 border">{detalle.lote}</td>
                                                 <td className="px-3 py-2 border">{detalle.producto.codigo_barras}</td>
                                                 <td className="px-3 py-2 border">{detalle.producto.nombre}</td>
                                                 <td className="px-3 py-2 border">{formatearMiles(Number(detalle.cantidad))}</td>
                                                 <td className="px-3 py-2 border">{formatearGuarani(detalle.precio_unitario)}</td>
+                                                <td className="px-3 py-2 border">{detalle.fecha_vencimiento || 'Sin fecha'}</td>
                                                 <td className="px-3 py-2 border">{formatearGuarani(detalle.subtotal)}</td>
                                                 <td className="px-3 py-2 border">
                                                     <div className="flex space-x-2">

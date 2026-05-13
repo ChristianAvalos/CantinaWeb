@@ -12,13 +12,17 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
         const numero = Number(transaccionDetalle.cantidad);
         return Number.isFinite(numero) && transaccionDetalle.cantidad !== '' ? String(numero) : (transaccionDetalle.cantidad || '');
     });
+    const [lote, setLote] = useState(() => {
+    const numero = Number(transaccionDetalle.lote);
+    return Number.isFinite(numero) && transaccionDetalle.lote !== '' ? String(numero) : (transaccionDetalle.lote || '');
+    });
     const [unidad_medida, setUnidadMedida] = useState(transaccionDetalle.producto?.unidad_medida || '');
     const [precio_unitario, setPrecioUnitario] = useState(() => {
         const numero = Number(transaccionDetalle.precio_unitario);
         return Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || '');
     });
     const [subTotal, setSubTotal] = useState(transaccionDetalle.producto?.subtotal || '');
-    const [fecha, setFecha] = useState(transaccionDetalle.created_at ? formatDateToInput(transaccionDetalle.created_at) : formatDateToInput(new Date()));
+    const [fecha_vencimiento, setFechaVencimiento] = useState(transaccionDetalle.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
 
     const [errores, setErrores] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -44,13 +48,17 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 const numero = Number(transaccionDetalle.cantidad);
                 setCantidad(Number.isFinite(numero) && transaccionDetalle.cantidad !== '' ? String(numero) : (transaccionDetalle.cantidad || ''));
             }
+            {
+                const numero = Number(transaccionDetalle.lote);
+                setLote(Number.isFinite(numero) && transaccionDetalle.lote !== '' ? String(numero) : (transaccionDetalle.lote || ''));
+            }
             setUnidadMedida(transaccionDetalle.unidad_medida || '');
             setSubTotal(transaccionDetalle.subtotal || '');
             {
                 const numero = Number(transaccionDetalle.precio_unitario);
                 setPrecioUnitario(Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || ''));
             }
-            setFecha(transaccionDetalle.created_at ? formatDateToInput(transaccionDetalle.created_at) : formatDateToInput(new Date()));
+            setFechaVencimiento(transaccionDetalle.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
         }
     }, [transaccionDetalle, modo]); // Dependencia en 'transacciondetalle' y 'modo'
 
@@ -106,9 +114,10 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 codigo_barras: codigo_barras,
                 unidad_medida: unidad_medida,
                 cantidad: cantidadNumber,
+                lote: lote ? Number(lote) : null,
                 precio_unitario: precioUnitarioNumber,
                 subtotal: subtotalNumber,
-                Fecha: fecha,
+                fecha_vencimiento: fecha_vencimiento,
                 id_transaccion: id_transaccion
             };
             if (modo === 'crear') {
@@ -165,6 +174,28 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-h-[80vh] overflow-y-auto">
                         {/* Campos del formulario */}
                         <div className="col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+                            {/* Campo para lote */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                                <input
+                                    type="text"
+                                    min="0"
+                                    className={`w-full px-3 py-2 border ${(errores && errores.lote) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Introduce el lote"
+                                    value={formatearMiles(Number(lote))}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setLote(soloNumeros);
+                                    }}
+                                />
+                                {errores && errores.lote && Array.isArray(errores.lote) && (
+                                    <p className="text-red-500 text-sm">{errores.lote[0]}</p>
+                                )}
+                            </div>
+
                             {/* Campo para Codigo de barras */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Codigo de barras</label>
@@ -237,6 +268,19 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 {errores && errores.precio_unitario && Array.isArray(errores.precio_unitario) && (
                                     <p className="text-red-500 text-sm">{errores.precio_unitario[0]}</p>
                                 )}
+                            </div>
+                            {/* Campo para vencimiento */}
+                            <div className="mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
+                                <input
+                                    type="date"
+                                    className={`w-full px-3 py-2 border ${errores.fecha_vencimiento ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Introduce la fecha de vencimiento"
+                                    value={fecha_vencimiento}
+                                    onChange={(e) => setFechaVencimiento(e.target.value)}
+                                />
+
+                                {errores.fecha_vencimiento && <p className="text-red-500 text-sm">{errores.fecha_vencimiento[0]}</p>}
                             </div>
                         </div>
                     </div>
