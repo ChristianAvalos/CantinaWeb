@@ -175,27 +175,6 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                         {/* Campos del formulario */}
                         <div className="col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
 
-                            {/* Campo para lote */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-                                <input
-                                    type="text"
-                                    min="0"
-                                    className={`w-full px-3 py-2 border ${(errores && errores.lote) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Introduce el lote"
-                                    value={formatearMiles(Number(lote))}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setLote(soloNumeros);
-                                    }}
-                                />
-                                {errores && errores.lote && Array.isArray(errores.lote) && (
-                                    <p className="text-red-500 text-sm">{errores.lote[0]}</p>
-                                )}
-                            </div>
-
                             {/* Campo para Codigo de barras */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Codigo de barras</label>
@@ -228,6 +207,28 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                     <p className="text-red-500 text-sm">{errores.nombre[0]}</p>
                                 )}
                             </div>
+
+                             {/* Campo para lote */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                                <input
+                                    type="text"
+                                    min="0"
+                                    className={`w-full px-3 py-2 border ${(errores && errores.lote) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Introduce el lote"
+                                    value={formatearMiles(Number(lote))}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setLote(soloNumeros);
+                                    }}
+                                />
+                                {errores && errores.lote && Array.isArray(errores.lote) && (
+                                    <p className="text-red-500 text-sm">{errores.lote[0]}</p>
+                                )}
+                            </div>
+                            
                             {/* Campo para cantidad */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>

@@ -64,6 +64,7 @@ class TransaccionesController extends Controller
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
                 $q->where(function ($s) use ($search, $searchFecha) {
                     $s->where('nombre', 'ilike', '%' . $search . '%')
+                        ->orWhere('descripcion', 'ilike', '%' . $search . '%')
                         ->orWhere('monto', 'ilike', '%' . $search . '%')
                         ->orWhereHas('persona', function ($q2) use ($search) {
                             $q2->where('nombre', 'ilike', '%' . $search . '%');

@@ -14,13 +14,7 @@ const FILTROS_COMPRAS = [
         key: 'search',
         label: 'Buscar compra',
         type: 'text',
-        placeholder: 'Buscar compra...',
-    },
-    {
-        key: 'lote',
-        label: 'Lote',
-        type: 'text',
-        placeholder: 'Número de lote...',
+        placeholder: 'Buscar compra (nombre,descripción,proveedor,monto...)',
     },
     {
         key: 'nro_comprobante',
