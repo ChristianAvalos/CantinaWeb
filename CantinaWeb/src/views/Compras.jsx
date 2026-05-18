@@ -196,7 +196,6 @@ export default function Compras() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
                                             <th>Organización</th>
-                                            <th>Nro. Lote</th>
                                             <th>Nro. Comprobante</th>
                                             <th>Nombre</th>
                                             <th>Descripcción</th>
@@ -216,7 +215,6 @@ export default function Compras() {
                                                 <tr key={compra.id}>
                                                     <td>{compra.id}</td>
                                                     <td className="text-center">{compra.organizacion.RazonSocial}</td>
-                                                    <td className="text-center">{compra.lote}</td>
                                                     <td className="text-center">{compra.nro_comprobante}</td>
                                                     <td>{compra.nombre}</td>
                                                     <td>{compra.descripcion}</td>

@@ -519,7 +519,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.fecha && <p className="text-red-500 text-sm">{errores.fecha[0]}</p>}
                             </div>
 
-                            {/* Campo para lote */}
+                            {/* Campo para lote
                             <div className="mb-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
                                 <input
@@ -530,7 +530,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     onChange={(e) => setForm({ ...form, lote: e.target.value })}
                                 />
                                 {errores.lote && <p className="text-red-500 text-sm">{errores.lote[0]}</p>}
-                            </div>
+                            </div> */}
 
                             {/* Tipo de comprobante */}
                             <div>
@@ -856,7 +856,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={6} className="px-3 py-2 text-center text-gray-500 border">
+                                            <td colSpan={8} className="px-3 py-2 text-center text-gray-500 border">
                                                 No hay detalles cargados.
                                             </td>
                                         </tr>
