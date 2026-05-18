@@ -29,15 +29,24 @@ const FILTROS_COMPRAS = [
         placeholder: 'Número de comprobante...',
     },
     {
-        key: 'mes',
-        label: 'Mes seleccionado',
-        type: 'month',
+        key: 'fecha_desde',
+        label: 'Fecha desde',
+        type: 'date',
+    },
+    {
+        key: 'fecha_hasta',
+        label: 'Fecha hasta',
+        type: 'date',
     },
 ];
 
+const inicioMesActual = dayjs().startOf('month').format('YYYY-MM-DD');
+const finMesActual = dayjs().endOf('month').format('YYYY-MM-DD');
+
 const FILTROS_COMPRAS_INICIALES = {
     search: '',
-    mes: dayjs().format('YYYY-MM'),
+    fecha_desde: inicioMesActual,
+    fecha_hasta: finMesActual,
 };
 
 export default function Compras() {

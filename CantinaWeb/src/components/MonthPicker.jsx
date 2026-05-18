@@ -51,6 +51,8 @@ export default function MonthPicker({
     useEffect(() => {
         if (anioSeleccionado !== null) {
             setAnioVista(anioSeleccionado);
+        } else {
+            setAnioVista(dayjs().year());
         }
     }, [anioSeleccionado]);
 
@@ -145,6 +147,15 @@ export default function MonthPicker({
         setAbierto(false);
     };
 
+    const limpiarMes = () => {
+        if (typeof onChange === 'function') {
+            onChange('');
+        }
+
+        setAbierto(false);
+        setAnioVista(dayjs().year());
+    };
+
     const irAlMesActual = () => {
         const hoy = dayjs();
         const siguienteValor = hoy.format('YYYY-MM');
@@ -166,7 +177,7 @@ export default function MonthPicker({
                     ref={buttonRef}
                     type="button"
                     onClick={() => setAbierto((estadoAnterior) => !estadoAnterior)}
-                    className="relative flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-center shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`relative flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-center shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${value ? 'pr-16' : 'pr-10'}`}
                 >
                     <span className="text-center text-gray-900">{formatearValor(value)}</span>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -175,6 +186,20 @@ export default function MonthPicker({
                         </svg>
                     </span>
                 </button>
+
+                {value ? (
+                    <button
+                        type="button"
+                        onClick={limpiarMes}
+                        className="absolute right-10 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                        aria-label="Limpiar mes"
+                        title="Limpiar mes"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414L11.414 10l1.293 1.293a1 1 0 01-1.414 1.414L10 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L8.586 10 7.293 8.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                ) : null}
 
                 {abierto && popupStyle && createPortal(
                     <div

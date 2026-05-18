@@ -91,6 +91,25 @@ export default function FiltrosBar({
             );
         }
 
+        if (definition.type === 'date') {
+            return (
+                <label key={definition.key} className="block">
+                    {renderLabel(definition.label)}
+                    <input
+                        type="date"
+                        value={currentValue}
+                        onChange={(event) => handleChange(definition.key, event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                handleApply();
+                            }
+                        }}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                </label>
+            );
+        }
+
         if (definition.type === 'select') {
             return (
                 <label key={definition.key} className="block">

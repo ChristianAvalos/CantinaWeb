@@ -28,6 +28,8 @@ class TransaccionesController extends Controller
 
         $search = $filtros['search'] ?? $request->input('search');
         $mes = $filtros['mes'] ?? $request->input('mes');
+        $fechaDesde = $filtros['fecha_desde'] ?? $request->input('fecha_desde');
+        $fechaHasta = $filtros['fecha_hasta'] ?? $request->input('fecha_hasta');
         $tipo = $filtros['tipo'] ?? $request->input('tipo');
 
         // Si el search es una fecha en formato dd/mm/yyyy, la convertimos a yyyy-mm-dd
@@ -72,21 +74,30 @@ class TransaccionesController extends Controller
 
                     // Si el search es una fecha válida, buscar por fecha exacta
                     if ($searchFecha) {
-                        $s->orWhereDate('UrevFechaHora', $searchFecha);
+                        $s->orWhereDate('fecha', $searchFecha);
                     }
                 });
             })
             ->when($tipo, function ($q, $tipo) {
                 $q->where('id_TipoMovimiento', $tipo);
             })
+            ->when($fechaDesde || $fechaHasta, function ($q) use ($fechaDesde, $fechaHasta) {
+                if ($fechaDesde) {
+                    $q->whereDate('fecha', '>=', $fechaDesde);
+                }
+
+                if ($fechaHasta) {
+                    $q->whereDate('fecha', '<=', $fechaHasta);
+                }
+            })
             // Filtro por mes si viene el parámetro
             ->when($mes, function ($q, $mes) {
                 [$anio, $mesNum] = explode('-', $mes); // $mes debe venir como 'YYYY-MM'
-                $q->whereYear('UrevFechaHora', $anio)
-                    ->whereMonth('UrevFechaHora', $mesNum);
+                $q->whereYear('fecha', $anio)
+                    ->whereMonth('fecha', $mesNum);
             })
             ->when(!empty($filtros), function ($q) use ($filtros) {
-                return $this->aplicarFiltrosDinamicos($q, $filtros, ['search', 'mes', 'tipo', 'ejercicio']);
+                return $this->aplicarFiltrosDinamicos($q, $filtros, ['search', 'mes', 'fecha_desde', 'fecha_hasta', 'tipo', 'ejercicio']);
             })
             ->orderBy('id', 'desc')
             ->paginate(10);
