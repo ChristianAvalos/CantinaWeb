@@ -85,6 +85,14 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
     const [transaccionAEliminar, setTransaccionAEliminar] = useState(null);
 
+    const nombreRef = useRef(null);
+    // Enfocar el campo de nombre al abrir el modal
+    useEffect(() => {
+        if (nombreRef.current) {
+            nombreRef.current.focus();
+        }
+    }, []);
+
     // Función única para crear/actualizar transacción
     const guardarTransaccion = async (modo) => {
         try {
@@ -497,6 +505,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 <input
                                     type="text"
                                     name='nombre'
+                                    ref={nombreRef}
                                     className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     placeholder="Introduce el nombre"
                                     value={form.nombre}
