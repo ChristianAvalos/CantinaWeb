@@ -626,6 +626,27 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
                             </div>
 
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
+                                <select
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    value={organizacionSeleccionada}
+                                    onChange={(e) => {
+                                        const id = e.target.value;
+                                        setorganizacionSeleccionada(id);
+                                        setForm(prev => ({ ...prev, id_organizacion: id }));
+                                    }}
+                                >
+                                    <option value="">Seleccione una organizacion</option>
+                                    {organizaciones.map((organizacion) => (
+                                        <option key={organizacion.id} value={organizacion.id}>
+                                            {organizacion.RazonSocial}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
+                            </div>
+
 
                             {/* Campo para Persona (Proveedor/Cliente) */}
                             <div className="mb-2 col-span-2 relative">
@@ -727,26 +748,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
 
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
-                                <select
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    value={organizacionSeleccionada}
-                                    onChange={(e) => {
-                                        const id = e.target.value;
-                                        setorganizacionSeleccionada(id);
-                                        setForm(prev => ({ ...prev, id_organizacion: id }));
-                                    }}
-                                >
-                                    <option value="">Seleccione una organizacion</option>
-                                    {organizaciones.map((organizacion) => (
-                                        <option key={organizacion.id} value={organizacion.id}>
-                                            {organizacion.RazonSocial}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
-                            </div>
+                           
                         </div>
                     </div>
 
