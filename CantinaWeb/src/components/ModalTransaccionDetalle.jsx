@@ -12,10 +12,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
         const numero = Number(transaccionDetalle.cantidad);
         return Number.isFinite(numero) && transaccionDetalle.cantidad !== '' ? String(numero) : (transaccionDetalle.cantidad || '');
     });
-    const [lote, setLote] = useState(() => {
-    const numero = Number(transaccionDetalle.lote);
-    return Number.isFinite(numero) && transaccionDetalle.lote !== '' ? String(numero) : (transaccionDetalle.lote || '');
-    });
+    const [lote, setLote] = useState(transaccionDetalle.lote || '');
     const [unidad_medida, setUnidadMedida] = useState(transaccionDetalle.producto?.unidad_medida || '');
     const [precio_unitario, setPrecioUnitario] = useState(() => {
         const numero = Number(transaccionDetalle.precio_unitario);
@@ -48,10 +45,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 const numero = Number(transaccionDetalle.cantidad);
                 setCantidad(Number.isFinite(numero) && transaccionDetalle.cantidad !== '' ? String(numero) : (transaccionDetalle.cantidad || ''));
             }
-            {
-                const numero = Number(transaccionDetalle.lote);
-                setLote(Number.isFinite(numero) && transaccionDetalle.lote !== '' ? String(numero) : (transaccionDetalle.lote || ''));
-            }
+            setLote(transaccionDetalle.lote || '');
             setUnidadMedida(transaccionDetalle.unidad_medida || '');
             setSubTotal(transaccionDetalle.subtotal || '');
             {
@@ -114,7 +108,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 codigo_barras: codigo_barras,
                 unidad_medida: unidad_medida,
                 cantidad: cantidadNumber,
-                lote: lote ? Number(lote) : null,
+                lote: lote,
                 precio_unitario: precioUnitarioNumber,
                 subtotal: subtotalNumber,
                 fecha_vencimiento: fecha_vencimiento,
@@ -213,16 +207,10 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
                                 <input
                                     type="text"
-                                    min="0"
                                     className={`w-full px-3 py-2 border ${(errores && errores.lote) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     placeholder="Introduce el lote"
-                                    value={formatearMiles(Number(lote))}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setLote(soloNumeros);
-                                    }}
+                                    value={lote}
+                                    onChange={(e) => setLote(e.target.value)}
                                 />
                                 {errores && errores.lote && Array.isArray(errores.lote) && (
                                     <p className="text-red-500 text-sm">{errores.lote[0]}</p>

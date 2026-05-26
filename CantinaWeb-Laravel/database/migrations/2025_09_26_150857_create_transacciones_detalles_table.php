@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_transaccion');
             $table->unsignedBigInteger('id_producto');
             $table->decimal('cantidad',19,4);
-            $table->decimal('lote',19,4)->nullable();
+            $table->string('lote')->nullable();
             $table->date('fecha_vencimiento')->nullable();
             $table->decimal('precio_unitario',19,4);
             $table->decimal('subtotal',19,4);

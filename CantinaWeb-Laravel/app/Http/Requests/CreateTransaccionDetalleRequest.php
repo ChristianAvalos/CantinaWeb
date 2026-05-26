@@ -23,7 +23,7 @@ class CreateTransaccionDetalleRequest extends FormRequest
     {
         return [
                 'codigo_barras' => ['required', 'string', 'not_in:0', 'exists:productos,codigo_barras'],
-                'lote' => ['nullable', 'numeric'],
+                'lote' => ['nullable', 'string'],
                 'fecha_vencimiento' => ['nullable', 'date'],
                 'precio_unitario' => ['required', 'numeric', 'gt:0'],
                 'cantidad' => ['required', 'numeric', 'gt:0']
@@ -42,7 +42,7 @@ class CreateTransaccionDetalleRequest extends FormRequest
                 'cantidad.required' => 'La cantidad es obligatoria',
                 'cantidad.numeric' => 'La cantidad debe ser numérica',
                 'cantidad.gt' => 'La cantidad debe ser mayor a 0',
-                'lote.numeric' => 'El lote debe ser numérico',
+                'lote.string' => 'El lote debe ser una cadena de texto',
                 'fecha_vencimiento.date' => 'La fecha de vencimiento debe ser una fecha válida',
             ];
         }
