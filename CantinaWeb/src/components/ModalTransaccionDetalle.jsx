@@ -66,9 +66,13 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                             Authorization: `Bearer ${token}`
                         }
                     });
-                    if (data && data.producto) {
+                        if (data && data.producto) {
                         setNombre(data.producto.nombre || '');
                         setUnidadMedida(data.producto.unidad_medida || '');
+                        // Autocompletar precio unitario si el producto tiene un precio de compra definido
+                        if (data.producto.precio_compra && modo === 'crear') {
+                            setPrecioUnitario(String(data.producto.precio_compra));
+                        }
                     } else {
                         setNombre('');
                         setUnidadMedida('');
