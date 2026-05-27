@@ -31,6 +31,7 @@ class RolePermissionSeeder extends Seeder
             'Personas',
             'Categorias',
             'Productos',
+            'Precio_Ventas',
         ];
 
         foreach ($permissions as $permission) {

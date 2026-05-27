@@ -239,6 +239,15 @@ export default function SideNav() {
                     </li>
                   )}
 
+                  {hasPermission('Precio_Ventas') && (
+                    <li>
+                      <Link to="/precio-ventas" className={getItemLinkClasses('/precio-ventas')}>
+                        <img src="/img/Icon/account-statement-filled.png" alt="Precio Ventas" className="h-5 w-5 shrink-0" />
+                        <span>Precio Ventas</span>
+                      </Link>
+                    </li>
+                  )}
+
 
                 </ul>
               </li>

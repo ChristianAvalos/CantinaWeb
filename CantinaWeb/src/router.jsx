@@ -22,6 +22,7 @@ const Persona = lazy(() => import("./views/Personas"));
 const Compras = lazy(() => import("./views/Compras"));
 const Ventas = lazy(() => import("./views/Ventas"));
 const Ajustes = lazy(() => import("./views/Ajustes"));
+const PrecioVentas = lazy(() => import("./views/PrecioVentas"));
 
 function withSuspense(element) {
     return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -139,6 +140,14 @@ const router = createBrowserRouter ([
                 element: withSuspense(
                 <ProtectedRoute permission="Personas">
                     <Persona/>
+                </ProtectedRoute>
+                )
+            },
+            {
+                path:'/precio-ventas',
+                element: withSuspense(
+                <ProtectedRoute permission="Precio_Ventas">
+                    <PrecioVentas/>
                 </ProtectedRoute>
                 )
             },
