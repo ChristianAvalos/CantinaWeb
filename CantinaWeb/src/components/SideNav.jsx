@@ -193,7 +193,8 @@ export default function SideNav() {
           <ul className="space-y-1" role="menu">
 
             {(hasPermission('Transacciones') || hasPermission('Categorias')  
-                || hasPermission('Compras') || hasPermission('Ventas') || hasPermission('Ajustes')         
+                || hasPermission('Compras') || hasPermission('Ventas') || hasPermission('Ajustes')
+                || hasPermission('Precio_Ventas')         
               )
             && (
 
