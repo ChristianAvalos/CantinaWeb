@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use App\Models\User;
-use App\Models\Persona;
-use App\Models\Producto;
 use App\Models\Organizacion;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Persona;
+use App\Models\PrecioVenta;
+use App\Models\Producto;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class TipoEstado extends Model
 {
@@ -57,5 +58,11 @@ class TipoEstado extends Model
     public function personas()
     {
         return $this->hasMany(Persona::class, 'id_tipoestado');
+    }
+
+    //relacion con precio_ventas
+    public function precioVentas()
+    {
+        return $this->hasMany(PrecioVenta::class, 'id_tipoestado');
     }
 }

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use App\Models\Categorias;
-use App\Models\TipoEstado;
 use App\Models\Organizacion;
+use App\Models\PrecioVenta;
+use App\Models\TipoEstado;
 use App\Models\TipoUnidadMedida;
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
@@ -66,5 +67,12 @@ class Producto extends Model
     {
         return $this->belongsTo(TipoEstado::class, 'id_TipoEstado');
     }
+
+    //relacion con precio venta
+    public function precioVenta()
+    {
+        return $this->hasMany(PrecioVenta::class, 'id_producto');
+    }
+    
 
 }

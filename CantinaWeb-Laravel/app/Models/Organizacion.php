@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use App\Models\Pais;
-use App\Models\User;
 use App\Models\Ciudad;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Pais;
+use App\Models\PrecioVenta;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Organizacion extends Model
 {
@@ -87,4 +88,11 @@ class Organizacion extends Model
     {
         return $this->hasMany(Categorias::class, 'id_organizacion');
     }
+
+    //relacion con precios de venta
+    public function precioVentas()
+    {
+        return $this->hasMany(PrecioVenta::class, 'id_organizacion');
+    }
+    
 }

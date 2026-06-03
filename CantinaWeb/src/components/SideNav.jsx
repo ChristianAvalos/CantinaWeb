@@ -3,12 +3,17 @@ import React, { useEffect, useState } from 'react';
 import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';
 
-const buildExpandedSections = (pathname) => ({
-  operaciones: pathname === '/compras' || pathname === '/ventas' || pathname === '/ajustes' || pathname === '/transacciones',
-  definiciones: pathname === '/productos' || pathname === '/categorias' || pathname === '/personas',
-  herramientas: pathname === '/organizacion' || pathname === '/usuarios' || pathname === '/usuarios/roles',
-  reportes: pathname === '/usuarios/reporte',
-});
+const sectionRoutes = {
+  operaciones: ['/compras', '/ventas', '/ajustes', '/transacciones', '/precio-ventas'],
+  definiciones: ['/productos', '/categorias', '/personas'],
+  herramientas: ['/organizacion', '/usuarios', '/usuarios/roles'],
+  reportes: ['/usuarios/reporte'],
+};
+
+const buildExpandedSections = (pathname) =>
+  Object.fromEntries(
+    Object.entries(sectionRoutes).map(([section, routes]) => [section, routes.includes(pathname)])
+  );
 
 export default function SideNav() {
   const { hasPermission, loading } = useAuthPermisos();

@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
+use App\Models\PrecioVenta;
 use App\Models\Transacciones;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoMoneda extends Model
@@ -33,5 +34,11 @@ class TipoMoneda extends Model
     public function transacciones()
     {
         return $this->hasMany(Transacciones::class, 'id_TipoMoneda');
+    }
+
+    //relacion con precio_ventas
+    public function precioVentas()
+    {
+        return $this->hasMany(PrecioVenta::class, 'id_tipo_moneda');
     }
 }
