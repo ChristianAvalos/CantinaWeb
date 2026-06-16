@@ -13,13 +13,13 @@ const FILTROS_PrecioVenta = [
         key: 'search',
         label: 'Buscar precio de venta',
         type: 'text',
-        placeholder: 'Buscar precio de venta...',
+        placeholder: 'Buscar por nombre del producto...',
     },
     {
-        key: 'nombre',
-        label: 'Nombre del producto',
+        key: 'precio',
+        label: 'Precio',
         type: 'text',
-        placeholder: 'Buscar por nombre del producto...',
+        placeholder: 'Filtrar por precio...',
     },
 ];
 
@@ -76,7 +76,7 @@ export default function PrecioVenta() {
     //funcion para obtener los precios de venta
     const fetchPreciosVenta = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
-            const preciosVenta = await obtenerPreciosVenta(page, filtros.search ?? '');        
+            const preciosVenta = await obtenerPreciosVenta(page, filtros);        
             setPreciosVenta(preciosVenta.data);
             setTotalPaginas(preciosVenta.last_page);
             setTotalRegistros(preciosVenta.total);
@@ -101,9 +101,24 @@ export default function PrecioVenta() {
     };
 
 
-    const obtenerPreciosVenta = async (page = 1, search = '') => {
+    const obtenerPreciosVenta = async (page = 1, filtros = {}) => {
         const token = localStorage.getItem('AUTH_TOKEN');
-        const { data } = await clienteAxios.get(`api/precio_venta?page=${page}&search=${search}`, {
+        const params = new URLSearchParams({ page });
+
+        // Search va como query param directo
+        if (filtros.search) params.append('search', filtros.search);
+
+        // Los demás filtros se mandan dinámicamente como JSON en "filtros"
+        const { search, ...otrosFiltros } = filtros;
+        const filtrosLimpios = Object.fromEntries(
+            Object.entries(otrosFiltros).filter(([, value]) => value !== undefined && value !== null && value !== '')
+        );
+
+        if (Object.keys(filtrosLimpios).length > 0) {
+            params.append('filtros', JSON.stringify(filtrosLimpios));
+        }
+
+        const { data } = await clienteAxios.get(`api/precio_venta?${params}`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
