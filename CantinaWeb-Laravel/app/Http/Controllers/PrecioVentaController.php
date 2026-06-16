@@ -5,15 +5,42 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePrecioVentaRequest;
 use App\Http\Requests\UpdatePrecioVentaRequest;
 use App\Models\PrecioVenta;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 
 class PrecioVentaController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    use AplicaFiltrosDinamicos;
+
+    public function index(Request $request)
     {
-        //
+        $search = $request->input('search');
+        $filtros = $this->normalizarFiltros($request->input('filtros', []));
+
+        if ($request->query('all')) {
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion']);
+            if (!empty($filtros)) {
+                $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
+            }
+            $precio_ventas = $precio_ventas_Query->get();
+        } else {
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion']);
+
+            if ($search) {
+                $precio_ventas_Query->where('nombre', 'ilike', '%' . $search . '%');
+            }
+
+            if (!empty($filtros)) {
+                $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
+            }
+
+            $precio_ventas = $precio_ventas_Query->paginate(10);
+        }
+        return response()->json($precio_ventas);
+
     }
 
     /**

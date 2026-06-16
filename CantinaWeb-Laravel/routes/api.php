@@ -1,27 +1,28 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoriasController;
+use App\Http\Controllers\CiudadController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FormaPagoController;
+use App\Http\Controllers\OrganizacionController;
+use App\Http\Controllers\PaisController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\PrecioVentaController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TipoComprobanteController;
+use App\Http\Controllers\TipoEstadoController;
+use App\Http\Controllers\TipoMovimientosController;
+use App\Http\Controllers\TipoPagoController;
+use App\Http\Controllers\TipoPersonaController;
+use App\Http\Controllers\TipoUnidadMedidaController;
+use App\Http\Controllers\TransaccionesController;
+use App\Http\Controllers\TransaccionesDetalleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PaisController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\CiudadController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\PersonaController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\TipoPagoController;
-use App\Http\Controllers\FormaPagoController;
-use App\Http\Controllers\CategoriasController;
-use App\Http\Controllers\PermissionController;
-use App\Http\Controllers\TipoEstadoController;
-use App\Http\Controllers\TipoPersonaController;
-use App\Http\Controllers\OrganizacionController;
-use App\Http\Controllers\TransaccionesController;
-use App\Http\Controllers\TipoComprobanteController;
-use App\Http\Controllers\TipoMovimientosController;
-use App\Http\Controllers\TipoUnidadMedidaController;
-use App\Http\Controllers\TransaccionesDetalleController;
-use App\Http\Controllers\DashboardController;
 
 
 /*
@@ -136,6 +137,9 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //tipo de comprobante
     Route::get('/tipo_comprobante',[TipoComprobanteController::class,'index']);
+
+    //precio de venta
+    Route::get('/precio_venta',[PrecioVentaController::class,'index']);
 
 });
 

@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import ModalCategoria from "../components/ModalCategoria";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
-import { obtenerCategorias } from '../helpers/HelpersUsuarios';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import { formatearGuarani } from '../helpers/HelpersNumeros';
+
 
 const FILTROS_PrecioVenta = [
     {
@@ -13,6 +14,12 @@ const FILTROS_PrecioVenta = [
         label: 'Buscar precio de venta',
         type: 'text',
         placeholder: 'Buscar precio de venta...',
+    },
+    {
+        key: 'nombre',
+        label: 'Nombre del producto',
+        type: 'text',
+        placeholder: 'Buscar por nombre del producto...',
     },
 ];
 
@@ -93,6 +100,17 @@ export default function PrecioVenta() {
         }
     };
 
+
+    const obtenerPreciosVenta = async (page = 1, search = '') => {
+        const token = localStorage.getItem('AUTH_TOKEN');
+        const { data } = await clienteAxios.get(`api/precio_venta?page=${page}&search=${search}`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        return data;
+    };
+
     //para la eliminacion de precios de venta seleccionados 
     const handleDelete = async (id) => {
 
@@ -105,7 +123,7 @@ export default function PrecioVenta() {
 
     const confirmarEliminacion = async () => {
         try {
-            const response = await clienteAxios.delete(`api/precios-venta/${precioVentaAEliminar}`, {
+            const response = await clienteAxios.delete(`api/precio_venta/${precioVentaAEliminar}`, {
                 headers: {
                     Authorization: `Bearer ${token}` // Configurar el token en los headers
                 }
@@ -182,11 +200,10 @@ export default function PrecioVenta() {
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
                                                 <td>{precioVenta.id}</td>
-                                                <td>{precioVenta.nombre}</td>
-                                                <td>{precioVenta.organizacion}</td>
-                                                <td>{precioVenta.tipoMoneda}</td>
-                                                <td>{precioVenta.precio}</td>
-                                                <td>{precioVenta.utilidades}</td>
+                                                <td>{precioVenta.producto.nombre}</td>
+                                                <td>{precioVenta.organizacion.RazonSocial}</td>
+                                                <td>{precioVenta.tipo_moneda.nombre}</td>
+                                                <td>{formatearGuarani(precioVenta.precio)}</td>
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', precioVenta)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
