@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\StorePrecioVentaRequest;
 use App\Http\Requests\UpdatePrecioVentaRequest;
+use App\Http\Resources\PrecioVentaResource;
 use App\Models\PrecioVenta;
+use App\Models\TipoEstado;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use Illuminate\Support\Facades\Auth;
 
 class PrecioVentaController extends Controller
 {
@@ -21,16 +25,18 @@ class PrecioVentaController extends Controller
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         if ($request->query('all')) {
-            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion']);
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
             $precio_ventas = $precio_ventas_Query->get();
         } else {
-            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion']);
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
 
             if ($search) {
-                $precio_ventas_Query->where('nombre', 'ilike', '%' . $search . '%');
+                $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
+                    $q->where('nombre', 'ilike', '%' . $search . '%');
+                });
             }
 
             if (!empty($filtros)) {
@@ -39,7 +45,7 @@ class PrecioVentaController extends Controller
 
             $precio_ventas = $precio_ventas_Query->paginate(10);
         }
-        return response()->json($precio_ventas);
+        return PrecioVentaResource::collection($precio_ventas);
 
     }
 
@@ -81,6 +87,24 @@ class PrecioVentaController extends Controller
     public function update(UpdatePrecioVentaRequest $request, PrecioVenta $precioVenta)
     {
         //
+    }
+    public function estadoPrecioVenta($id, Request $request)
+    {
+        // Formalizar: convertir "Activo"/"Inactivo" al id_tipoestado real
+        $tipoEstado = TipoEstado::where('descripcion', $request->id_tipoestado)->firstOrFail();
+        
+        // Buscar el precio de venta por ID
+        $precioVenta = PrecioVenta::findOrFail($id);
+        //Asigno el estado del precio de venta
+        $precioVenta->id_tipoestado = $tipoEstado->id;
+        //Asigno el usuario que realizó la actualización
+        $precioVenta->UrevUsuario = Auth::user()->name;
+        //Asigno la fecha y hora de la actualización
+        $precioVenta->UrevFechaHora = Carbon::now();
+        //Guardo los cambios
+        $precioVenta->save();
+
+        return response()->json(['message' => 'Estado del precio de venta actualizado correctamente.'], 200);
     }
 
     /**

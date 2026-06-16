@@ -151,6 +151,9 @@ export default function PrecioVenta() {
         if (accionConfirmadaModal == 'delete') {
             confirmarEliminacion();
         }
+        if (accionConfirmadaModal == 'PrecioVentaActive') {
+            PrecioVentaActive();
+        }
 
     };
 
@@ -161,6 +164,39 @@ export default function PrecioVenta() {
     const handleAplicarFiltros = (nuevosFiltros) => {
         setFiltrosAplicados(nuevosFiltros);
         setPaginaActual(1);
+    };
+
+     //para activar/desactivar precio venta seleccionados
+    const handlePrecioVentaActive = async (id, tipoestado) => {
+        const accion = tipoestado === 'Activo' ? 'Desactivar' : 'Activar';
+
+        setPrecioVentaSeleccionado(id);
+        setTipoEstadoSeleccionado(tipoestado);
+        setAccionConfirmadaModal('PrecioVentaActive');
+        setTipoAlertaModal('confirmacion');
+        setMensajeAlertaModal(`¿Estás seguro de que deseas ${accion} al precio de venta?`);
+        setMostrarAlertaModal(true);
+    };
+
+    const PrecioVentaActive = async () => {
+        try {
+            const nuevoEstado = tipoEstadoSeleccionado === 'Activo' ? 'Inactivo' : 'Activo'; // Cambiar el estado
+            const accion2 = tipoEstadoSeleccionado === 'Activo' ? 'Desactivado' : 'Activado';
+
+
+            await clienteAxios.post(`api/precio_venta_estado/${precioVentaSeleccionado}`,
+                {
+                    id_tipoestado: nuevoEstado
+                }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(`Precio de venta ${accion2} correctamente.`);
+            fetchPreciosVenta();
+        } catch (error) {
+            toast.error('Hubo un problema al cambiar el estado del precio de venta.');
+        } finally {
+            setPrecioVentaSeleccionado(null);
+        }
     };
 
 
@@ -200,9 +236,9 @@ export default function PrecioVenta() {
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
                                                 <td>{precioVenta.id}</td>
-                                                <td>{precioVenta.producto.nombre}</td>
-                                                <td>{precioVenta.organizacion.RazonSocial}</td>
-                                                <td>{precioVenta.tipo_moneda.nombre}</td>
+                                                <td>{precioVenta.nombre}</td>
+                                                <td>{precioVenta.organizacion}</td>
+                                                <td>{precioVenta.tipoMoneda}</td>
                                                 <td>{formatearGuarani(precioVenta.precio)}</td>
                                                 <td>
                                                     <div className="flex space-x-2">
@@ -211,6 +247,13 @@ export default function PrecioVenta() {
                                                         </button>
                                                         <button onClick={() => handleDelete(precioVenta.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
                                                             <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
+                                                        </button>
+                                                        <button onClick={() => handlePrecioVentaActive(precioVenta.id, precioVenta.tipoEstado)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
+                                                            {precioVenta.tipoEstado === 'Activo' ? (
+                                                                <img src="/img/Icon/toggle-on.png" alt="Edit Precio Venta" className="w-5 h-5 mr-2" />
+                                                            ) : (
+                                                                <img src="/img/Icon/toggle-off.png" alt="Edit Precio Venta" className="w-5 h-5 mr-2" />
+                                                            )}
                                                         </button>
                                                     </div>
                                                 </td>

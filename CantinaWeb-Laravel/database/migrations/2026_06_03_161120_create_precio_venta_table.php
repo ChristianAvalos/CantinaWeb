@@ -18,6 +18,8 @@ return new class extends Migration
             $table->unsignedBigInteger('id_tipoestado'); // 1: Activo, 2: Inactivo
             $table->unsignedBigInteger('id_tipo_moneda');
             $table->decimal('precio', 15, 2);
+            $table->string('UrevUsuario')->nullable();
+            $table->dateTime('UrevFechaHora')->nullable();
             $table->timestamps();
 
 
