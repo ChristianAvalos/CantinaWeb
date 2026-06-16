@@ -169,17 +169,24 @@ export default function PrecioVenta() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
                                             <th>Nombre</th>
+                                            <th>Organización</th>
+                                            <th>Tipo de moneda</th>
+                                            <th>Precio</th>
                                             <th>Utilidades</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {preciosVenta.length === 0 ? (
-                                            <NoExistenDatos colSpan={3} mensaje="No existen precios de venta." />
+                                            <NoExistenDatos colSpan={6} mensaje="No existen precios de venta." />
                                         ) : (
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
                                                 <td>{precioVenta.id}</td>
                                                 <td>{precioVenta.nombre}</td>
+                                                <td>{precioVenta.organizacion}</td>
+                                                <td>{precioVenta.tipoMoneda}</td>
+                                                <td>{precioVenta.precio}</td>
+                                                <td>{precioVenta.utilidades}</td>
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', precioVenta)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">

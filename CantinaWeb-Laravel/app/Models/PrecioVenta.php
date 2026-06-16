@@ -15,6 +15,7 @@ class PrecioVenta extends Model
         'id_producto',
         'id_tipoestado',
         'id_tipo_moneda',
+        'precio',
         'UrevUsuario',
         'UrevFechaHora',
         'UrevCalc',

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_organizacion');    
             $table->unsignedBigInteger('id_tipoestado'); // 1: Activo, 2: Inactivo
             $table->unsignedBigInteger('id_tipo_moneda');
+            $table->decimal('precio', 15, 2);
             $table->timestamps();
 
 
