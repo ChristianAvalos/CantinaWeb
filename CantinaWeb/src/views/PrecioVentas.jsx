@@ -1,6 +1,6 @@
 import clienteAxios from "../config/axios";
 import { useCallback, useEffect, useState } from 'react';
-import ModalCategoria from "../components/ModalCategoria";
+import ModalPrecioVenta from "../components/ModalPrecioVenta";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import NoExistenDatos from "../components/NoExistenDatos";
@@ -333,9 +333,9 @@ export default function PrecioVenta() {
             </section>
             {/* Renderizar el modal */}
             {isModalOpen && (
-                <ModalCategoria
-                    refrescarCategorias={fetchPreciosVenta}
-                    categoria={precioVentaSeleccionado}
+                <ModalPrecioVenta
+                    refrescarPrecioVenta={fetchPreciosVenta}
+                    precioVenta={precioVentaSeleccionado}
                     modo={modalMode}
                     onClose={closeModal}
                 />
