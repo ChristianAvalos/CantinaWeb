@@ -17,6 +17,7 @@ class PrecioVentaResource extends JsonResource
         return [
         'id'           => $this->id,
         'nombre'       => $this->producto?->nombre,
+        'codigo_barras' => $this->producto?->codigo_barras,
         'organizacion' => $this->organizacion?->RazonSocial,
         'tipoMoneda'   => $this->tipoMoneda?->nombre,
         'tipoEstado'   => $this->tipoEstado?->descripcion,

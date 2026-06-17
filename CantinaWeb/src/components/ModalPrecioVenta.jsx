@@ -4,8 +4,10 @@ import { toast } from "react-toastify";
 
 export default function ModalPrecioVenta({ onClose, modo, precioVenta = {}, refrescarPrecioVenta }) {
     const [nombre, setNombre] = useState(precioVenta.nombre || '');
+    const [codigo_barras, setCodigoBarras] = useState(precioVenta.codigo_barras || '');
+    const [precio, setPrecio] = useState(precioVenta.precio || '');
     const [errores, setErrores] = useState({});
-    const nombreRef = useRef(null);
+    const codigoBarrasRef = useRef(null);
 
     const token = localStorage.getItem('AUTH_TOKEN');
 
@@ -18,8 +20,8 @@ export default function ModalPrecioVenta({ onClose, modo, precioVenta = {}, refr
 
     // Enfocar el campo de nombre cuando el modal se abra
     useEffect(() => {
-        if (nombreRef.current) {
-            nombreRef.current.focus();
+        if (codigoBarrasRef.current) {
+            codigoBarrasRef.current.focus();
         }
     }, []);
     // Función para manejar la creación o edición de la precioVenta
@@ -84,18 +86,38 @@ export default function ModalPrecioVenta({ onClose, modo, precioVenta = {}, refr
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                    {/* Campo para Nombre */}
+
+                    {/* Campo para Codigo de barras */}
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Codigo de barras</label>
+                        <input
+                            type="text"
+                            ref={codigoBarrasRef}
+                            className={`w-full px-3 py-2 border ${(errores && errores.codigo_barras) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            placeholder="Introduce el codigo de barras"
+                            value={codigo_barras}
+                            onChange={(e) => setCodigoBarras(e.target.value)}
+                            autoComplete="off"
+                        />
+                        {errores && errores.codigo_barras && Array.isArray(errores.codigo_barras) && (
+                            <p className="text-red-500 text-sm">{errores.codigo_barras[0]}</p>
+                        )}
+                    </div>
+
+                    {/* Campo para nombre */}
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                         <input
                             type="text"
-                            ref={nombreRef}
-                            className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            disabled
+                            className={`w-full px-3 py-2 border ${(errores && errores.nombre) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             placeholder="Introduce el nombre"
                             value={nombre}
-                            onChange={(e) => setNombre(e.target.value)}
+                            readOnly
                         />
-                        {errores.nombre && <p className="text-red-500 text-sm">{errores.nombre[0]}</p>}
+                        {errores && errores.nombre && Array.isArray(errores.nombre) && (
+                            <p className="text-red-500 text-sm">{errores.nombre[0]}</p>
+                        )}
                     </div>
 
                     {/* Botones para cerrar y guardar */}
