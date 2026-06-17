@@ -141,6 +141,7 @@ Route::middleware('auth:sanctum')->group(function() {
     //precio de venta
     Route::get('/precio_venta',[PrecioVentaController::class,'index']);
     Route::post('/precio_venta_estado/{id}', [PrecioVentaController::class, 'estadoPrecioVenta']);
+    Route::delete('/precio_venta/{id}', [PrecioVentaController::class, 'DeletePrecioVenta']);
 
 });
 

@@ -106,12 +106,11 @@ class PrecioVentaController extends Controller
 
         return response()->json(['message' => 'Estado del precio de venta actualizado correctamente.'], 200);
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(PrecioVenta $precioVenta)
+    public function DeletePrecioVenta($id)
     {
-        //
+        $precio_ventas = PrecioVenta::findOrFail($id);
+        $precio_ventas->delete();
+
+        return response()->json(['message' => 'Precio de venta eliminada correctamente']);
     }
 }
