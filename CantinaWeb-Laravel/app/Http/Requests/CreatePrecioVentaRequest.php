@@ -48,6 +48,7 @@ class CreatePrecioVentaRequest extends FormRequest
             'precio.numeric' => 'El campo precio debe ser un número.',
             'precio.min' => 'El campo precio debe ser mayor o igual a 0.',
             'id_producto.required' => 'El campo producto es obligatorio.',
-            'id_producto.exists' => 'El producto proporcionado no existe.',];
+            'id_producto.exists' => 'El producto proporcionado no existe.',
+        ];
     }
 }

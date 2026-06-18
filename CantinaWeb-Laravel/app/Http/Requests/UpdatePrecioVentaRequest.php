@@ -23,9 +23,10 @@ class UpdatePrecioVentaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_organizacion' => 'required|exists:organizaciones,id',
-            'id_tipo_moneda' => 'required|exists:tipos_moneda,id',
+            'id_organizacion' => 'required|exists:organizacion,id',
+            'id_tipo_moneda' => 'required|exists:tipo_monedas,id',
             'codigo_barras' => 'required|string|max:255',
+            'id_producto' => 'required|exists:productos,id',
             'nombre' => 'required|string|max:255',
             'precio' => 'required|numeric|min:0',
         ];
@@ -46,6 +47,8 @@ class UpdatePrecioVentaRequest extends FormRequest
             'precio.required' => 'El campo precio es obligatorio.',
             'precio.numeric' => 'El campo precio debe ser un número.',
             'precio.min' => 'El campo precio debe ser mayor o igual a 0.',
+            'id_producto.required' => 'El campo producto es obligatorio.',
+            'id_producto.exists' => 'El producto proporcionado no existe.',
         ];
     }
 }

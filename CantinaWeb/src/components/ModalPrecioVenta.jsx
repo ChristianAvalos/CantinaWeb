@@ -186,30 +186,6 @@ export default function ModalPrecioVenta({
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                    {/* Campo para Organizacion */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Organizacion
-                        </label>
-                        <select
-                            className={`w-full px-3 py-2 border ${errores.id_organizacion ? "border-red-500" : "border-gray-300"} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                            value={organizacionSeleccionada}
-                            onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
-                        >
-                            <option value="">Seleccione una organizacion</option>
-                            {organizaciones.map((organizacion) => (
-                                <option key={organizacion.id} value={organizacion.id}>
-                                    {organizacion.RazonSocial}
-                                </option>
-                            ))}
-                        </select>
-                        {errores.id_organizacion && (
-                            <p className="text-red-500 text-sm">
-                                {errores.id_organizacion[0]}
-                            </p>
-                        )}
-                    </div>
-
                     {/* Campo para Codigo de barras */}
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -248,6 +224,30 @@ export default function ModalPrecioVenta({
                         />
                         {errores && errores.nombre && Array.isArray(errores.nombre) && (
                             <p className="text-red-500 text-sm">{errores.nombre[0]}</p>
+                        )}
+                    </div>
+                    
+                    {/* Campo para Organizacion */}
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Organizacion
+                        </label>
+                        <select
+                            className={`w-full px-3 py-2 border ${errores.id_organizacion ? "border-red-500" : "border-gray-300"} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            value={organizacionSeleccionada}
+                            onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
+                        >
+                            <option value="">Seleccione una organizacion</option>
+                            {organizaciones.map((organizacion) => (
+                                <option key={organizacion.id} value={organizacion.id}>
+                                    {organizacion.RazonSocial}
+                                </option>
+                            ))}
+                        </select>
+                        {errores.id_organizacion && (
+                            <p className="text-red-500 text-sm">
+                                {errores.id_organizacion[0]}
+                            </p>
                         )}
                     </div>
 
