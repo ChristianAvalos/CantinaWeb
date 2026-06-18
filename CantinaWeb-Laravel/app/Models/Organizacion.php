@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Ciudad;
 use App\Models\Pais;
 use App\Models\PrecioVenta;
+use App\Models\Transacciones;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -93,6 +94,12 @@ class Organizacion extends Model
     public function precioVentas()
     {
         return $this->hasMany(PrecioVenta::class, 'id_organizacion');
+    }
+    
+     //relacion con transacciones
+    public function transacciones()
+    {
+        return $this->hasMany(Transacciones::class, 'id_organizacion');
     }
     
 }

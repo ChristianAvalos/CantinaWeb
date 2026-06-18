@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Requests\CreatePrecioVentaRequest;
 use App\Http\Requests\StorePrecioVentaRequest;
 use App\Http\Requests\UpdatePrecioVentaRequest;
 use App\Http\Resources\PrecioVentaResource;
@@ -52,18 +53,21 @@ class PrecioVentaController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function createPrecioVenta(CreatePrecioVentaRequest $request)
     {
-        //
+        $validatedData = $request->validated();
+
+        // Agregar información adicional
+        $validatedData['id_tipoestado'] = 1; // Asignar un estado predeterminado (por ejemplo, "Activo")
+        $validatedData['UrevUsuario'] = Auth::user()->name;
+        $validatedData['UrevFechaHora'] = Carbon::now();
+
+        // Crear el registro en la base de datos
+        $precioVenta = PrecioVenta::create($validatedData);
+
+        return response()->json(['message' => 'Precio de venta creado correctamente', 'data' => $precioVenta], 201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StorePrecioVentaRequest $request)
-    {
-        //
-    }
 
     /**
      * Display the specified resource.
@@ -84,9 +88,21 @@ class PrecioVentaController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePrecioVentaRequest $request, PrecioVenta $precioVenta)
+    public function updatePrecioVenta(UpdatePrecioVentaRequest $request, $id)
     {
-        //
+        $validatedData = $request->validated();
+
+        // Agregar información adicional
+        $validatedData['UrevUsuario'] = 'Actualizado - ' . Auth::user()->name;
+        $validatedData['UrevFechaHora'] = Carbon::now();
+    
+        // Buscar el precio de venta por ID
+        $precioVenta = PrecioVenta::findOrFail($id);
+
+        // Actualizar el registro en la base de datos
+        $precioVenta->update($validatedData);
+
+        return response()->json(['message' => 'Precio de venta actualizado correctamente', 'data' => $precioVenta], 200);
     }
     public function estadoPrecioVenta($id, Request $request)
     {

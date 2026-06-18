@@ -17,13 +17,15 @@ class PrecioVentaResource extends JsonResource
         return [
         'id'           => $this->id,
         'nombre'       => $this->producto?->nombre,
+        'id_producto' => $this->id_producto,
         'codigo_barras' => $this->producto?->codigo_barras,
         'organizacion' => $this->organizacion?->RazonSocial,
         'id_organizacion' => $this->id_organizacion,
         'tipoMoneda'   => $this->tipoMoneda?->nombre,
         'id_tipo_moneda' => $this->id_tipo_moneda,
         'tipoEstado'   => $this->tipoEstado?->descripcion,
-        'precio'       => $this->precio
+        'precio'       => $this->precio,
+        'UrevCalc'      => $this->UrevCalc,
         ];
     }
 }

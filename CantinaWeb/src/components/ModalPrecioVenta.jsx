@@ -10,6 +10,10 @@ export default function ModalPrecioVenta({
     refrescarPrecioVenta,
 }) {
     const [nombre, setNombre] = useState(precioVenta.nombre || "");
+    const [productoSeleccionado, setProductoSeleccionado] = useState(
+        precioVenta.id_producto ? String(precioVenta.id_producto) : "",
+    );
+
     const [codigo_barras, setCodigoBarras] = useState(
         precioVenta.codigo_barras || "",
     );
@@ -49,10 +53,15 @@ export default function ModalPrecioVenta({
         try {
             const precioVentaData = {
                 nombre: nombre,
+                id_producto: productoSeleccionado,
+                codigo_barras: codigo_barras,
+                id_tipo_moneda: tipoMonedaSeleccionada,
+                precio: limpiarFormato(precio),
+                id_organizacion: organizacionSeleccionada,
             };
 
             if (modo === "crear") {
-                // Crear un nueo precioVenta
+                // Crear un nuevo precioVenta
                 await clienteAxios.post("api/crear_precio_venta", precioVentaData, {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -62,7 +71,7 @@ export default function ModalPrecioVenta({
             } else {
                 // Editar precioVenta existente
                 await clienteAxios.put(
-                    `api/update_precio_venta/${categoria.id}`,
+                    `api/update_precio_venta/${precioVenta.id}`,
                     precioVentaData,
                     {
                         headers: {
@@ -145,11 +154,14 @@ export default function ModalPrecioVenta({
                     );
                     if (data && data.producto) {
                         setNombre(data.producto.nombre || "");
+                        setProductoSeleccionado(String(data.producto.id));
                     } else {
                         setNombre("");
+                        setProductoSeleccionado("");
                     }
                 } catch (error) {
                     setNombre("");
+                    setProductoSeleccionado("");
                 }
             } else {
                 setNombre("");

@@ -143,6 +143,8 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/precio_venta',[PrecioVentaController::class,'index']);
     Route::post('/precio_venta_estado/{id}', [PrecioVentaController::class, 'estadoPrecioVenta']);
     Route::delete('/precio_venta/{id}', [PrecioVentaController::class, 'DeletePrecioVenta']);
+    Route::post('/crear_precio_venta',[PrecioVentaController::class,'createPrecioVenta']);
+    Route::put('/update_precio_venta/{id}',[PrecioVentaController::class,'updatePrecioVenta']); 
 
     //Monedas
     Route::get('/tipo_moneda',[TipoMonedaController::class,'index']);
