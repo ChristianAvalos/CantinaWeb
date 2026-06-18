@@ -110,6 +110,34 @@ export default function FiltrosBar({
             );
         }
 
+        if (definition.type === 'currency') {
+            const valorFormateado = currentValue
+                ? Number(currentValue).toLocaleString('es-PY')
+                : '';
+
+            return (
+                <label key={definition.key} className="block">
+                    {renderLabel(definition.label)}
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={valorFormateado}
+                        placeholder={definition.placeholder ?? ''}
+                        onChange={(event) => {
+                            const soloNumeros = event.target.value.replace(/\D/g, '');
+                            handleChange(definition.key, soloNumeros);
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                handleApply();
+                            }
+                        }}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                </label>
+            );
+        }
+
         if (definition.type === 'select') {
             return (
                 <label key={definition.key} className="block">

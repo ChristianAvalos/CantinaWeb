@@ -18,7 +18,7 @@ const FILTROS_PrecioVenta = [
     {
         key: 'precio',
         label: 'Precio',
-        type: 'text',
+        type: 'currency',
         placeholder: 'Filtrar por precio...',
     },
 ];
