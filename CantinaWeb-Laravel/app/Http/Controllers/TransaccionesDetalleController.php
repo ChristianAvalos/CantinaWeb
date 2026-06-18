@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateTransaccionDetalleRequest; 
 use App\Http\Requests\CreateTransaccionDetalleRequest; 
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Models\Producto;
 
 class TransaccionesDetalleController extends Controller
 {
@@ -26,6 +27,38 @@ class TransaccionesDetalleController extends Controller
         ]);
 
         return $subtotal;
+    }
+
+    private function calculoStock($id_producto, $cantidad,$tipoOperacion): float
+    {
+        //inicializo para que no de error si no encuentra el producto
+        $stocktotal = 0;
+
+        $stockAnterior = (float) Producto::where('id', $id_producto)->value('stock_actual');
+        if ($tipoOperacion === 'salida') {
+            $stocktotal = $stockAnterior - (float) $cantidad;
+        } 
+        
+        if ($tipoOperacion === 'entrada') {
+        $stocktotal = $stockAnterior + (float) $cantidad;
+        }
+
+        if ($tipoOperacion === 'actualizacion') {
+            // $cantidad aquí es la diferencia (nueva - vieja), no la cantidad absoluta
+            $stocktotal = $stockAnterior + (float) $cantidad;
+        }
+
+        if ($stocktotal < 0) {
+            $stocktotal = 0; // Evitar que el stock sea negativo
+        }
+
+        Producto::where('id', $id_producto)->update([
+            'stock_actual' => $stocktotal,
+            'UrevUsuario' => Auth::user()->name,
+            'UrevFechaHora' => now(),
+        ]);
+
+        return $stocktotal;
     }
 
     /**
@@ -120,11 +153,13 @@ class TransaccionesDetalleController extends Controller
         ]);
 
         $montoCabecera = $this->recalcularMontoCabecera($id_transaccion);
+        $stockActual = $this->calculoStock($producto->id,$cantidad,'entrada');
 
         return response()->json([
             'message' => 'Detalle creado exitosamente.',
             'detalle' => $detalle,
-            'monto_cabecera' => $montoCabecera
+            'monto_cabecera' => $montoCabecera,
+            'stock_actual' => $stockActual,
         ], 201);
     }
 
@@ -162,6 +197,10 @@ class TransaccionesDetalleController extends Controller
 
         $usuario = Auth::user()->name;
 
+        // Guardar valores anteriores para el cálculo de stock
+        $idProductoAnterior = $detalle->id_producto;
+        $cantidadAnterior = (float) $detalle->cantidad;
+
         // Buscar el producto por código de barras y organización
         $producto = \App\Models\Producto::where('codigo_barras', $data['codigo_barras'])
             ->first();
@@ -170,14 +209,14 @@ class TransaccionesDetalleController extends Controller
             return response()->json(['message' => 'Producto no encontrado'], 404);
         }
 
-        $cantidad = (float) $data['cantidad'];
+        $cantidadNueva = (float) $data['cantidad'];
         $precioUnitario = (float) $data['precio_unitario'];
-        $subtotal = $cantidad * $precioUnitario;
+        $subtotal = $cantidadNueva * $precioUnitario;
 
         // Guardar directamente usando update (fillable)
         $detalle->update([
             'id_producto' => $producto->id,
-            'cantidad' => $cantidad,
+            'cantidad' => $cantidadNueva,
             'lote' => isset($data['lote']) ? $data['lote'] : null,
             'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
             'precio_unitario' => $precioUnitario,
@@ -185,6 +224,17 @@ class TransaccionesDetalleController extends Controller
             'UrevUsuario' => $usuario,
             'UrevFechaHora' => now(),
         ]);
+
+        // Ajustar stock según el cambio
+        if ($idProductoAnterior === $producto->id) {
+            // Mismo producto: solo cambió la cantidad
+            $diferencia = $cantidadNueva - $cantidadAnterior;
+            $this->calculoStock($producto->id, $diferencia, 'actualizacion');
+        } else {
+            // Cambió el producto: revertir stock del viejo y aplicar al nuevo
+            $this->calculoStock($idProductoAnterior, -$cantidadAnterior, 'actualizacion');
+            $this->calculoStock($producto->id, $cantidadNueva, 'actualizacion');
+        }
 
         $montoCabecera = $this->recalcularMontoCabecera($detalle->id_transaccion);
 
@@ -206,10 +256,12 @@ class TransaccionesDetalleController extends Controller
         $transaccionesDetalle->delete();
 
         $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
+        $stockActual = $this->calculoStock($transaccionesDetalle->id_producto, $transaccionesDetalle->cantidad, 'salida');
 
         return response()->json([
             'message' => 'Transacción eliminada correctamente.',
-            'monto_cabecera' => $montoCabecera
+            'monto_cabecera' => $montoCabecera,
+            'stock_actual' => $stockActual
         ], 200);
     }
 }
