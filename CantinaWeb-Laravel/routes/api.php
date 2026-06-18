@@ -15,6 +15,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TipoComprobanteController;
 use App\Http\Controllers\TipoEstadoController;
+use App\Http\Controllers\TipoMonedaController;
 use App\Http\Controllers\TipoMovimientosController;
 use App\Http\Controllers\TipoPagoController;
 use App\Http\Controllers\TipoPersonaController;
@@ -142,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/precio_venta',[PrecioVentaController::class,'index']);
     Route::post('/precio_venta_estado/{id}', [PrecioVentaController::class, 'estadoPrecioVenta']);
     Route::delete('/precio_venta/{id}', [PrecioVentaController::class, 'DeletePrecioVenta']);
+
+    //Monedas
+    Route::get('/tipo_moneda',[TipoMonedaController::class,'index']);
 
 });
 
