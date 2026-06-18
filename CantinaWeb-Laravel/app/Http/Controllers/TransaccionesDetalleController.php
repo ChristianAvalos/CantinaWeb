@@ -8,6 +8,7 @@ use App\Models\Transacciones;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateTransaccionDetalleRequest; 
 use App\Http\Requests\CreateTransaccionDetalleRequest; 
+use App\Helpers\StockHelper;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Models\Producto;
 
@@ -29,36 +30,9 @@ class TransaccionesDetalleController extends Controller
         return $subtotal;
     }
 
-    private function calculoStock($id_producto, $cantidad,$tipoOperacion): float
+    private function calculoStock($id_producto, $cantidad, $tipoOperacion): float
     {
-        //inicializo para que no de error si no encuentra el producto
-        $stocktotal = 0;
-
-        $stockAnterior = (float) Producto::where('id', $id_producto)->value('stock_actual');
-        if ($tipoOperacion === 'salida') {
-            $stocktotal = $stockAnterior - (float) $cantidad;
-        } 
-        
-        if ($tipoOperacion === 'entrada') {
-        $stocktotal = $stockAnterior + (float) $cantidad;
-        }
-
-        if ($tipoOperacion === 'actualizacion') {
-            // $cantidad aquí es la diferencia (nueva - vieja), no la cantidad absoluta
-            $stocktotal = $stockAnterior + (float) $cantidad;
-        }
-
-        if ($stocktotal < 0) {
-            $stocktotal = 0; // Evitar que el stock sea negativo
-        }
-
-        Producto::where('id', $id_producto)->update([
-            'stock_actual' => $stocktotal,
-            'UrevUsuario' => Auth::user()->name,
-            'UrevFechaHora' => now(),
-        ]);
-
-        return $stocktotal;
+        return StockHelper::calcular($id_producto, (float) $cantidad, $tipoOperacion, Auth::user()->name);
     }
 
     /**
