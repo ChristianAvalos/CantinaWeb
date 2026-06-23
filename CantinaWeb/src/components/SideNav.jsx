@@ -4,7 +4,7 @@ import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';
 
 const sectionRoutes = {
-  operaciones: ['/compras', '/ventas', '/ajustes', '/transacciones', '/precio-ventas'],
+  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/ajustes', '/transacciones', '/precio-ventas'],
   definiciones: ['/productos', '/categorias', '/personas'],
   herramientas: ['/organizacion', '/usuarios', '/usuarios/roles'],
   reportes: ['/usuarios/reporte'],
@@ -208,7 +208,7 @@ export default function SideNav() {
                   <span>Operaciones</span>
                   <i className={`fas fa-angle-left text-sm transition-transform ${expandedSections.operaciones ? '-rotate-90' : ''}`}></i>
                 </button>
-                <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.operaciones ? 'mt-2 max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <ul className={`space-y-1 overflow-hidden pl-2 transition-all ${expandedSections.operaciones ? 'mt-2 max-h-[520px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   {hasPermission('Compras') && (
                     <li>
                       <Link to="/compras" className={getItemLinkClasses('/compras')}>
@@ -223,6 +223,15 @@ export default function SideNav() {
                       <Link to="/ventas" className={getItemLinkClasses('/ventas')}>
                         <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas" className="h-5 w-5 shrink-0" />
                         <span>Ventas</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {hasPermission('Ventas') && (
+                    <li>
+                      <Link to="/ventas-rapidas" className={getItemLinkClasses('/ventas-rapidas')}>
+                        <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas Rápidas" className="h-5 w-5 shrink-0" />
+                        <span>Ventas Rápidas</span>
                       </Link>
                     </li>
                   )}
