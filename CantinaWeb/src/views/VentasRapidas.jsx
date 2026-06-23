@@ -536,37 +536,37 @@ export default function VentasRapidas() {
                             <table className="w-full">
                                 <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm">
                                     <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        <th className="text-left px-4 py-2.5">Producto</th>
-                                        <th className="text-center px-2 py-2.5 w-20">Cant.</th>
-                                        <th className="text-right px-2 py-2.5 w-28">P. Unit.</th>
-                                        <th className="text-right px-4 py-2.5 w-28">Subtotal</th>
-                                        <th className="text-center px-2 py-2.5 w-12"></th>
+                                        <th className="text-left px-2 sm:px-4 py-2.5">Producto</th>
+                                        <th className="text-center px-1 sm:px-2 py-2.5 w-12 sm:w-20">Cant.</th>
+                                        <th className="text-right px-1 sm:px-2 py-2.5 w-20 sm:w-28 hidden sm:table-cell">P. Unit.</th>
+                                        <th className="text-right px-2 sm:px-4 py-2.5 w-20 sm:w-28">Subtotal</th>
+                                        <th className="text-center px-1 sm:px-2 py-2.5 w-8 sm:w-12"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {cart.map((item) => (
                                         <tr key={item.cartId} className="hover:bg-blue-50/40 transition-colors group">
-                                            <td className="px-4 py-2.5">
-                                                <div className="font-semibold text-slate-800">{item.nombre}</div>
-                                                <div className="text-xs text-slate-400">{item.codigo_barras || 'S/Código'} — {item.unidad_medida}</div>
+                                            <td className="px-2 sm:px-4 py-2.5">
+                                                <div className="font-semibold text-slate-800 text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{item.nombre}</div>
+                                                <div className="text-xs text-slate-400 truncate">{item.codigo_barras || 'S/Código'} — {item.unidad_medida}</div>
                                             </td>
-                                            <td className="px-2 py-2.5">
+                                            <td className="px-1 sm:px-2 py-2.5">
                                                 <input
                                                     type="number"
                                                     min="1"
                                                     value={item.cantidad}
                                                     onChange={(e) => updateCantidad(item.cartId, e.target.value)}
-                                                    className="w-16 text-center px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none text-sm font-semibold"
+                                                    className="w-10 sm:w-16 text-center px-1 sm:px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none text-xs sm:text-sm font-semibold"
                                                     onClick={(e) => e.target.select()}
                                                 />
                                             </td>
-                                            <td className="px-2 py-2.5 text-right text-sm font-medium text-slate-600">
+                                            <td className="px-1 sm:px-2 py-2.5 text-right text-xs sm:text-sm font-medium text-slate-600 hidden sm:table-cell">
                                                 {formatearGuarani(item.precio_venta)}
                                             </td>
-                                            <td className="px-4 py-2.5 text-right font-bold text-slate-800">
+                                            <td className="px-2 sm:px-4 py-2.5 text-right font-bold text-slate-800 text-sm sm:text-base">
                                                 {formatearGuarani(item.subtotal)}
                                             </td>
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-1 sm:px-2 py-2.5 text-center">
                                                 <button
                                                     onClick={() => removeFromCart(item.cartId)}
                                                     className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
@@ -585,7 +585,7 @@ export default function VentasRapidas() {
             </div>
 
             {/* ═══════════════ PANEL DERECHO: RESUMEN + PAGO ═══════════════ */}
-            <div data-panel="derecho" className="w-full lg:w-[30%] lg:min-w-[340px] lg:max-w-[460px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+            <div data-panel="derecho" className="w-full lg:w-[30%] lg:min-w-[340px] lg:max-w-[460px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto max-h-[42%] lg:max-h-none">
                 {/* ── Cliente ── */}
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4" ref={clienteContainerRef}>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
