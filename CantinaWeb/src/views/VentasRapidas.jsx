@@ -92,7 +92,8 @@ export default function VentasRapidas() {
 
     // ─── Totales calculados ──────────────────────────────────────
     const subtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
-    const total = subtotal; // sin impuestos por ahora
+    const iva = Math.round(subtotal * 0.10);
+    const total = subtotal + iva;
 
     // ─── Enfocar siempre el input de búsqueda ─────────────────────
     useEffect(() => {
@@ -430,9 +431,15 @@ export default function VentasRapidas() {
 
     // ─── Render ────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-10rem)] min-h-[600px]">
+        <div
+            className="flex flex-col lg:flex-row gap-4 w-full"
+            style={{
+                height: 'calc(100dvh - 10.0rem)',
+                minHeight: '550px',
+            }}
+        >
             {/* ═══════════════ PANEL IZQUIERDO: BÚSQUEDA + CARRITO ═══════════════ */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0">
                 {/* ── Barra de búsqueda ── */}
                 <div className="flex-shrink-0 mb-3" ref={searchContainerRef}>
                     <div className="relative">
@@ -518,7 +525,7 @@ export default function VentasRapidas() {
 
                     <div className="flex-1 overflow-y-auto">
                         {cart.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 py-12">
+                            <div className="flex flex-col items-center justify-center flex-1 text-slate-400 gap-3 py-12">
                                 <svg className="w-20 h-20 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
                                 </svg>
@@ -578,7 +585,7 @@ export default function VentasRapidas() {
             </div>
 
             {/* ═══════════════ PANEL DERECHO: RESUMEN + PAGO ═══════════════ */}
-            <div data-panel="derecho" className="w-full lg:w-96 flex-shrink-0 flex flex-col gap-3">
+            <div data-panel="derecho" className="w-full lg:w-[30%] lg:min-w-[340px] lg:max-w-[460px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
                 {/* ── Cliente ── */}
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4" ref={clienteContainerRef}>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -669,7 +676,7 @@ export default function VentasRapidas() {
                     </div>
                     <div className="flex justify-between items-center mb-1 text-slate-300 text-sm">
                         <span>IVA (10%)</span>
-                        <span>0 Gs.</span>
+                        <span>{formatearGuarani(iva)} Gs.</span>
                     </div>
                     <div className="border-t border-slate-600 my-3" />
                     <div className="flex justify-between items-center">
