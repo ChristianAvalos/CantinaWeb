@@ -27,9 +27,13 @@ const IconTrash = () => (
     </svg>
 );
 const IconBarcode = () => (
-    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v1m0 4v1m0 4v1m4-10v1m0 4v1m0 4v1m4-10v1m0 4v1m0-5h2m-2 4h2m-2 4h2M20 7v1m0 4v1m0 4v1" />
-    </svg>
+    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 ring-1 ring-inset ring-white/20">
+        <img
+            src="/img/Icon/barcode.png"
+            alt=""
+            className="h-4 w-4 object-contain opacity-95"
+        />
+    </span>
 );
 const IconCart = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
