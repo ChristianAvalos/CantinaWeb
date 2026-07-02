@@ -129,7 +129,7 @@ class TransaccionesController extends Controller
             'fecha' => $data['fecha'],
             'lote' => $data['lote'] ?? null,
             'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
-            'id_persona' => $data['id_persona'],
+            'id_persona' => $data['id_persona'] ?? null,
             'id_TipoEstado' => $data['id_TipoEstado'],
             'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
             'nro_comprobante' => $data['nro_comprobante'] ?? null,
