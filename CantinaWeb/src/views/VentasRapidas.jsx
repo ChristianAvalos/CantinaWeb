@@ -36,9 +36,17 @@ const IconBarcode = () => (
     </span>
 );
 const IconCart = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-    </svg>
+    // <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    //     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+    // </svg>
+
+    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 ring-1 ring-inset ring-white/20">
+        <img
+            src="/img/Icon/shopping-cart.png"
+            alt=""
+            className="h-4 w-4 object-contain opacity-95"
+        />
+    </span>
 );
 const IconCash = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -530,9 +538,16 @@ export default function VentasRapidas() {
                     <div className="flex-1 overflow-y-auto">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center flex-1 text-slate-400 gap-3 py-12">
-                                <svg className="w-20 h-20 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {/* <svg className="w-20 h-20 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-                                </svg>
+                                </svg> */}
+                                <span className="w-20 h-20 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <img
+                                        src="/img/Icon/shopping-cart2.png"
+                                        alt=""
+                                        className="h-20 w-20 object-contain opacity-30"
+                                    />
+                                </span>
                                 <p className="text-lg font-medium">No hay productos en el carrito</p>
                                 <p className="text-sm">Escanea un código o busca un producto para comenzar</p>
                             </div>
