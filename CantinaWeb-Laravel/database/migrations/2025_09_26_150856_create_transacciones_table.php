@@ -19,6 +19,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_TipoMovimiento');
             $table->unsignedBigInteger('id_TipoEstado');
             $table->decimal('monto',19,4)->default(0);
+            $table->decimal('monto_recibido', 15, 2)->nullable()->after('monto')->comment('Monto recibido del cliente');
+            $table->decimal('vuelto', 15, 2)->nullable()->after('monto_recibido')->comment('Vuelto entregado al cliente');
+            $table->decimal('iva', 15, 2)->nullable()->after('vuelto')->comment('IVA discriminado de la transacción');
             $table->unsignedBigInteger('id_usuario');
             $table->unsignedBigInteger('id_persona')->nullable();
             $table->unsignedBigInteger('id_TipoPago')->nullable();

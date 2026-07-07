@@ -102,10 +102,11 @@ export default function VentasRapidas() {
     const [pagoRecibido, setPagoRecibido] = useState('');
     const [vuelto, setVuelto] = useState(0);
 
-    // ─── Totales calculados ──────────────────────────────────────
-    const subtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
-    const iva = Math.round(subtotal * 0.10);
-    const total = subtotal + iva;
+    // ─── Totales calculados (precios con IVA incluido) ──────────
+    const total = cart.reduce((acc, item) => acc + item.subtotal, 0);
+    const iva = Math.round(total / 11);          // solo referencia: extraer IVA del total
+    const pagoRecibidoNumero = parseFloat(pagoRecibido) || 0;
+    const pagoInsuficiente = cart.length > 0 && pagoRecibidoNumero < total;
 
     // ─── Enfocar siempre el input de búsqueda ─────────────────────
     useEffect(() => {
@@ -322,6 +323,10 @@ export default function VentasRapidas() {
             toast.warning('No hay productos en el carrito');
             return;
         }
+        if (pagoRecibidoNumero < total) {
+            toast.warning('El pago recibido no puede ser menor al total');
+            return;
+        }
         if (!selectedTipoPago || !selectedFormaPago) {
             toast.warning('Selecciona un método de pago');
             return;
@@ -343,6 +348,9 @@ export default function VentasRapidas() {
                 id_TipoPago: selectedTipoPago,
                 id_FormaPago: selectedFormaPago,
                 monto: total,
+                monto_recibido: pagoRecibidoNumero,
+                vuelto: vuelto,
+                iva: iva,
             };
 
             const { data: transaccionCreada } = await clienteAxios.post('api/creartransaccion', transactionPayload, {
@@ -430,9 +438,8 @@ export default function VentasRapidas() {
 
     // ─── Calcular vuelto ──────────────────────────────────────────
     useEffect(() => {
-        const pago = parseFloat(pagoRecibido) || 0;
-        setVuelto(Math.max(0, pago - total));
-    }, [pagoRecibido, total]);
+        setVuelto(Math.max(0, pagoRecibidoNumero - total));
+    }, [pagoRecibidoNumero, total]);
 
     // ─── Seleccionar cliente ──────────────────────────────────────
     const selectCliente = (cliente) => {
@@ -690,16 +697,16 @@ export default function VentasRapidas() {
                 {/* ── Totales ── */}
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-xl p-5 text-white">
                     <div className="flex justify-between items-center mb-2 text-slate-300 text-sm">
-                        <span>Subtotal</span>
-                        <span>{formatearGuarani(subtotal)} Gs.</span>
+                        <span>Total (IVA incluido)</span>
+                        <span>{formatearGuarani(total)} Gs.</span>
                     </div>
-                    <div className="flex justify-between items-center mb-1 text-slate-300 text-sm">
-                        <span>IVA (10%)</span>
+                    <div className="flex justify-between items-center mb-1 text-slate-400 text-xs">
+                        <span>IVA 10%</span>
                         <span>{formatearGuarani(iva)} Gs.</span>
                     </div>
                     <div className="border-t border-slate-600 my-3" />
                     <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold">TOTAL</span>
+                        <span className="text-lg font-bold">A COBRAR</span>
                         <span className="text-2xl font-extrabold tracking-tight">{formatearGuarani(total)} Gs.</span>
                     </div>
 
@@ -736,7 +743,7 @@ export default function VentasRapidas() {
                     </button>
                     <button
                         onClick={procesarPago}
-                        disabled={cart.length === 0 || isProcessing}
+                        disabled={cart.length === 0 || isProcessing || pagoInsuficiente}
                         className="flex-[2] py-3.5 rounded-2xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-green-600 to-emerald-500 text-white shadow-lg hover:shadow-xl hover:from-green-500 hover:to-emerald-400 active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (
