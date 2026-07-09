@@ -105,7 +105,8 @@ export default function VentasRapidas() {
     // ─── Totales calculados (precios con IVA incluido) ──────────
     const total = cart.reduce((acc, item) => acc + item.subtotal, 0);
     const iva = Math.round(total / 11);          // solo referencia: extraer IVA del total
-    const pagoRecibidoNumero = parseFloat(pagoRecibido) || 0;
+    const isEfectivo = Number(selectedFormaPago) === 1;
+    const pagoRecibidoNumero = isEfectivo ? (parseFloat(pagoRecibido) || 0) : total;
     const pagoInsuficiente = cart.length > 0 && pagoRecibidoNumero < total;
 
     // ─── Enfocar siempre el input de búsqueda ─────────────────────
@@ -718,10 +719,10 @@ export default function VentasRapidas() {
                                 <input
                                     type="number"
                                     min="0"
-                                    value={(Number(selectedFormaPago) === 1) ? pagoRecibido : total}
+                                    value={isEfectivo ? pagoRecibido : total}
                                     onChange={(e) => setPagoRecibido(e.target.value)}
                                     placeholder="0"
-                                    disabled={Number(selectedFormaPago) !== 1} // Solo efectivo
+                                    readOnly={Number(selectedFormaPago) !== 1} // Solo efectivo
                                     className="w-full px-3 py-2 text-right text-lg font-bold text-slate-900 bg-white rounded-xl outline-none focus:ring-2 focus:ring-green-400"
                                 />
                             </div>
