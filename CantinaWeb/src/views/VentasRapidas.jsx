@@ -718,9 +718,10 @@ export default function VentasRapidas() {
                                 <input
                                     type="number"
                                     min="0"
-                                    value={pagoRecibido}
+                                    value={(Number(selectedFormaPago) === 1) ? pagoRecibido : total}
                                     onChange={(e) => setPagoRecibido(e.target.value)}
                                     placeholder="0"
+                                    disabled={Number(selectedFormaPago) !== 1} // Solo efectivo
                                     className="w-full px-3 py-2 text-right text-lg font-bold text-slate-900 bg-white rounded-xl outline-none focus:ring-2 focus:ring-green-400"
                                 />
                             </div>
