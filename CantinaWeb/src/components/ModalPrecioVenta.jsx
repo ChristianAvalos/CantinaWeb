@@ -103,40 +103,22 @@ export default function ModalPrecioVenta({
         }
     };
 
-    // Cargar los organizacion desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchOrganizacion = async () => {
+        const fetchInitialData = async () => {
             try {
-                const { data } = await clienteAxios.get("api/organizacion?all=true", {
-                    headers: {
-                        Authorization: `Bearer ${token}`, // Configurar el token en los headers
-                    },
-                });
-                setOrganizaciones(data);
+                const [orgRes, monRes] = await Promise.all([
+                    clienteAxios.get("api/organizacion?all=true", { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get("api/tipo_moneda?all=true", { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setOrganizaciones(orgRes.data);
+                setTiposMoneda(monRes.data);
             } catch (error) {
-                console.error("Error al cargar las organizaciones", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchOrganizacion();
-    }, []);
-
-        // Cargar los tipos de monedas desde la API al cargar el componente
-    useEffect(() => {
-        const fetchMonedas = async () => {
-            try {
-                const { data } = await clienteAxios.get("api/tipo_moneda?all=true", {
-                    headers: {
-                        Authorization: `Bearer ${token}`, // Configurar el token en los headers
-                    },
-                });
-                setTiposMoneda(data);
-            } catch (error) {
-                console.error("Error al cargar las monedas", error);
-            }
-        };
-
-        fetchMonedas();
+        fetchInitialData();
     }, []);
 
     // Buscar producto por código de barras y autocompletar nombre

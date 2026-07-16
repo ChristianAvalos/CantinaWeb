@@ -318,80 +318,28 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
 
 
-    // Cargar los tipos de pagos desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchTipoPagos = async () => {
+        const fetchInitialData = async () => {
             try {
-
-                const { data } = await clienteAxios.get('api/tipo_pago', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoPago(data);
+                const [tpRes, fpRes, teRes, tcRes, orgRes] = await Promise.all([
+                    clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/tipo_estado?filtro=basico', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/tipo_comprobante', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setTipoPago(tpRes.data);
+                setFormaPago(fpRes.data);
+                setTipoEstado(teRes.data);
+                setTipoComprobante(tcRes.data);
+                setOrganizacion(orgRes.data);
             } catch (error) {
-                console.error("Error al cargar los tipos de pago", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchTipoPagos();
-    }, []);
-
-    // Cargar las fromas de pagos desde la API al cargar el componente
-    useEffect(() => {
-        const fetchFormasPagos = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/forma_pago', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setFormaPago(data);
-            } catch (error) {
-                console.error("Error al cargar los tipos de pago", error);
-            }
-        };
-
-        fetchFormasPagos();
-    }, []);
-
-    // Cargar los tipos de estados desde la API al cargar el componente
-    useEffect(() => {
-        const fetchTipoEstado = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/tipo_estado?filtro=basico', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoEstado(data);
-            } catch (error) {
-                console.error("Error al cargar los tipos de estados", error);
-            }
-        };
-
-        fetchTipoEstado();
-    }, []);
-
-    // Cargar los tipos de comprobantes desde la API al cargar el componente
-    useEffect(() => {
-        const fetchTipoComprobante = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/tipo_comprobante', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoComprobante(data);
-            } catch (error) {
-                console.error("Error al cargar los tipos de comprobantes", error);
-            }
-        };
-
-        fetchTipoComprobante();
+        fetchInitialData();
     }, []);
 
 
@@ -463,24 +411,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setAccionConfirmadaModal(null);
     };
 
-        // Cargar los organizacion desde la API al cargar el componente
-    useEffect(() => {
-        const fetchOrganizacion = async () => {
-            try {
 
-                const { data } = await clienteAxios.get('api/organizacion?all=true', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setOrganizacion(data);
-            } catch (error) {
-                console.error("Error al cargar las organizaciones", error);
-            }
-        };
-
-        fetchOrganizacion();
-    }, []);
 
 
 

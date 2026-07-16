@@ -97,42 +97,22 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
         }
     };
 
-    // Cargar los tipos de estados desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchTipoEstado = async () => {
+        const fetchInitialData = async () => {
             try {
-
-                const { data } = await clienteAxios.get('api/tipo_estado?filtro=basico', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoEstado(data);
+                const [teRes, tpRes] = await Promise.all([
+                    clienteAxios.get('api/tipo_estado?filtro=basico', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/tipo_personas', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setTipoEstado(teRes.data);
+                setTipoPersona(tpRes.data);
             } catch (error) {
-                console.error("Error al cargar los tipos de estados", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchTipoEstado();
-    }, []);
-
-    // Cargar los tipos de personas desde la API al cargar el componente
-    useEffect(() => {
-        const fetchTipoPersona = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/tipo_personas', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoPersona(data);
-            } catch (error) {
-                console.error("Error al cargar los tipos de personas", error);
-            }
-        };
-
-        fetchTipoPersona();
+        fetchInitialData();
     }, []);
 
 
@@ -219,7 +199,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Tipo de persona</label>
                             <select
-                                className={`w-full px-3 py-2 border ${errores.id_tipo_persona ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                className={`w-full px-3 py-2 border ${errores.id_tipo_persona ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                 value={form.id_tipo_persona}
                                 onChange={(e) => setForm({ ...form, id_tipo_persona: e.target.value })}
                             >
@@ -237,7 +217,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                             <select
-                                className={`w-full px-3 py-2 border ${errores.id_tipoestado ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                className={`w-full px-3 py-2 border ${errores.id_tipoestado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                 value={form.id_tipoestado}
                                 onChange={(e) => setForm({ ...form, id_tipoestado: e.target.value })}
                             >

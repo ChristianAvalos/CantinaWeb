@@ -64,61 +64,24 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
         }
     }, [producto, modo]);
 
-    // Cargar los tipos de unidad de medida desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchTipoUnidadMedida = async () => {
+        const fetchInitialData = async () => {
             try {
-
-                const { data } = await clienteAxios.get('api/tipo_unidad_medida', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoUnidadMedida(data);
+                const [tumRes, teRes, catRes] = await Promise.all([
+                    clienteAxios.get('api/tipo_unidad_medida', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/tipo_estado?filtro=basico', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/categorias?all=1', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setTipoUnidadMedida(tumRes.data);
+                setTipoEstado(teRes.data);
+                setCategorias(catRes.data.data);
             } catch (error) {
-                console.error("Error al cargar los tipos de unidad de medida", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchTipoUnidadMedida();
-    }, []);
-
-        // Cargar los tipos de estados desde la API al cargar el componente
-    useEffect(() => {
-        const fetchTipoEstado = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/tipo_estado?filtro=basico', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setTipoEstado(data);
-            } catch (error) {
-                console.error("Error al cargar los tipos de estados", error);
-            }
-        };
-
-        fetchTipoEstado();
-    }, []);
-
-    // Cargar las categorias desde la API al cargar el componente
-    useEffect(() => {
-        const fetchCategorias = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/categorias?all=1', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setCategorias(data.data);
-            } catch (error) {
-                console.error("Error al cargar las categorias", error);
-            }
-        };
-
-        fetchCategorias();
+        fetchInitialData();
     }, []);
 
     // Función para manejar la creación o edición del producto
@@ -275,7 +238,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Categoria</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_Categoria ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_Categoria ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_Categoria}
                                     onChange={(e) => setForm({ ...form, id_Categoria: e.target.value })}
                                 >
@@ -309,7 +272,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de movimientos</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoMovimiento ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoMovimiento ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_TipoUnidadMedida}
                                     onChange={(e) => setForm({ ...form, id_TipoUnidadMedida: e.target.value })}
                                 >
@@ -379,7 +342,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={form.id_TipoEstado}
                                     onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
                                 >

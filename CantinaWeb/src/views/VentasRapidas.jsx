@@ -677,7 +677,7 @@ export default function VentasRapidas() {
                         <select
                             value={selectedTipoPago}
                             onChange={(e) => setSelectedTipoPago(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-slate-50"
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-white"
                         >
                             {tipoPago.map(tp => (
                                 <option key={tp.id} value={tp.id}>{tp.nombre || tp.descripcion}</option>
@@ -686,7 +686,7 @@ export default function VentasRapidas() {
                         <select
                             value={selectedFormaPago}
                             onChange={(e) => setSelectedFormaPago(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-slate-50"
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-white"
                         >
                             {formaPago.map(fp => (
                                 <option key={fp.id} value={fp.id}>{fp.nombre || fp.descripcion}</option>

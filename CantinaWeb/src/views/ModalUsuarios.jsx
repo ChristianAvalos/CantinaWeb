@@ -24,42 +24,22 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
         }
     }, []);
 
-    // Cargar los roles desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchRoles = async () => {
+        const fetchInitialData = async () => {
             try {
-
-                const { data } = await clienteAxios.get('api/roles?all=true', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setRoles(data);
+                const [rolesRes, orgRes] = await Promise.all([
+                    clienteAxios.get('api/roles?all=true', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setRoles(rolesRes.data);
+                setOrganizacion(orgRes.data);
             } catch (error) {
-                console.error("Error al cargar los roles", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchRoles();
-    }, []);
-
-    // Cargar los organizacion desde la API al cargar el componente
-    useEffect(() => {
-        const fetchOrganizacion = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/organizacion?all=true', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setOrganizacion(data);
-            } catch (error) {
-                console.error("Error al cargar las organizaciones", error);
-            }
-        };
-
-        fetchOrganizacion();
+        fetchInitialData();
     }, []);
 
     // Actualizar el estado del formulario cuando cambie el usuario
@@ -216,7 +196,7 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.rol_id ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.rol_id ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={rolSeleccionado}
                                     onChange={(e) => setRolSeleccionado(e.target.value)}
                                 >
@@ -239,7 +219,7 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={organizacionSeleccionada}
                                     onChange={(e) => setorganizacionSeleccionada(e.target.value)}
                                 >

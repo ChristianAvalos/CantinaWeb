@@ -43,42 +43,22 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     }, [organizacion, baseURL]);
 
 
-    // Cargar los paises desde la API al cargar el componente
+    // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
-        const fetchPaises = async () => {
+        const fetchInitialData = async () => {
             try {
-
-                const { data } = await clienteAxios.get('api/paises', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setPaises(data);
+                const [paisesRes, ciudadesRes] = await Promise.all([
+                    clienteAxios.get('api/paises', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/ciudades', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                setPaises(paisesRes.data);
+                setCiudades(ciudadesRes.data);
             } catch (error) {
-                console.error("Error al cargar los paises", error);
+                console.error("Error al cargar los datos iniciales", error);
             }
         };
 
-        fetchPaises();
-    }, []);
-
-    // Cargar las ciudades desde la API al cargar el componente
-    useEffect(() => {
-        const fetchCiudades = async () => {
-            try {
-
-                const { data } = await clienteAxios.get('api/ciudades', {
-                    headers: {
-                        Authorization: `Bearer ${token}` // Configurar el token en los headers
-                    }
-                });
-                setCiudades(data);
-            } catch (error) {
-                console.error("Error al cargar las ciudades", error);
-            }
-        };
-
-        fetchCiudades();
+        fetchInitialData();
     }, []);
 
     // Actualizar el estado del formulario cuando cambie la organizacion
@@ -276,7 +256,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">País</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.pais_id ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.pais_id ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={paisSeleccionado}
                                     onChange={(e) => setPaisSeleccionado(e.target.value)}
                                 >
@@ -294,7 +274,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Ciudad</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.ciudad_id ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores.ciudad_id ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     value={CiudadSeleccionado}
                                     onChange={(e) => setCiudadSeleccionado(e.target.value)}
                                 >
