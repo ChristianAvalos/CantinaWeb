@@ -61,11 +61,7 @@ const router = createBrowserRouter ([
             },
             {
                 path:'/error',
-                element: withSuspense(
-                <ProtectedRoute permission="Principal">
-                    <Error/>
-                </ProtectedRoute>
-                )
+                element: withSuspense(<Error/>)
             },
 
             {

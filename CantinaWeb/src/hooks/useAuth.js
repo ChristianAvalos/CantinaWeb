@@ -141,13 +141,13 @@ export const useAuth = ({middleware,url}) =>{
         }
 
         //Si es un usuario y no tiene definido su rol le va a aparecer en la pagina de error 
-        if (middleware === 'guest' && user && (Number(user.rol_id) === undefined || Number(user.rol_id)  === null) ){
+        if (middleware === 'guest' && user && (user.rol_id === undefined || user.rol_id === null) ){
             safeNavigate('/error');
             return;
         }
         
         //  //Si no tiene definido su organizacion le va a aparecer en la pagina de error
-        if (middleware === 'guest' && user && (Number(user.id_organizacion) === undefined || Number(user.id_organizacion) === null) ){
+        if (middleware === 'guest' && user && (user.id_organizacion === undefined || user.id_organizacion === null) ){
             safeNavigate('/error');
             return;
         }
