@@ -32,7 +32,7 @@ class CreateProductoRequest extends FormRequest
                 'precio_compra' => ['required','numeric'],
                 'precio_venta' => ['required','numeric'],
                 'stock_minimo' => ['required','integer'],
-                'id_TipoEstado' => ['nullable','integer'],
+                'id_TipoEstado' => ['required','nullable','integer'],
                 'imagen' => ['nullable','image','mimes:jpeg,png,jpg,gif,svg','max:2048'],
                 'fecha' => ['required','date']
             ];
@@ -50,7 +50,7 @@ class CreateProductoRequest extends FormRequest
                 'precio_compra' => 'El precio de compra es obligatorio',
                 'precio_venta' => 'El precio de venta es obligatorio',
                 'stock_minimo' => 'El stock mínimo es obligatorio',
-                'id_TipoEstado' => 'El estado es obligatorio',
+                'id_TipoEstado.required' => 'El estado es obligatorio',
                 'imagen.image' => 'El archivo debe ser una imagen',
                 'imagen.mimes' => 'La imagen debe ser un archivo de tipo: jpeg, png, jpg, gif, svg',
                 'imagen.max' => 'La imagen no debe ser mayor a 2MB',

@@ -353,7 +353,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                         </option>
                                     ))}
                                 </select>
-                                {errores.tipoEstado && <p className="text-red-500 text-sm">{errores.tipoEstado[0]}</p>}
+                                {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
                             </div>
 
 

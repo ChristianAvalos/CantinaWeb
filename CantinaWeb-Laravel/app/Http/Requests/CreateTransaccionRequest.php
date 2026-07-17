@@ -34,9 +34,9 @@ class CreateTransaccionRequest extends FormRequest
             'vuelto' => 'nullable|numeric',
             'iva' => 'nullable|numeric',
             'id_TipoEstado' => 'required|exists:tipo_estados,id',
-            'id_TipoComprobante' => 'nullable|exists:tipo_comprobantes,id',
+            'id_TipoComprobante' => 'required|nullable|exists:tipo_comprobantes,id',
             'id_TipoMovimiento' => 'required|exists:tipo_movimientos,id',
-            'nro_comprobante' => 'nullable|string|max:100',
+            'nro_comprobante' => 'required|nullable|string|max:100',
             'id_persona' => $esVenta ? 'nullable|exists:personas,id' : 'required|exists:personas,id',
             'id_TipoPago' => 'required|exists:tipo_pagos,id',
             'id_FormaPago' => 'required|exists:forma_pagos,id',
@@ -68,8 +68,10 @@ class CreateTransaccionRequest extends FormRequest
             'id_TipoEstado.required' => 'Debe seleccionar un tipo de estado.',
             'id_TipoEstado.exists' => 'El tipo de estado seleccionado no existe.',
 
+            'id_TipoComprobante.required' => 'Debe seleccionar un tipo de comprobante.',
             'id_TipoComprobante.exists' => 'El tipo de comprobante seleccionado no existe.',
-
+            
+            'nro_comprobante.required' => 'El campo número de comprobante es obligatorio.',
             'nro_comprobante.string' => 'El número de comprobante debe ser una cadena de texto.',
             'nro_comprobante.max' => 'El número de comprobante no debe exceder los 100 caracteres.',
 
