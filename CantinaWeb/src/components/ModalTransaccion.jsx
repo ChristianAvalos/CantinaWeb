@@ -322,10 +322,14 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
+                const tipoEstadoUrl = tipoTransaccion === 'compra'
+                    ? 'api/tipo_estado?filtro=basico'       // compra: solo Activo/Inactivo
+                    : 'api/tipo_estado';                     // venta/ajuste: todos los estados
+
                 const [tpRes, fpRes, teRes, tcRes, orgRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
-                    clienteAxios.get('api/tipo_estado?filtro=basico', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get(tipoEstadoUrl, { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/tipo_comprobante', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
                 ]);

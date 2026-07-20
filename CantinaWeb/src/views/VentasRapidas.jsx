@@ -343,7 +343,7 @@ export default function VentasRapidas() {
                 descripcion: `Venta rápida - ${cart.length} producto(s)`,
                 fecha: fechaActual,
                 id_organizacion: user?.id_organizacion || '',
-                id_TipoEstado: '2',        // Completado
+                id_TipoEstado: '3',        // Finalizado
                 id_TipoMovimiento: '2',    // Venta
                 id_persona: selectedCliente.id || '',
                 id_TipoPago: selectedTipoPago,
