@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import clienteAxios from '../config/axios';
 import { toast } from 'react-toastify';
-import { formatearGuarani } from '../helpers/HelpersNumeros';
+import { formatearGuarani,formatearMiles } from '../helpers/HelpersNumeros';
 import { useAuth } from '../hooks/useAuth';
 import AlertaModal from '../components/AlertaModal';
 
@@ -717,10 +717,14 @@ export default function VentasRapidas() {
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-slate-300 whitespace-nowrap">Recibido:</span>
                                 <input
-                                    type="number"
-                                    min="0"
-                                    value={isEfectivo ? pagoRecibido : total}
-                                    onChange={(e) => setPagoRecibido(e.target.value)}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={isEfectivo ? formatearMiles(pagoRecibido) : formatearMiles(total)}
+                                    onChange={(e) => {
+                                        // Limpiar todo lo que no sea dígito (puntos, comas, etc.)
+                                        const raw = e.target.value.replace(/\D/g, '');
+                                        setPagoRecibido(raw);
+                                    }}
                                     placeholder="0"
                                     readOnly={Number(selectedFormaPago) !== 1} // Solo efectivo
                                     className="w-full px-3 py-2 text-right text-lg font-bold text-slate-900 bg-white rounded-xl outline-none focus:ring-2 focus:ring-green-400"
