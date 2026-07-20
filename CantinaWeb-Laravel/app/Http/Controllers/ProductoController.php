@@ -44,13 +44,14 @@ class ProductoController extends Controller
             })
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
-                    $q->where('nombre', 'like', '%' . $search . '%')
+                    $term = '%' . strtolower($search) . '%';
+                    $q->whereRaw('LOWER(nombre) LIKE ?', [$term])
                         ->orWhere('precio_compra', 'like', '%' . $search . '%')
-                        ->orWhere('codigo_interno', 'like', '%' . $search . '%')
-                        ->orWhere('codigo_barras', 'like', '%' . $search . '%')
-                        ->orWhere('descripcion', 'like', '%' . $search . '%')
-                        ->orWhereHas('categoria', function ($q2) use ($search) {
-                            $q2->where('nombre', 'like', '%' . $search . '%');
+                        ->orWhereRaw('LOWER(codigo_interno) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(codigo_barras) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(descripcion) LIKE ?', [$term])
+                        ->orWhereHas('categoria', function ($q2) use ($term) {
+                            $q2->whereRaw('LOWER(nombre) LIKE ?', [$term]);
                         });
 
                     // Si el search es una fecha válida, buscar por fecha exacta

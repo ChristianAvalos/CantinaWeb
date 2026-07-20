@@ -36,6 +36,47 @@ class TransaccionesDetalleController extends Controller
     }
 
     /**
+     * Determina si una transacción es de entrada o salida según su tipo.
+     * - Compra (id_TipoMovimiento=1): siempre entrada
+     * - Venta  (id_TipoMovimiento=2): siempre salida
+     * - Ajuste (id_TipoMovimiento=3): según id_TipoEstado (5=Positivo→entrada, 6=Negativo→salida)
+     */
+    private function tipoOperacionDesdeTransaccion($idTransaccion): string
+    {
+        $transaccion = Transacciones::find($idTransaccion);
+        if (!$transaccion) {
+            return 'entrada'; // fallback seguro
+        }
+
+        $tipoMovimiento = (int) $transaccion->id_TipoMovimiento;
+
+        if ($tipoMovimiento === 1) {
+            return 'entrada';            // Compra
+        }
+
+        if ($tipoMovimiento === 2) {
+            return 'salida';             // Venta
+        }
+
+        // Ajuste (id_TipoMovimiento=3): la dirección la determina el TipoEstado
+        // 5 = Positivo (suma stock), 6 = Negativo (resta stock)
+        if ($tipoMovimiento === 3) {
+            $tipoEstado = (int) $transaccion->id_TipoEstado;
+            return $tipoEstado === 6 ? 'salida' : 'entrada';
+        }
+
+        return 'entrada'; // fallback
+    }
+
+    /**
+     * Retorna la operación inversa: si la original fue entrada → salida, y viceversa.
+     */
+    private function tipoOperacionInversa($idTransaccion): string
+    {
+        return $this->tipoOperacionDesdeTransaccion($idTransaccion) === 'entrada' ? 'salida' : 'entrada';
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -127,7 +168,9 @@ class TransaccionesDetalleController extends Controller
         ]);
 
         $montoCabecera = $this->recalcularMontoCabecera($id_transaccion);
-        $stockActual = $this->calculoStock($producto->id,$cantidad,'entrada');
+        // Usar el tipo de operación según la transacción padre (compra=entrada, venta=salida)
+        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($id_transaccion);
+        $stockActual = $this->calculoStock($producto->id, $cantidad, $tipoOperacion);
 
         return response()->json([
             'message' => 'Detalle creado exitosamente.',
@@ -200,14 +243,20 @@ class TransaccionesDetalleController extends Controller
         ]);
 
         // Ajustar stock según el cambio
+        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($detalle->id_transaccion);
         if ($idProductoAnterior === $producto->id) {
             // Mismo producto: solo cambió la cantidad
             $diferencia = $cantidadNueva - $cantidadAnterior;
-            $this->calculoStock($producto->id, $diferencia, 'actualizacion');
+            if ($diferencia >= 0) {
+                $this->calculoStock($producto->id, abs($diferencia), $tipoOperacion);
+            } else {
+                // Si la diferencia es negativa, usar la operación inversa
+                $this->calculoStock($producto->id, abs($diferencia), $this->tipoOperacionInversa($detalle->id_transaccion));
+            }
         } else {
-            // Cambió el producto: revertir stock del viejo y aplicar al nuevo
-            $this->calculoStock($idProductoAnterior, -$cantidadAnterior, 'actualizacion');
-            $this->calculoStock($producto->id, $cantidadNueva, 'actualizacion');
+            // Cambió el producto: revertir stock del viejo (operación inversa) y aplicar al nuevo
+            $this->calculoStock($idProductoAnterior, $cantidadAnterior, $this->tipoOperacionInversa($detalle->id_transaccion));
+            $this->calculoStock($producto->id, $cantidadNueva, $tipoOperacion);
         }
 
         $montoCabecera = $this->recalcularMontoCabecera($detalle->id_transaccion);
@@ -230,7 +279,9 @@ class TransaccionesDetalleController extends Controller
         $transaccionesDetalle->delete();
 
         $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
-        $stockActual = $this->calculoStock($transaccionesDetalle->id_producto, $transaccionesDetalle->cantidad, 'salida');
+        // Al eliminar, revertir el stock: si era venta → devolver (entrada), si era compra → quitar (salida)
+        $tipoOperacion = $this->tipoOperacionInversa($idTransaccion);
+        $stockActual = $this->calculoStock($transaccionesDetalle->id_producto, $transaccionesDetalle->cantidad, $tipoOperacion);
 
         return response()->json([
             'message' => 'Transacción eliminada correctamente.',

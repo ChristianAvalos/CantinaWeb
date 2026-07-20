@@ -102,6 +102,10 @@ export default function VentasRapidas() {
     const [pagoRecibido, setPagoRecibido] = useState('');
     const [vuelto, setVuelto] = useState(0);
 
+    // ─── Ref para toast pendiente (evita duplicados por StrictMode) ──
+    const pendingToastRef = useRef(null);
+    const [toastTick, setToastTick] = useState(0);
+
     // ─── Totales calculados (precios con IVA incluido) ──────────
     const total = cart.reduce((acc, item) => acc + item.subtotal, 0);
     const iva = Math.round(total / 11);          // solo referencia: extraer IVA del total
@@ -185,8 +189,19 @@ export default function VentasRapidas() {
                 if (cancelled) return;
 
                 if (barcodeData?.producto) {
+                    // Validar stock antes de agregar
+                    const prod = barcodeData.producto;
+                    const stock = Number(prod.stock_actual) ?? Number(prod.cantidad_unidad) ?? 0;
+                    if (stock <= 0) {
+                        toast.warning(`${prod.nombre} no tiene stock disponible`, { autoClose: 1500 });
+                        setSearchTerm('');
+                        setSearchResults([]);
+                        setShowDropdown(false);
+                        setIsSearching(false);
+                        return;
+                    }
                     // Coincidencia exacta: añadir directamente y limpiar
-                    addProductoToCart(barcodeData.producto);
+                    addProductoToCart(prod);
                     setSearchTerm('');
                     setSearchResults([]);
                     setShowDropdown(false);
@@ -202,7 +217,9 @@ export default function VentasRapidas() {
                 if (cancelled) return;
 
                 const results = searchData?.productos?.data || [];
-                const activos = Array.isArray(results) ? results.filter(p => Number(p.id_TipoEstado) === 1) : [];
+                const activos = Array.isArray(results)
+                    ? results.filter(p => Number(p.id_TipoEstado) === 1 && Number(p.stock_actual ?? p.cantidad_unidad ?? 0) > 0)
+                    : [];
                 setSearchResults(activos);
                 setShowDropdown(activos.length > 0);
                 setSelectedIndex(-1);
@@ -249,20 +266,31 @@ export default function VentasRapidas() {
         }
     }, [token]);
 
-    // ─── Añadir producto al carrito (versión estable para el efecto de búsqueda) ──
+    // ─── Añadir producto al carrito ──
     const addProductoToCart = useCallback((producto) => {
         const precioVenta = Number(producto.precio_venta) || Number(producto.precio_compra) || 0;
+        const stockDisponible = Number(producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
 
         setCart(prev => {
             const existingIdx = prev.findIndex(item => item.id_producto === producto.id);
             if (existingIdx >= 0) {
+                const item = prev[existingIdx];
+                if (item.cantidad >= stockDisponible) {
+                    pendingToastRef.current = { type: 'warning', msg: `Stock máximo: ${stockDisponible} un. de ${producto.nombre}` };
+                    return prev;
+                }
                 const updated = [...prev];
-                const item = { ...updated[existingIdx] };
-                item.cantidad += 1;
-                item.subtotal = item.cantidad * item.precio_venta;
-                updated[existingIdx] = item;
+                const newItem = { ...item, cantidad: item.cantidad + 1 };
+                newItem.subtotal = newItem.cantidad * newItem.precio_venta;
+                updated[existingIdx] = newItem;
+                pendingToastRef.current = { type: 'success', msg: `${producto.nombre} (${newItem.cantidad}/${stockDisponible})` };
                 return updated;
             }
+            if (stockDisponible <= 0) {
+                pendingToastRef.current = { type: 'warning', msg: `${producto.nombre} no tiene stock disponible` };
+                return prev;
+            }
+            pendingToastRef.current = { type: 'success', msg: `${producto.nombre} agregado` };
             return [...prev, {
                 cartId: Date.now() + Math.random(),
                 id_producto: producto.id,
@@ -272,10 +300,25 @@ export default function VentasRapidas() {
                 cantidad: 1,
                 unidad_medida: producto.unidad_medida?.nombre || producto.unidad_medida || 'UN',
                 subtotal: precioVenta,
+                stockDisponible: stockDisponible,
             }];
         });
-        toast.success(`${producto.nombre} agregado`, { autoClose: 800, hideProgressBar: true, position: 'bottom-right' });
+        // Forzar el useEffect siempre, incluso si cart no cambió
+        setToastTick(t => t + 1);
     }, []);
+
+    // ─── Mostrar toast (éxito o advertencia) una sola vez ──
+    useEffect(() => {
+        if (pendingToastRef.current && toastTick > 0) {
+            const { type, msg } = pendingToastRef.current;
+            pendingToastRef.current = null;
+            if (type === 'success') {
+                toast.success(msg, { autoClose: 800, hideProgressBar: true, position: 'bottom-right' });
+            } else {
+                toast.warning(msg, { autoClose: 1500, position: 'bottom-right' });
+            }
+        }
+    }, [toastTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ─── Actualizar cantidad ──────────────────────────────────────
     const updateCantidad = (cartId, nuevaCantidad) => {
@@ -284,11 +327,16 @@ export default function VentasRapidas() {
             removeFromCart(cartId);
             return;
         }
-        setCart(prev => prev.map(item =>
-            item.cartId === cartId
-                ? { ...item, cantidad: cant, subtotal: cant * item.precio_venta }
-                : item
-        ));
+        setCart(prev => prev.map(item => {
+            if (item.cartId !== cartId) return item;
+            // Validar contra el stock disponible
+            const max = item.stockDisponible ?? 999999;
+            if (cant > max) {
+                toast.warning(`Stock máximo: ${max} unidades`, { autoClose: 1500, position: 'bottom-right' });
+                return item; // No modificar
+            }
+            return { ...item, cantidad: cant, subtotal: cant * item.precio_venta };
+        }));
     };
 
     // ─── Eliminar del carrito ─────────────────────────────────────
@@ -429,6 +477,11 @@ export default function VentasRapidas() {
     };
 
     const selectProduct = (producto) => {
+        const stock = Number(producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
+        if (stock <= 0) {
+            toast.warning(`${producto.nombre} no tiene stock disponible`, { autoClose: 1500 });
+            return;
+        }
         addProductoToCart(producto);
         setSearchTerm('');
         setSearchResults([]);
@@ -505,7 +558,7 @@ export default function VentasRapidas() {
                                         <div className="flex-1 min-w-0">
                                             <div className="font-semibold text-slate-800 truncate">{prod.nombre}</div>
                                             <div className="text-xs text-slate-500">
-                                                Código: {prod.codigo_barras || '—'} | Stock: {prod.cantidad_unidad || 'N/D'}
+                                                Código: {prod.codigo_barras || '—'} | Stock: {prod.stock_actual ?? prod.cantidad_unidad ?? 'N/D'}
                                             </div>
                                         </div>
                                         <div className="ml-3 text-right flex-shrink-0">
