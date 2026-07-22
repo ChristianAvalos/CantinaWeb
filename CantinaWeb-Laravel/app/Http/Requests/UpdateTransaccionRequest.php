@@ -21,6 +21,7 @@ class UpdateTransaccionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $esVenta = (int) $this->input('id_TipoMovimiento') === 2;
         $rules = [
             'nombre' => 'required|string|max:255',
             'fecha' => 'required|date',
@@ -29,10 +30,10 @@ class UpdateTransaccionRequest extends FormRequest
             'descripcion' => 'nullable|string|max:1000',
             'monto' => 'nullable|numeric',
             'id_TipoEstado' => 'required|exists:tipo_estados,id',
-            'id_TipoComprobante' => 'nullable|exists:tipo_comprobantes,id',
+            'id_TipoComprobante' => $esVenta ? 'nullable|exists:tipo_comprobantes,id' : 'required|nullable|exists:tipo_comprobantes,id',
             'id_TipoMovimiento' => 'required|exists:tipo_movimientos,id',
-            'nro_comprobante' => 'nullable|string|max:100',
-            'id_persona' => 'required|exists:personas,id',
+            'nro_comprobante' => $esVenta ? 'nullable|exists:tipo_comprobantes,id' : 'required|nullable|string|max:100',
+            'id_persona' => $esVenta ? 'nullable|exists:personas,id' : 'required|exists:personas,id',
             'id_TipoPago' => 'required|exists:tipo_pagos,id',
             'id_FormaPago' => 'required|exists:forma_pagos,id',
             'descripcion' => 'nullable|string'
