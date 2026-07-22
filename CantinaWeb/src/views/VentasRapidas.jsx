@@ -424,17 +424,19 @@ export default function VentasRapidas() {
             // 3. Éxito
             setUltimaVentaId(idTransaccion);
             setVentaCompletada(true);
-            toast.success('¡Venta completada con éxito!', { autoClose: 2000 });
+            toast.success('¡Venta completada con éxito!', { autoClose: 1000 });
 
-            // Limpiar carrito después de 2 segundos
+            // Limpiar todo después de 1.5 segundos
             setTimeout(() => {
                 setCart([]);
                 setVentaCompletada(false);
                 setPagoRecibido('');
                 setVuelto(0);
                 setSearchTerm('');
+                setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
+                setClienteSearch('');
                 searchInputRef.current?.focus();
-            }, 2500);
+            }, 1500);
 
         } catch (err) {
             console.error('Error al procesar la venta:', err);
