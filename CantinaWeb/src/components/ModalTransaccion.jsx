@@ -295,6 +295,26 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }));
     }, [transaccionDetalle]);
 
+    // Calcular vuelto e IVA automáticamente cuando cambia el monto o el monto recibido
+    useEffect(() => {
+        const monto = Number(form.monto) || 0;
+        const montoRecibido = Number(form.monto_recibido) || 0;
+
+        // Vuelto: diferencia entre lo recibido y el total (nunca negativo)
+        const vueltoCalculado = montoRecibido > monto ? montoRecibido - monto : 0;
+
+        // IVA: 10% sobre la base imponible (monto / 11 = IVA incluido paraguayo)
+        const ivaCalculado = Math.round(monto / 11);
+
+        setForm(prev => {
+            // Solo actualizar si hay cambio real para evitar renders innecesarios
+            if (prev.vuelto === vueltoCalculado && prev.iva === ivaCalculado) {
+                return prev;
+            }
+            return { ...prev, vuelto: vueltoCalculado, iva: ivaCalculado };
+        });
+    }, [form.monto, form.monto_recibido]);
+
     // Actualizar el estado del formulario cuando cambie la transaccion
     useEffect(() => {
         if (modo === 'editar') {
@@ -688,66 +708,51 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 />
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
+                            
+                            {/* Campos exclusivos para venta: Monto Recibido, Vuelto e IVA */}
+                            {tipoTransaccion === 'venta' && (
+                            <>
+                                <div className="mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
+                                    <input
+                                        type="text"
+                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        placeholder="Monto recibido en Gs."
+                                        value={formatearGuarani(form.monto_recibido) || ''}
+                                        onChange={(e) => {
+                                            const valorDigitado = e.target.value;
+                                            const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                            setForm({ ...form, monto_recibido: soloNumeros });
+                                        }}
+                                    />
+                                    {errores.monto_recibido && <p className="text-red-500 text-sm">{errores.monto_recibido[0]}</p>}
+                                </div>
 
-                             {/* Campo para monto recibido */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Monto recibido en Gs."
-                                    disabled
-                                    value={formatearGuarani(form.monto_recibido) || ''}
-                                    //onChange={(e) => setMonto(e.target.value)}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setForm({ ...form, monto_recibido: soloNumeros });
-                                    }}
-                                />
-                                {errores.monto_recibido && <p className="text-red-500 text-sm">{errores.monto_recibido[0]}</p>}
-                            </div>
+                                <div className="mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vuelto</label>
+                                    <input
+                                        type="text"
+                                        className={`w-full px-3 py-2 border ${errores.vuelto ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        placeholder="Vuelto en Gs."
+                                        disabled
+                                        value={formatearGuarani(form.vuelto) || ''}
+                                    />
+                                    {errores.vuelto && <p className="text-red-500 text-sm">{errores.vuelto[0]}</p>}
+                                </div>
 
-                             {/* Campo para vuelto */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Vuelto</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.vuelto ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Vuelto en Gs."
-                                    disabled
-                                    value={formatearGuarani(form.vuelto) || ''}
-                                    //onChange={(e) => setMonto(e.target.value)}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setForm({ ...form, vuelto: soloNumeros });
-                                    }}
-                                />
-                                {errores.vuelto && <p className="text-red-500 text-sm">{errores.vuelto[0]}</p>}
-                            </div>
-
-                             {/* Campo para IVA */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.iva ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="IVA en Gs."
-                                    disabled
-                                    value={formatearGuarani(form.iva) || ''}
-                                    //onChange={(e) => setMonto(e.target.value)}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setForm({ ...form, iva: soloNumeros });
-                                    }}
-                                />
-                                {errores.iva && <p className="text-red-500 text-sm">{errores.iva[0]}</p>}
-                            </div>
+                                <div className="mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+                                    <input
+                                        type="text"
+                                        className={`w-full px-3 py-2 border ${errores.iva ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        placeholder="IVA en Gs."
+                                        disabled
+                                        value={formatearGuarani(form.iva) || ''}
+                                    />
+                                    {errores.iva && <p className="text-red-500 text-sm">{errores.iva[0]}</p>}
+                                </div>
+                            </>
+                            )}
 
                         </div>
                     </div>
