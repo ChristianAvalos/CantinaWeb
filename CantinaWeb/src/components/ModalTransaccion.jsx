@@ -20,6 +20,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         descripcion: transaccion.descripcion || '',
         id_organizacion: transaccion.id_organizacion || '',
         monto: transaccion.monto ?? 0,
+        monto_recibido: transaccion.monto_recibido ?? 0,
+        vuelto:transaccion.vuelto ?? 0,
+        iva: transaccion.iva ?? 0,
         lote: transaccion.lote || '',
         nro_comprobante: transaccion.nro_comprobante || '',
         id_TipoPago: transaccion.id_TipoPago || '',
@@ -300,6 +303,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 id_organizacion: transaccion.id_organizacion || '',
                 descripcion: transaccion.descripcion || '',
                 monto: transaccion.monto ?? 0,
+                monto_recibido: transaccion.monto_recibido ?? 0,
+                vuelto:transaccion.vuelto ?? 0,
+                iva: transaccion.iva ?? 0,
                 id_TipoEstado: transaccion.id_TipoEstado || '',
                 id_TipoPago: transaccion.id_TipoPago || '',
                 id_FormaPago: transaccion.id_FormaPago || '',
@@ -683,7 +689,66 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
 
-                           
+                             {/* Campo para monto recibido */}
+                            <div className="mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
+                                <input
+                                    type="text"
+                                    className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Monto recibido en Gs."
+                                    disabled
+                                    value={formatearGuarani(form.monto_recibido) || ''}
+                                    //onChange={(e) => setMonto(e.target.value)}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setForm({ ...form, monto_recibido: soloNumeros });
+                                    }}
+                                />
+                                {errores.monto_recibido && <p className="text-red-500 text-sm">{errores.monto_recibido[0]}</p>}
+                            </div>
+
+                             {/* Campo para vuelto */}
+                            <div className="mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Vuelto</label>
+                                <input
+                                    type="text"
+                                    className={`w-full px-3 py-2 border ${errores.vuelto ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Vuelto en Gs."
+                                    disabled
+                                    value={formatearGuarani(form.vuelto) || ''}
+                                    //onChange={(e) => setMonto(e.target.value)}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setForm({ ...form, vuelto: soloNumeros });
+                                    }}
+                                />
+                                {errores.vuelto && <p className="text-red-500 text-sm">{errores.vuelto[0]}</p>}
+                            </div>
+
+                             {/* Campo para IVA */}
+                            <div className="mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+                                <input
+                                    type="text"
+                                    className={`w-full px-3 py-2 border ${errores.iva ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="IVA en Gs."
+                                    disabled
+                                    value={formatearGuarani(form.iva) || ''}
+                                    //onChange={(e) => setMonto(e.target.value)}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setForm({ ...form, iva: soloNumeros });
+                                    }}
+                                />
+                                {errores.iva && <p className="text-red-500 text-sm">{errores.iva[0]}</p>}
+                            </div>
+
                         </div>
                     </div>
 
