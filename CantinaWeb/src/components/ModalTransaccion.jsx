@@ -373,10 +373,27 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     }, []);
 
 
+    // Validación: monto recibido no puede ser menor al monto en ventas
+    const validarMontoRecibido = () => {
+        if (tipoTransaccion === 'venta') {
+            const monto = Number(form.monto) || 0;
+            const montoRecibido = Number(form.monto_recibido) || 0;
+            if (montoRecibido < monto) {
+                setErrores({ monto_recibido: ['El monto recibido no puede ser menor al monto total.'] });
+                return false;
+            }
+        }
+        return true;
+    };
+
     // Función para manejar la creación o edición de la transaccion
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isSaving) {
+            return;
+        }
+
+        if (!validarMontoRecibido()) {
             return;
         }
 
@@ -779,6 +796,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 type="button"
                                 onClick={async () => {
                                     setErrores({});
+
+                                    if (!validarMontoRecibido()) {
+                                        return;
+                                    }
+
                                     // Si la transacción ya tiene id, solo actualizar (modo 'editar')
                                     const modoGuardar = transaccion.id ? 'editar' : 'crear';
                                     const result = await guardarTransaccion(modoGuardar);
@@ -843,6 +865,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                         <button
                                                             type='button'
                                                             onClick={async () => {
+                                                                if (!validarMontoRecibido()) {
+                                                                    return;
+                                                                }
                                                                 // Siempre actualizar la cabecera si ya existe
                                                                 const modoGuardar = detalle.id ? 'editar' : 'crear';
                                                                 console.log(detalle.id, modoGuardar);
