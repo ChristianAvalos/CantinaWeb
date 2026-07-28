@@ -984,6 +984,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     refrescarTransaccionesDetalle={fetchTansaccionDetalle}
                     onClose={closeModal}
                     id_transaccion={transaccion.id}
+                    tipoTransaccion={tipoTransaccion}
                 />
             )}
 

@@ -24,7 +24,8 @@ class   TransaccionesDetalle extends Model
         'UrevFechaHora'
     ];
 
-    protected $appends = ['UrevCalc'];
+    protected $appends = ['UrevCalc', 'cantidad_vendida'];
+
     public function getUrevCalcAttribute()
     {
         // Si no hay fecha, devuelve solo el usuario
@@ -34,6 +35,19 @@ class   TransaccionesDetalle extends Model
         $fechaFormateada = Carbon::parse($this->UrevFechaHora)->format('d/m/Y H:i');
 
         return "{$this->UrevUsuario} - {$fechaFormateada}";
+    }
+
+    /**
+     * Calcula cuántas unidades de este producto ya fueron vendidas.
+     * Solo relevante para detalles de compra (entrada).
+     */
+    public function getCantidadVendidaAttribute(): float
+    {
+        return (float) self::where('id_producto', $this->id_producto)
+            ->whereHas('transaccion', function ($query) {
+                $query->where('id_TipoMovimiento', 2); // ventas
+            })
+            ->sum('cantidad');
     }
     //relacion con transacciones
     public function transaccion()

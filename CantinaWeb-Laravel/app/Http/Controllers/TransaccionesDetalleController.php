@@ -230,6 +230,20 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $data['precio_unitario'];
         $subtotal = $cantidadNueva * $precioUnitario;
 
+        // Validación para compras: la nueva cantidad no puede ser menor a lo ya vendido
+        $tipoMovimiento = (int) (Transacciones::find($detalle->id_transaccion)->id_TipoMovimiento ?? 0);
+        if ($tipoMovimiento === 1) {
+            $cantidadVendida = $detalle->cantidad_vendida;
+            if ($cantidadNueva < $cantidadVendida) {
+                return response()->json([
+                    'message' => 'La cantidad no puede ser menor a lo ya vendido.',
+                    'errors' => [
+                        'cantidad' => ["No se puede reducir la cantidad por debajo de {$cantidadVendida} unidades (ya vendidas)."]
+                    ]
+                ], 422);
+            }
+        }
+
         // Guardar directamente usando update (fillable)
         $detalle->update([
             'id_producto' => $producto->id,

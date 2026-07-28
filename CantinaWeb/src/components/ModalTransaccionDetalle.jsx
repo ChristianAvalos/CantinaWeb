@@ -5,7 +5,7 @@ import { formatearMiles, formatearGuarani, limpiarFormato } from '../helpers/Hel
 import { formatDateToInput } from '../helpers/HelpersFechas';
 
 
-export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {}, refrescarTransaccionesDetalle, id_transaccion }) {
+export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {}, refrescarTransaccionesDetalle, id_transaccion, tipoTransaccion = '' }) {
     const [nombre, setNombre] = useState(transaccionDetalle.producto?.nombre || '');
     const [codigo_barras, setCodigoBarras] = useState(transaccionDetalle.producto?.codigo_barras || '');
     const [cantidad, setCantidad] = useState(() => {
@@ -100,6 +100,17 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
 
         setIsSaving(true);
         setErrores({}); // Resetear errores antes de la validación
+
+        // Validación para compras: la cantidad no puede ser menor a lo ya vendido
+        if (tipoTransaccion === 'compra' && modo === 'editar') {
+            const cantidadVendida = Number(transaccionDetalle?.cantidad_vendida) || 0;
+            const nuevaCantidad = Number(cantidad);
+            if (cantidadVendida > 0 && nuevaCantidad < cantidadVendida) {
+                setErrores({ cantidad: [`No se puede reducir la cantidad por debajo de ${cantidadVendida} unidades (ya vendidas).`] });
+                setIsSaving(false);
+                return;
+            }
+        }
 
         try {
             // Calcular subtotal si no está calculado
@@ -237,6 +248,11 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                         setCantidad(soloNumeros);
                                     }}
                                 />
+                                {tipoTransaccion === 'compra' && modo === 'editar' && Number(transaccionDetalle?.cantidad_vendida) > 0 && (
+                                    <p className="text-amber-600 text-xs mt-1">
+                                        ⚠️ Mínimo permitido: {formatearMiles(Number(transaccionDetalle.cantidad_vendida))} unidades (ya vendidas)
+                                    </p>
+                                )}
                                 {errores && errores.cantidad && Array.isArray(errores.cantidad) && (
                                     <p className="text-red-500 text-sm">{errores.cantidad[0]}</p>
                                 )}
