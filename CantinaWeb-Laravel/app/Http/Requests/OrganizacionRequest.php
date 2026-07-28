@@ -37,6 +37,7 @@ class OrganizacionRequest extends FormRequest
             'sigla' => 'nullable|string|max:10',
             'sitioWeb' => 'nullable|string',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'eliminar_imagen' => ['nullable'],
         ];
     }
 

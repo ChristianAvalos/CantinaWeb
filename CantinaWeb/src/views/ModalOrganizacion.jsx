@@ -21,6 +21,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     const baseURL = clienteAxios.defaults.baseURL;
     const [ImagenURL, setImagenURL] = useState("");
     const [previewImage, setPreviewImage] = useState(null);
+    const [eliminarImagen, setEliminarImagen] = useState(false);
     const nombreRef = useRef(null);
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -36,7 +37,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     useEffect(() => {
         if (organizacion.Imagen) {
             const timestamp = new Date().getTime(); // Generar un timestamp único
-            setImagenURL(`${baseURL}/img/${organizacion.Imagen}?t=${timestamp}`);
+            setImagenURL(`${baseURL}/img/organizaciones/${organizacion.Imagen}?t=${timestamp}`);
         } else {
             setImagenURL(""); // Resetear si no hay imagen
         }
@@ -101,6 +102,9 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
         // Si se seleccionó una imagen, la añadimos al FormData
         if (Imagen) {
             formData.append("imagen", Imagen);
+        }
+        if (eliminarImagen) {
+            formData.append('eliminar_imagen', '1');
         }
 
         try {
@@ -171,6 +175,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            setEliminarImagen(false); // si se selecciona nueva imagen, cancelar eliminación
             // Crear un nuevo nombre de archivo basado en la razón social
             const extension = file.name.split('.').pop(); // Obtener la extensión del archivo
             const razonLimpia = RazonSocial.trim().replace(/\.+$/, '').replace(/\s+/g, '_'); // Limpiar y formatear la razón social
@@ -368,20 +373,40 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
                         <div className="col-span-1 flex flex-col items-center justify-center border-l-2 border-gray-200">
                             <div>
                                 <img
-                                    src={previewImage ||  (organizacion.Imagen ? `${baseURL}/img/${organizacion.Imagen}` : '/img/Icon/factory.png')}
+                                    src={previewImage ||  (organizacion.Imagen ? `${baseURL}/img/organizaciones/${organizacion.Imagen}` : '/img/Icon/factory.png')}
                                     alt={`Imagen de ${organizacion.RazonSocial}`}
                                     className="max-w-full h-auto rounded"
                                 />
                             </div>
+                            <label class="bg-slate-700 text-white rounded px-2 py-1 hover:bg-slate-900 transition" for="imagen">
+                                Imagen
+                            </label>
                             <input
                                 type="file"
                                 id="imagen"
                                 name="imagen"
-                                className="w-full px-3 py-2 border rounded-md text-sm"
+                                className="opacity-0 w-full px-3 py-2 border rounded-md text-sm"
                                 accept="image/*"
                                 onChange={handleImageChange}
                             />
+                            {(organizacion.Imagen || previewImage) && !eliminarImagen && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEliminarImagen(true);
+                                        setPreviewImage(null);
+                                        setImagen(null);
+                                    }}
+                                    className="bg-red-500 text-white rounded px-2 py-1 text-sm hover:bg-red-600 transition mt-2"
+                                >
+                                    Eliminar imagen
+                                </button>
+                            )}
+                            {eliminarImagen && (
+                                <p className="text-amber-600 text-xs mt-1">La imagen se eliminará al guardar.</p>
+                            )}
                         </div>
+                        
                     </div>
 
                     {/* Botones */}

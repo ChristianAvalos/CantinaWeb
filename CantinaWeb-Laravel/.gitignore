@@ -7,6 +7,7 @@
 /storage/*.key
 /vendor
 /public/img/producto/
+/public/img/organizaciones/
 .env
 .env.backup
 .env.production

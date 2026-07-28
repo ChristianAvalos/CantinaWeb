@@ -47,16 +47,18 @@ class OrganizacionController extends Controller
     {      
         //Elimino la organizacion 
         $organizacion = Organizacion::findOrFail($id);
+        $imagenAEliminar = $organizacion->Imagen;
 
-        // Eliminar la imagen si está presente
-        if (!empty($organizacion->Imagen)) {
-            $path = public_path('img/' . $organizacion->Imagen);
+        // Primero eliminar el registro de la BD
+        $organizacion->delete();
 
+        // Luego eliminar la imagen física (solo si el delete fue exitoso)
+        if (!empty($imagenAEliminar)) {
+            $path = public_path('img/organizaciones/' . $imagenAEliminar);
             if (is_file($path)) {
                 unlink($path);
             }
         }
-        $organizacion->delete();
 
         return response()->json(['message' => 'Organizacion eliminado correctamente.'],200);
     }
@@ -83,14 +85,14 @@ class OrganizacionController extends Controller
                     $fileName = $data['name'] . '.' . $extension;
 
                     // Eliminar la imagen anterior
-                    $path = public_path('img/' . $fileName);
+                    $path = public_path('img/organizaciones/' . $fileName);
 
                     if (is_file($path)) {
                         unlink($path);
                     }
         
-                    // Mover el archivo a la carpeta public/img
-                    $imagen->move(public_path('img'), $fileName);
+                    // Mover el archivo a la carpeta public/img/organizaciones
+                    $imagen->move(public_path('img/organizaciones'), $fileName);
         
                     // Asignar el nombre del archivo a los datos
                     $data['imagen'] = $fileName;
@@ -163,8 +165,17 @@ class OrganizacionController extends Controller
             $organizacion = Organizacion::findOrFail($id);
 
 
-            // Subir la imagen si está presente
-            if ($request->hasFile('imagen')) {
+            // Manejo de la imagen
+            if ($request->has('eliminar_imagen') && $request->eliminar_imagen) {
+                // Eliminar la imagen física anterior
+                if (!empty($organizacion->Imagen)) {
+                    $path = public_path('img/organizaciones/' . $organizacion->Imagen);
+                    if (is_file($path)) {
+                        unlink($path);
+                    }
+                }
+                $data['imagen'] = null;
+            } elseif ($request->hasFile('imagen')) {
                 // Obtener el archivo
                 $imagen = $request->file('imagen');
     
@@ -174,21 +185,21 @@ class OrganizacionController extends Controller
                 // Renombrar el archivo con el nombre de la Razón Social
                 $fileName = $data['name'] . '.' . $extension;
 
-
-                // Eliminar la imagen anterior
-                $path = public_path('img/' . $organizacion->Imagen);
-
-                if (!empty($organizacion->Imagen) && is_file($path)) {
-                    unlink($path);
+                // Eliminar la imagen anterior (usar el nombre viejo)
+                if (!empty($organizacion->Imagen)) {
+                    $oldPath = public_path('img/organizaciones/' . $organizacion->Imagen);
+                    if (is_file($oldPath)) {
+                        unlink($oldPath);
+                    }
                 }
     
-                // Mover el archivo a la carpeta public/img
-                $imagen->move(public_path('img'), $fileName);
+                // Mover el archivo a la carpeta public/img/organizaciones
+                $imagen->move(public_path('img/organizaciones'), $fileName);
     
                 // Asignar el nombre del archivo a los datos
                 $data['imagen'] = $fileName;
             } else {
-                // Si no se sube imagen, puedes asignar un valor predeterminado
+                // Si no se sube imagen, mantener la actual
                 $data['imagen'] = $organizacion->Imagen ?? null;
             }
     
