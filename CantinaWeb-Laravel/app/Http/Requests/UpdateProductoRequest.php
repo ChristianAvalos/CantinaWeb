@@ -35,6 +35,7 @@ class UpdateProductoRequest extends FormRequest
                 'stock_minimo' => ['required','integer'],
                 'id_TipoEstado' => ['nullable','integer'],
                 'imagen' => ['nullable','image','mimes:jpeg,png,jpg,gif,svg','max:5048'],
+                'eliminar_imagen' => ['nullable'],
                 'fecha' => ['required','date']
             ];
         }

@@ -178,7 +178,16 @@ class ProductoController extends Controller
         $producto = Producto::findOrFail($id);
 
         // Subir la imagen si está presente
-        if ($request->hasFile('imagen')) {
+        if ($request->has('eliminar_imagen') && $request->eliminar_imagen) {
+            // Eliminar la imagen física anterior
+            if ($producto->imagen) {
+                $path = public_path('img/producto/' . $producto->imagen);
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+            $data['imagen'] = null;
+        } elseif ($request->hasFile('imagen')) {
             // Obtener el archivo
             $imagen = $request->file('imagen');
 

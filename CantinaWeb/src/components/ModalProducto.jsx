@@ -29,6 +29,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
     const baseURL = clienteAxios.defaults.baseURL;
     const [ImagenURL, setImagenURL] = useState("");
     const [previewImage, setPreviewImage] = useState(null);
+    const [eliminarImagen, setEliminarImagen] = useState(false);
 
     const [errores, setErrores] = useState({});
 
@@ -98,6 +99,9 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
             if (Imagen) {
                 formData.append('imagen', Imagen);
             }
+            if (eliminarImagen) {
+                formData.append('eliminar_imagen', '1');
+            }
             // --- Agrega este bloque para ver el contenido del FormData ---
             // for (let pair of formData.entries()) {
             //     console.log(pair[0] + ':', pair[1]);
@@ -142,6 +146,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            setEliminarImagen(false); // si se selecciona nueva imagen, cancelar eliminación
             // Crear un nuevo nombre de archivo basado en la razón social
             const extension = file.name.split('.').pop(); // Obtener la extensión del archivo
             let nombreLimpio = form.nombre.trim().replace(/\.+$/, '').replace(/\s+/g, '_'); // Limpiar y formatear la razón social
@@ -381,6 +386,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                     className="max-w-full h-auto rounded"
                                 />
                             </div>
+                            
                             <label class="bg-slate-700 text-white rounded px-2 py-1 hover:bg-slate-900 transition" for="imagen">
                                 Imagen
                             </label>
@@ -392,7 +398,24 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                 accept="image/*"
                                 onChange={handleImageChange}
                             />
+                            {(producto.imagen || previewImage) && !eliminarImagen && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEliminarImagen(true);
+                                        setPreviewImage(null);
+                                        setImagen(null);
+                                    }}
+                                    className="bg-red-500 text-white rounded px-2 py-1 text-sm hover:bg-red-600 transition mt-2"
+                                >
+                                    Eliminar imagen
+                                </button>
+                            )}
+                            {eliminarImagen && (
+                                <p className="text-amber-600 text-xs mt-1">La imagen se eliminará al guardar.</p>
+                            )}
                         </div>
+                        
                     </div>
                     {/* Botones para cerrar y guardar */}
                     <div className="flex justify-end space-x-3 mt-3">
