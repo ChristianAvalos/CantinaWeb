@@ -233,12 +233,12 @@ class TransaccionesDetalleController extends Controller
         // Validación para compras: la nueva cantidad no puede ser menor a lo ya vendido
         $tipoMovimiento = (int) (Transacciones::find($detalle->id_transaccion)->id_TipoMovimiento ?? 0);
         if ($tipoMovimiento === 1) {
-            $cantidadVendida = $detalle->cantidad_vendida;
-            if ($cantidadNueva < $cantidadVendida) {
+            $cantidadMinima = $detalle->cantidad_minima;
+            if ($cantidadNueva < $cantidadMinima) {
                 return response()->json([
-                    'message' => 'La cantidad no puede ser menor a lo ya vendido.',
+                    'message' => 'La cantidad no puede ser menor al mínimo permitido.',
                     'errors' => [
-                        'cantidad' => ["No se puede reducir la cantidad por debajo de {$cantidadVendida} unidades (ya vendidas)."]
+                        'cantidad' => ["No se puede reducir la cantidad por debajo de {$cantidadMinima} unidades (mínimo por ventas ya realizadas)."]
                     ]
                 ], 422);
             }

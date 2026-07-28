@@ -101,12 +101,12 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
         setIsSaving(true);
         setErrores({}); // Resetear errores antes de la validación
 
-        // Validación para compras: la cantidad no puede ser menor a lo ya vendido
+        // Validación para compras: la cantidad no puede ser menor al mínimo permitido
         if (tipoTransaccion === 'compra' && modo === 'editar') {
-            const cantidadVendida = Number(transaccionDetalle?.cantidad_vendida) || 0;
+            const cantidadMinima = Number(transaccionDetalle?.cantidad_minima) || 0;
             const nuevaCantidad = Number(cantidad);
-            if (cantidadVendida > 0 && nuevaCantidad < cantidadVendida) {
-                setErrores({ cantidad: [`No se puede reducir la cantidad por debajo de ${cantidadVendida} unidades (ya vendidas).`] });
+            if (cantidadMinima > 0 && nuevaCantidad < cantidadMinima) {
+                setErrores({ cantidad: [`No se puede reducir la cantidad por debajo de ${cantidadMinima} unidades (mínimo por ventas ya realizadas).`] });
                 setIsSaving(false);
                 return;
             }
@@ -248,9 +248,9 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                         setCantidad(soloNumeros);
                                     }}
                                 />
-                                {tipoTransaccion === 'compra' && modo === 'editar' && Number(transaccionDetalle?.cantidad_vendida) > 0 && (
+                                {tipoTransaccion === 'compra' && modo === 'editar' && Number(transaccionDetalle?.cantidad_minima) > 0 && (
                                     <p className="text-amber-600 text-xs mt-1">
-                                        ⚠️ Mínimo permitido: {formatearMiles(Number(transaccionDetalle.cantidad_vendida))} unidades (ya vendidas)
+                                        ⚠️ Mínimo permitido: {formatearMiles(Number(transaccionDetalle.cantidad_minima))} unidades (por ventas realizadas)
                                     </p>
                                 )}
                                 {errores && errores.cantidad && Array.isArray(errores.cantidad) && (

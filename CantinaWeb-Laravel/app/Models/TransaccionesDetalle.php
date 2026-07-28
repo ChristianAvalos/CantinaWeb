@@ -24,7 +24,7 @@ class   TransaccionesDetalle extends Model
         'UrevFechaHora'
     ];
 
-    protected $appends = ['UrevCalc', 'cantidad_vendida'];
+    protected $appends = ['UrevCalc', 'cantidad_vendida', 'cantidad_minima'];
 
     public function getUrevCalcAttribute()
     {
@@ -38,8 +38,7 @@ class   TransaccionesDetalle extends Model
     }
 
     /**
-     * Calcula cuántas unidades de este producto ya fueron vendidas.
-     * Solo relevante para detalles de compra (entrada).
+     * Total de unidades vendidas de este producto en todas las transacciones.
      */
     public function getCantidadVendidaAttribute(): float
     {
@@ -48,6 +47,31 @@ class   TransaccionesDetalle extends Model
                 $query->where('id_TipoMovimiento', 2); // ventas
             })
             ->sum('cantidad');
+    }
+
+    /**
+     * Cantidad mínima permitida para este detalle de compra,
+     * considerando que otras compras del mismo producto también aportan stock.
+     * Fórmula: max(0, totalVendido - otrasCompras)
+     * donde otrasCompras = totalComprado - cantidadDeEsteDetalle
+     */
+    public function getCantidadMinimaAttribute(): float
+    {
+        $totalComprado = (float) self::where('id_producto', $this->id_producto)
+            ->whereHas('transaccion', function ($query) {
+                $query->where('id_TipoMovimiento', 1); // compras
+            })
+            ->sum('cantidad');
+
+        $totalVendido = (float) self::where('id_producto', $this->id_producto)
+            ->whereHas('transaccion', function ($query) {
+                $query->where('id_TipoMovimiento', 2); // ventas
+            })
+            ->sum('cantidad');
+
+        $otrasCompras = $totalComprado - (float) $this->cantidad;
+
+        return max(0, $totalVendido - $otrasCompras);
     }
     //relacion con transacciones
     public function transaccion()
