@@ -107,6 +107,10 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                 ]);
                 setTipoEstado(teRes.data);
                 setTipoPersona(tpRes.data);
+
+                if (teRes.data?.length && !form.id_tipoestado) {
+                    setForm(prev => ({ ...prev, id_tipoestado: String(teRes.data[0].id) }));
+                }
             } catch (error) {
                 console.error("Error al cargar los datos iniciales", error);
             }

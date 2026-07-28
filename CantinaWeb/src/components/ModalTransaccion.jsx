@@ -364,6 +364,10 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 setTipoEstado(teRes.data);
                 setTipoComprobante(tcRes.data);
                 setOrganizacion(orgRes.data);
+
+                if (teRes.data?.length && !form.id_TipoEstado) {
+                    setForm(prev => ({ ...prev, id_TipoEstado: String(teRes.data[0].id) }));
+                }
             } catch (error) {
                 console.error("Error al cargar los datos iniciales", error);
             }
