@@ -197,11 +197,12 @@ class ProductoController extends Controller
             // Renombrar el archivo con el nombre de la Razón Social
             $fileName = $data['nombre'] . '.' . $extension;
 
-            // Eliminar la imagen anterior
-            $path = public_path('img/producto/' . $fileName);
-
-            if (file_exists($path)) {
-                unlink($path);
+            // Eliminar la imagen anterior (usar el nombre viejo, no el nuevo)
+            if ($producto->imagen) {
+                $oldPath = public_path('img/producto/' . $producto->imagen);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
             }
 
             // Mover el archivo a la carpeta public/img
