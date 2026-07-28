@@ -237,17 +237,18 @@ class ProductoController extends Controller
     {
         // Eliminar el producto por su ID
         $producto = Producto::findOrFail($id);
+        $imagenAEliminar = $producto->imagen;
 
-        // Eliminar la imagen si está presente
-        if ($producto->imagen) {
-            $path = public_path('/img/producto/' . $producto->imagen);
+        // Primero eliminar el registro de la BD
+        $producto->delete();
 
+        // Luego eliminar la imagen física (solo si el delete fue exitoso)
+        if ($imagenAEliminar) {
+            $path = public_path('/img/producto/' . $imagenAEliminar);
             if (file_exists($path)) {
                 unlink($path);
             }
         }
-
-        $producto->delete();
 
         return response()->json(['message' => 'Producto eliminado correctamente.'], 200);
     }
