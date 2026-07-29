@@ -1,11 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand-from: #1e3a8a; /* blue-900 */
+  --color-brand-to: #164e63; /* cyan-900 */
+  --color-brand-on: #ffffff;
+}
 
 :root {
-  --g360-from: 30 58 138; /* blue-900 */
-  --g360-to: 22 78 99; /* cyan-900 */
-  --g360-on: 255 255 255; /* texto por defecto sobre gradiente */
+  --g360-from: 30 58 138;   /* blue-900 */
+  --g360-to: 22 78 99;      /* cyan-900 */
+  --g360-on: 255 255 255;   /* blanco */
 }
 
 html,

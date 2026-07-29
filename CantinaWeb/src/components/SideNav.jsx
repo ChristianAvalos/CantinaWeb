@@ -40,7 +40,7 @@ export default function SideNav() {
     backgroundImage: `linear-gradient(180deg, rgb(${theme.from}) 0%, rgb(${theme.to}) 100%)`,
     color: `rgb(${theme.on})`,
   };
-  const sectionTitleClasses = "mt-5 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-extrabold uppercase tracking-[0.14em] transition hover:bg-white/10";
+  const sectionTitleClasses = "mt-5 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold uppercase tracking-[0.14em] transition hover:bg-white/10";
   const itemLinkClasses = "flex items-center gap-3 rounded-xl px-3 py-2 text-[1.02rem] font-semibold transition hover:bg-white/10";
   const getItemLinkClasses = (path) => {
     const isActive = location.pathname === path;
