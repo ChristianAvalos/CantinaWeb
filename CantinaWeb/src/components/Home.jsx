@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from "react-router"
 import clienteAxios from "../config/axios";
 import { useEffect, useState } from 'react';
 import { obtenerContadoresDashboard } from '../helpers/HelpersUsuarios';

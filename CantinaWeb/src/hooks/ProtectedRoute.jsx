@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import useAuthPermisos from "./useAuthPermisos";
 import clienteAxios from "../config/axios";
 

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation } from "react-router"
 import React, { useEffect, useState } from 'react';
 import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';

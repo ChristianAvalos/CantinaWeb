@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import clienteAxios from '../config/axios.js'
 import { useEffect } from "react";
 import { toast } from "react-toastify";
