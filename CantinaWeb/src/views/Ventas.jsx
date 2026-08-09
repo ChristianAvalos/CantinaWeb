@@ -184,7 +184,6 @@ export default function Ventas() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
                                             <th>Organización</th>
-                                            <th>Nro. Lote</th>
                                             <th>Nro. Comprobante</th>
                                             <th>Tipo</th>
                                             <th>Estado</th>
@@ -192,6 +191,8 @@ export default function Ventas() {
                                             <th>Descripcción</th>
                                             <th>Proveedor</th>
                                             <th>Monto</th>
+                                            <th>Monto recibido</th>
+                                            <th>Vuelto</th>
                                             <th>Urev</th>
                                             <th>Utilidades</th>
                                         </tr>
@@ -205,7 +206,6 @@ export default function Ventas() {
                                                 <tr key={venta.id}>
                                                     <td>{venta.id}</td>
                                                     <td className="text-center">{venta.organizacion.RazonSocial}</td>
-                                                    <td className="text-center">{venta.lote}</td>
                                                     <td className="text-center">{venta.nro_comprobante}</td>
                                                     <td>{venta.tipo_movimiento.nombre}</td>
                                                     <td>{venta.tipo_estado.descripcion}</td>
@@ -213,6 +213,8 @@ export default function Ventas() {
                                                     <td>{venta.descripcion}</td>
                                                     <td>{venta.persona ? venta.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(venta.monto)}</td>
+                                                    <td className="text-center">{formatearGuarani(venta.monto_recibido)}</td>
+                                                    <td className="text-center">{formatearGuarani(venta.vuelto)}</td>
                                                     <td className="text-center">{venta.UrevCalc}</td>
                                                     <td>
                                                         <div className="flex space-x-2">
