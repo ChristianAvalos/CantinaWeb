@@ -263,7 +263,10 @@ class ProductoController extends Controller
         return response()->json(['message' => 'Producto eliminado correctamente.'], 200);
     }
     /**
-     * Buscar producto por código de barras
+     * Buscar producto por código de barras.
+     * Si el usuario pertenece a una organización y dicha organización tiene
+     * un precio de venta personalizado para el producto, se devuelve ese precio
+     * en lugar del precio_venta de referencia de la tabla productos.
      */
     public function buscarPorCodigoBarras(Request $request)
     {
@@ -271,10 +274,27 @@ class ProductoController extends Controller
         if (!$codigo_barras) {
             return response()->json(['message' => 'Código de barras requerido'], 400);
         }
+
         $producto = Producto::where('codigo_barras', $codigo_barras)
             ->where('id_TipoEstado', 1)
             ->first();
+
         if ($producto) {
+            $idOrganizacion = Auth::user()->id_organizacion;
+
+            // Si el usuario tiene organización, buscar precio de venta personalizado
+            if ($idOrganizacion) {
+                $precioOrg = \App\Models\PrecioVenta::where('id_producto', $producto->id)
+                    ->where('id_organizacion', $idOrganizacion)
+                    ->where('id_tipoestado', 1) // solo precios activos
+                    ->first();
+
+                if ($precioOrg) {
+                    // Sobrescribir el precio_venta con el precio personalizado de la organización
+                    $producto->precio_venta = $precioOrg->precio;
+                }
+            }
+
             return response()->json(['producto' => $producto], 200);
         } else {
             return response()->json(['producto' => null], 200);

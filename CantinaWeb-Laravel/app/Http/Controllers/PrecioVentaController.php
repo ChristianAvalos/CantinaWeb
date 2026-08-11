@@ -12,6 +12,7 @@ use App\Models\TipoEstado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\QueryException;
 
 class PrecioVentaController extends Controller
 {
@@ -44,7 +45,7 @@ class PrecioVentaController extends Controller
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
 
-            $precio_ventas = $precio_ventas_Query->paginate(10);
+            $precio_ventas = $precio_ventas_Query->orderBy('id', 'desc')->paginate(10);
         }
         return PrecioVentaResource::collection($precio_ventas);
 
@@ -62,10 +63,22 @@ class PrecioVentaController extends Controller
         $validatedData['UrevUsuario'] = Auth::user()->name;
         $validatedData['UrevFechaHora'] = Carbon::now();
 
-        // Crear el registro en la base de datos
-        $precioVenta = PrecioVenta::create($validatedData);
+        try {
+            // Crear el registro en la base de datos
+            $precioVenta = PrecioVenta::create($validatedData);
 
-        return response()->json(['message' => 'Precio de venta creado correctamente', 'data' => $precioVenta], 201);
+            return response()->json(['message' => 'Precio de venta creado correctamente', 'data' => $precioVenta], 201);
+        } catch (QueryException $e) {
+            // Si el código de error es 23505 (unique violation en PostgreSQL) o 1062 (MySQL)
+            if ($e->getCode() == 23505 || $e->getCode() == 1062) {
+                return response()->json([
+                    'errors' => [
+                        'id_producto' => ['Ya existe un precio de venta para este producto en la organización seleccionada.']
+                    ]
+                ], 422);
+            }
+            throw $e;
+        }
     }
 
 
@@ -99,10 +112,21 @@ class PrecioVentaController extends Controller
         // Buscar el precio de venta por ID
         $precioVenta = PrecioVenta::findOrFail($id);
 
-        // Actualizar el registro en la base de datos
-        $precioVenta->update($validatedData);
+        try {
+            // Actualizar el registro en la base de datos
+            $precioVenta->update($validatedData);
 
-        return response()->json(['message' => 'Precio de venta actualizado correctamente', 'data' => $precioVenta], 200);
+            return response()->json(['message' => 'Precio de venta actualizado correctamente', 'data' => $precioVenta], 200);
+        } catch (QueryException $e) {
+            if ($e->getCode() == 23505 || $e->getCode() == 1062) {
+                return response()->json([
+                    'errors' => [
+                        'id_producto' => ['Ya existe un precio de venta para este producto en la organización seleccionada.']
+                    ]
+                ], 422);
+            }
+            throw $e;
+        }
     }
     public function estadoPrecioVenta($id, Request $request)
     {

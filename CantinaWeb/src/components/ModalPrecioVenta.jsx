@@ -21,7 +21,10 @@ export default function ModalPrecioVenta({
         precioVenta.id_tipo_moneda ? String(precioVenta.id_tipo_moneda) : "",
     );
     const [tiposMoneda, setTiposMoneda] = useState([]);
-    const [precio, setPrecio] = useState(precioVenta.precio || "");
+    // Convertir el precio a entero sin decimales (la API puede devolver "18000.00")
+    const [precio, setPrecio] = useState(
+        precioVenta.precio ? String(Math.round(Number(precioVenta.precio))) : ""
+    );
     //organizacion seleccionada
     const [organizacionSeleccionada, setOrganizacionSeleccionada] = useState(
         precioVenta.id_organizacion ? String(precioVenta.id_organizacion) : "",
@@ -56,7 +59,7 @@ export default function ModalPrecioVenta({
                 id_producto: productoSeleccionado,
                 codigo_barras: codigo_barras,
                 id_tipo_moneda: tipoMonedaSeleccionada,
-                precio: limpiarFormato(precio),
+                precio: Math.round(Number(limpiarFormato(precio))),
                 id_organizacion: organizacionSeleccionada,
             };
 
@@ -199,13 +202,16 @@ export default function ModalPrecioVenta({
                         <input
                             type="text"
                             disabled
-                            className={`w-full px-3 py-2 border ${errores && errores.nombre ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            className={`w-full px-3 py-2 border ${(errores && errores.nombre) || (errores && errores.id_producto) ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             placeholder="Introduce el nombre"
                             value={nombre}
                             readOnly
                         />
                         {errores && errores.nombre && Array.isArray(errores.nombre) && (
                             <p className="text-red-500 text-sm">{errores.nombre[0]}</p>
+                        )}
+                        {errores && errores.id_producto && Array.isArray(errores.id_producto) && (
+                            <p className="text-red-500 text-sm">{errores.id_producto[0]}</p>
                         )}
                     </div>
                     

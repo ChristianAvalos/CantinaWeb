@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreatePrecioVentaRequest extends FormRequest
 {
@@ -26,7 +27,13 @@ class CreatePrecioVentaRequest extends FormRequest
             'id_organizacion' => 'required|exists:organizacion,id',
             'id_tipo_moneda' => 'required|exists:tipo_monedas,id',
             'codigo_barras' => 'required|string|max:255',
-            'id_producto' => 'required|exists:productos,id',
+            'id_producto' => [
+                'required',
+                'exists:productos,id',
+                Rule::unique('precio_venta')->where(function ($query) {
+                    return $query->where('id_organizacion', $this->id_organizacion);
+                }),
+            ],
             'nombre' => 'required|string|max:255',
             'precio' => 'required|numeric|min:0',
         ];
@@ -49,6 +56,7 @@ class CreatePrecioVentaRequest extends FormRequest
             'precio.min' => 'El campo precio debe ser mayor o igual a 0.',
             'id_producto.required' => 'El campo producto es obligatorio.',
             'id_producto.exists' => 'El producto proporcionado no existe.',
+            'id_producto.unique' => 'Ya existe un precio de venta para este producto en la organización seleccionada.',
         ];
     }
 }
