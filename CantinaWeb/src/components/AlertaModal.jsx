@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function Alerta({ tipo = 'informativo', mensaje, onClose, onConfirm }) {
     return (
-        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black bg-opacity-50 z-[1050]">
+        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/50 z-1050">
             <div className="bg-white p-4 rounded-lg shadow-lg max-w-sm w-full">
                 <p className="text-gray-800 mb-4">{mensaje}</p>
 

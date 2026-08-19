@@ -237,6 +237,7 @@ export default function PrecioVenta() {
                                     <thead>
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
+                                            <th>Codigo</th>
                                             <th>Nombre</th>
                                             <th>Organización</th>
                                             <th>Tipo de moneda</th>
@@ -251,6 +252,7 @@ export default function PrecioVenta() {
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
                                                 <td>{precioVenta.id}</td>
+                                                <td>{precioVenta.codigo_barras}</td>
                                                 <td>{precioVenta.nombre}</td>
                                                 <td>{precioVenta.organizacion}</td>
                                                 <td>{precioVenta.tipoMoneda}</td>

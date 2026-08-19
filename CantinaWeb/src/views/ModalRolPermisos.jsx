@@ -53,7 +53,7 @@ const ModalRolPermisos = ({ roleId, onClose, refrescarRoles }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-gray-900/50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
                 <h2 className="text-2xl font-bold mb-4">Asignar Permisos</h2>
 
