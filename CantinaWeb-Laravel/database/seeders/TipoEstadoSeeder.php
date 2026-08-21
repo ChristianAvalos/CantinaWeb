@@ -20,7 +20,8 @@ class TipoEstadoSeeder extends Seeder
             'Finalizado',
             'Pendiente',
             'Positivo',
-            'Negativo'
+            'Negativo',
+            'Anulada'
         ];
 
         $now = Carbon::now();

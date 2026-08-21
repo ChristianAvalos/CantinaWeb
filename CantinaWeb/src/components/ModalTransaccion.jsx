@@ -14,6 +14,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             ? 'Cliente'
             : null;
 
+    // Modo solo lectura: deshabilita toda la edición (se usa para "Ver")
+    const esSoloLectura = modo === 'ver';
+
     //area de las transacciones
     const [form, setForm] = useState({
         nombre: transaccion.nombre || '',
@@ -393,7 +396,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     // Función para manejar la creación o edición de la transaccion
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (isSaving) {
+        if (esSoloLectura || isSaving) {
             return;
         }
 
@@ -474,7 +477,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             {/* Contenido del modal */}
             <div className="bg-white rounded-lg shadow-lg relative z-[1036] p-3 sm:p-6 w-[95vw] max-w-full sm:max-w-5xl border border-red-500 overflow-y-auto max-h-screen">
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">
-                    {modo === 'crear' ? `Crear ${tipoTransaccion}` : `Editar ${tipoTransaccion}`}
+                    {modo === 'crear' ? `Crear ${tipoTransaccion}` : modo === 'editar' ? `Editar ${tipoTransaccion}` : `Ver ${tipoTransaccion}`}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
@@ -488,7 +491,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     type="text"
                                     name='nombre'
                                     ref={nombreRef}
-                                    className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     placeholder="Introduce el nombre"
                                     value={form.nombre}
                                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
@@ -501,7 +505,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                                 <input
                                     type="date"
-                                    className={`w-full px-3 py-2 border ${errores.fecha ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.fecha ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     placeholder="Introduce la fecha"
                                     value={form.fecha}
                                     onChange={(e) => setForm({ ...form, fecha: e.target.value })}
@@ -527,7 +532,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de comprobante</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoComprobante}
                                     onChange={(e) => setForm({ ...form, id_TipoComprobante: e.target.value })}
                                 >
@@ -546,7 +552,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Nro Comprobante</label>
                                 <input
                                     type="text"
-                                    className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     placeholder="Introduce el comprobante"
                                     value={form.nro_comprobante}
                                     onChange={(e) => setForm({ ...form, nro_comprobante: e.target.value })}
@@ -558,7 +565,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Forma de pago</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_FormaPago}
                                     onChange={(e) => setForm({ ...form, id_FormaPago: e.target.value })}
                                 >
@@ -576,7 +584,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de pago</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoPago}
                                     onChange={(e) => setForm({ ...form, id_TipoPago: e.target.value })}
                                 >
@@ -594,7 +603,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoEstado}
                                     onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
                                 >
@@ -611,7 +621,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
                                 <select
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    disabled={esSoloLectura}
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={organizacionSeleccionada}
                                     onChange={(e) => {
                                         const id = e.target.value;
@@ -638,6 +649,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 <div ref={comboPersonaRef} className="relative">
                                     <button
                                         type="button"
+                                        disabled={esSoloLectura}
                                         onClick={() => {
                                             if (mostrarSugerencias) {
                                                 setMostrarSugerencias(false);
@@ -645,7 +657,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                 abrirComboPersona();
                                             }
                                         }}
-                                        className={`flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.id_persona ? 'border-red-500' : 'border-gray-300'}`}
+                                        className={`flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.id_persona ? 'border-red-500' : 'border-gray-300'} ${esSoloLectura ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`}
                                     >
                                         <span className={`${personaSeleccionada.nombre ? 'text-gray-900' : 'text-gray-400'}`}>
                                             {personaSeleccionada.nombre || `Seleccionar ${etiquetaPersona.toLowerCase()}`}
@@ -737,7 +749,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
                                     <input
                                         type="text"
-                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        disabled={esSoloLectura}
+                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                         placeholder="Monto recibido en Gs."
                                         value={formatearGuarani(form.monto_recibido) || ''}
                                         onChange={(e) => {
@@ -784,7 +797,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                         <textarea
                             rows={3}
-                            className={`w-full px-3 py-2 border ${errores.descripcion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            disabled={esSoloLectura}
+                            className={`w-full px-3 py-2 border ${errores.descripcion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                             placeholder="Introduce la descripción"
                             value={form.descripcion}
                             onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
@@ -796,46 +810,48 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     <div className="mt-1">
                         <div className="flex  items-center justify-between mb-2">
                             <h3 className="text-lg font-semibold">{`Detalles de ${tipoTransaccion}`}</h3>
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    setErrores({});
-
-                                    if (!validarMontoRecibido()) {
-                                        return;
-                                    }
-
-                                    // Si la transacción ya tiene id, solo actualizar (modo 'editar')
-                                    const modoGuardar = transaccion.id ? 'editar' : 'crear';
-                                    const result = await guardarTransaccion(modoGuardar);
-                                    if (result.success) {
+                            {!esSoloLectura && (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
                                         setErrores({});
-                                        toast.success(result.message || 'Transacción guardada exitosamente.');
-                                        // La cabecera ya quedó guardada, por lo tanto el formulario debe pasar a edición.
-                                        if (typeof setModo === 'function') {
-                                            setModo('editar');
+
+                                        if (!validarMontoRecibido()) {
+                                            return;
                                         }
-                                        // Si fue creación, cambia a modo editar y actualiza el id
-                                        if (transaccion.id && result.id) {
-                                            setModalModeDetalle('crear');
-                                            transaccion.id = result.id;
-                                            // Cambiar el estado del modal padre a editar
+
+                                        // Si la transacción ya tiene id, solo actualizar (modo 'editar')
+                                        const modoGuardar = transaccion.id ? 'editar' : 'crear';
+                                        const result = await guardarTransaccion(modoGuardar);
+                                        if (result.success) {
+                                            setErrores({});
+                                            toast.success(result.message || 'Transacción guardada exitosamente.');
+                                            // La cabecera ya quedó guardada, por lo tanto el formulario debe pasar a edición.
                                             if (typeof setModo === 'function') {
                                                 setModo('editar');
                                             }
-                                        } else {
-                                            setModalModeDetalle('editar');
+                                            // Si fue creación, cambia a modo editar y actualiza el id
+                                            if (transaccion.id && result.id) {
+                                                setModalModeDetalle('crear');
+                                                transaccion.id = result.id;
+                                                // Cambiar el estado del modal padre a editar
+                                                if (typeof setModo === 'function') {
+                                                    setModo('editar');
+                                                }
+                                            } else {
+                                                setModalModeDetalle('editar');
+                                            }
+                                            setTransaccionDetalleSeleccionado({});
+                                            setModalOpen(true);
+                                        } else if (result.message) {
+                                            toast.error(result.message);
                                         }
-                                        setTransaccionDetalleSeleccionado({});
-                                        setModalOpen(true);
-                                    } else if (result.message) {
-                                        toast.error(result.message);
-                                    }
-                                }}
-                                className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-800 transition"
-                            >
-                                Agregar
-                            </button>
+                                    }}
+                                    className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-800 transition"
+                                >
+                                    Agregar
+                                </button>
+                            )}
                         </div>
 
                         <div className="overflow-x-auto mt-2">
@@ -865,37 +881,41 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                 <td className="px-3 py-2 border">{detalle.fecha_vencimiento || 'Sin fecha'}</td>
                                                 <td className="px-3 py-2 border">{formatearGuarani(detalle.subtotal)}</td>
                                                 <td className="px-3 py-2 border">
-                                                    <div className="flex space-x-2">
-                                                        <button
-                                                            type='button'
-                                                            onClick={async () => {
-                                                                if (!validarMontoRecibido()) {
-                                                                    return;
-                                                                }
-                                                                // Siempre actualizar la cabecera si ya existe
-                                                                const modoGuardar = detalle.id ? 'editar' : 'crear';
-                                                                console.log(detalle.id, modoGuardar);
-                                                                
-                                                                const result = await guardarTransaccion(modoGuardar);
-                                                                if (result.success) {
-                                                                    toast.success(result.message || 'Transacción guardada exitosamente.');
-                                                                    if (typeof setModalModeDetalle === 'function') {
-                                                                        setModalModeDetalle('editar');
+                                                    {esSoloLectura ? (
+                                                        <span className="text-gray-400">—</span>
+                                                    ) : (
+                                                        <div className="flex space-x-2">
+                                                            <button
+                                                                type='button'
+                                                                onClick={async () => {
+                                                                    if (!validarMontoRecibido()) {
+                                                                        return;
                                                                     }
-                                                                    setTransaccionDetalleSeleccionado(detalle);
-                                                                    setModalOpen(true);
-                                                                } else if (result.message) {
-                                                                    toast.error(result.message);
-                                                                }
-                                                            }} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit" />
-                                                        </button>
-                                                        <button
-                                                            type='button'
-                                                            onClick={() => handleDelete(detalle.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete transaccion detalle" />
-                                                        </button>
-                                                    </div>
+                                                                    // Siempre actualizar la cabecera si ya existe
+                                                                    const modoGuardar = detalle.id ? 'editar' : 'crear';
+                                                                    console.log(detalle.id, modoGuardar);
+                                                                    
+                                                                    const result = await guardarTransaccion(modoGuardar);
+                                                                    if (result.success) {
+                                                                        toast.success(result.message || 'Transacción guardada exitosamente.');
+                                                                        if (typeof setModalModeDetalle === 'function') {
+                                                                            setModalModeDetalle('editar');
+                                                                        }
+                                                                        setTransaccionDetalleSeleccionado(detalle);
+                                                                        setModalOpen(true);
+                                                                    } else if (result.message) {
+                                                                        toast.error(result.message);
+                                                                    }
+                                                                }} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
+                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                            </button>
+                                                            <button
+                                                                type='button'
+                                                                onClick={() => handleDelete(detalle.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
+                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete transaccion detalle" />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))
@@ -961,23 +981,34 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
 
                     {/* Botones para cerrar y guardar */}
-                    <div className="flex justify-end space-x-3 mt-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSaving}
-                            className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
-                        >
-                            {isSaving ? 'Guardando...' : (transaccion.id ? 'Guardar Cambios' : 'Crear Transaccion')}
-                        </button>
-
-                    </div>
+                    {esSoloLectura ? (
+                        <div className="flex justify-end mt-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex justify-end space-x-3 mt-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                            >
+                                {isSaving ? 'Guardando...' : (transaccion.id ? 'Guardar Cambios' : 'Crear Transaccion')}
+                            </button>
+                        </div>
+                    )}
                 </form>
             </div>
             {/* Renderizar el modal */}

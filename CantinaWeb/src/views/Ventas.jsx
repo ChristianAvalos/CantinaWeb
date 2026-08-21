@@ -59,7 +59,7 @@ export default function Ventas() {
     const [tipoAlertaModal, setTipoAlertaModal] = useState('informativo');
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
-    const [VentaAEliminar, setVentaAEliminar] = useState(null);
+    const [ventaAAnular, setVentaAAnular] = useState(null);
 
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
@@ -107,32 +107,31 @@ export default function Ventas() {
         }
     };
 
-    //para la eliminacion de ventas seleccionados 
-    const handleDelete = async (id) => {
-
-        setVentaAEliminar(id);
-        setAccionConfirmadaModal('delete');
+    //para la anulacion de ventas (estilo SAP: no se borra, se anula)
+    const handleAnular = (venta) => {
+        setVentaAAnular(venta);
+        setAccionConfirmadaModal('anular');
         setTipoAlertaModal('confirmacion');
-        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar esta venta?');
+        setMensajeAlertaModal(`¿Estás seguro de que deseas anular la venta #${venta.id}? Se revertirá el stock de los productos.`);
         setMostrarAlertaModal(true);
     };
 
-    const confirmarEliminacion = async () => {
+    const confirmarAnulacion = async () => {
         try {
-            const response = await clienteAxios.delete(`api/transacciones/${VentaAEliminar}`, {
+            const response = await clienteAxios.post(`api/transacciones/${ventaAAnular.id}/anular`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}` // Configurar el token en los headers
                 }
             });
 
-            toast.success('Venta eliminada correctamente.');
+            toast.success(response.data?.message || 'Venta anulada correctamente.');
             fetchVentas();
         } catch (error) {
             setTipoAlertaModal('informativo');
-            setMensajeAlertaModal('Hubo un problema al eliminar la venta.');
+            setMensajeAlertaModal(error.response?.data?.message || 'Hubo un problema al anular la venta.');
             setMostrarAlertaModal(true);
         } finally {
-            setVentaAEliminar(null);
+            setVentaAAnular(null);
         }
     }
 
@@ -144,10 +143,14 @@ export default function Ventas() {
 
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
-        if (accionConfirmadaModal == 'delete') {
-            confirmarEliminacion();
+        if (accionConfirmadaModal === 'anular') {
+            confirmarAnulacion();
         }
 
+    };
+
+    const handleVer = (venta) => {
+        openModal('ver', venta);
     };
 
     const handleAplicarFiltros = (nuevosFiltros) => {
@@ -208,7 +211,9 @@ export default function Ventas() {
                                                     <td className="text-center">{venta.organizacion.RazonSocial}</td>
                                                     <td className="text-center">{venta.nro_comprobante}</td>
                                                     <td>{venta.tipo_movimiento.nombre}</td>
-                                                    <td>{venta.tipo_estado.descripcion}</td>
+                                                    <td className={Number(venta.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
+                                                        {venta.tipo_estado.descripcion}
+                                                    </td>
                                                     <td>{venta.nombre}</td>
                                                     <td>{venta.descripcion}</td>
                                                     <td>{venta.persona ? venta.persona.nombre : 'Sin proveedor'}</td>
@@ -217,13 +222,17 @@ export default function Ventas() {
                                                     <td className="text-center">{formatearGuarani(venta.vuelto)}</td>
                                                     <td className="text-center">{venta.UrevCalc}</td>
                                                     <td>
-                                                        <div className="flex space-x-2">
-                                                            <button onClick={() => openModal('editar', venta)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                        <div className="flex items-center justify-center space-x-2">
+                                                            {/* Ver detalle (solo lectura) */}
+                                                            <button onClick={() => handleVer(venta)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            <button onClick={() => handleDelete(venta.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
-                                                            </button>
+                                                            {/* Anular (oculto si ya está anulada) */}
+                                                            {Number(venta.id_TipoEstado) !== 7 && (
+                                                                <button onClick={() => handleAnular(venta)} title="Anular venta" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

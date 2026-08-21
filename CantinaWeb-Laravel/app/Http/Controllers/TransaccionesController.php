@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
+use App\Helpers\StockHelper;
 
 class TransaccionesController extends Controller
 {
@@ -304,5 +305,74 @@ class TransaccionesController extends Controller
         $transaccion->delete();
 
         return response()->json(['message' => 'Transacción eliminada correctamente.'], 200);
+    }
+
+    /**
+     * Anula una transacción (estilo SAP):
+     * revierte el stock de sus detalles y la marca con el estado 'Anulada'.
+     * No se borra físicamente el registro para conservar la trazabilidad.
+     */
+    public function AnularTransaccion($id)
+    {
+        $transaccion = Transacciones::findOrFail($id);
+
+        // Evitar anular dos veces la misma transacción
+        if ((int) $transaccion->id_TipoEstado === 7) {
+            return response()->json(['message' => 'La transacción ya está anulada.'], 422);
+        }
+
+        // 1) Revertir el stock de cada detalle (operación inversa a la original)
+        $detalles = TransaccionesDetalle::where('id_transaccion', $transaccion->id)->get();
+        $operacionInversa = $this->direccionInversa($transaccion);
+
+        foreach ($detalles as $detalle) {
+            StockHelper::calcular(
+                $detalle->id_producto,
+                (float) $detalle->cantidad,
+                $operacionInversa,
+                Auth::user()->name
+            );
+        }
+
+        // 2) Marcar como Anulada
+        $transaccion->update([
+            'id_TipoEstado' => 7,
+            'UrevUsuario' => Auth::user()->name,
+            'UrevFechaHora' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Transacción anulada correctamente. Stock revertido.',
+            'transaccion' => $transaccion->load('tipoEstado'),
+        ], 200);
+    }
+
+    /**
+     * Devuelve la dirección de movimiento de una transacción:
+     * - Compra  (1): entrada
+     * - Venta   (2): salida
+     * - Ajuste  (3): según estado (5=Positivo→entrada, 6=Negativo→salida)
+     */
+    private function direccionMovimiento(Transacciones $transaccion): string
+    {
+        $tipoMovimiento = (int) $transaccion->id_TipoMovimiento;
+
+        if ($tipoMovimiento === 2) {
+            return 'salida';   // Venta
+        }
+
+        if ($tipoMovimiento === 3) {
+            return (int) $transaccion->id_TipoEstado === 6 ? 'salida' : 'entrada'; // Ajuste
+        }
+
+        return 'entrada';      // Compra (y fallback)
+    }
+
+    /**
+     * Operación inversa: si la original fue entrada → salida, y viceversa.
+     */
+    private function direccionInversa(Transacciones $transaccion): string
+    {
+        return $this->direccionMovimiento($transaccion) === 'entrada' ? 'salida' : 'entrada';
     }
 }
