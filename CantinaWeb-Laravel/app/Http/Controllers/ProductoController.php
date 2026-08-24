@@ -72,6 +72,15 @@ class ProductoController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(10);
 
+        // Solo cuando lo pide el POS (?precio_org=1): aplicar el precio de venta
+        // personalizado de la organización a cada producto, para que la búsqueda
+        // por nombre muestre el MISMO precio que al escanear por código de barras.
+        if ($request->boolean('precio_org')) {
+            $productos->getCollection()->transform(function ($producto) {
+                return $this->aplicarPrecioPersonalizado($producto);
+            });
+        }
+
         //sumo los montos de los productos
         $subtotal = $productos->sum('precio_compra');
 
@@ -280,24 +289,39 @@ class ProductoController extends Controller
             ->first();
 
         if ($producto) {
-            $idOrganizacion = Auth::user()->id_organizacion;
-
-            // Si el usuario tiene organización, buscar precio de venta personalizado
-            if ($idOrganizacion) {
-                $precioOrg = \App\Models\PrecioVenta::where('id_producto', $producto->id)
-                    ->where('id_organizacion', $idOrganizacion)
-                    ->where('id_tipoestado', 1) // solo precios activos
-                    ->first();
-
-                if ($precioOrg) {
-                    // Sobrescribir el precio_venta con el precio personalizado de la organización
-                    $producto->precio_venta = $precioOrg->precio;
-                }
-            }
+            // Aplicar el precio de venta personalizado de la organización
+            $this->aplicarPrecioPersonalizado($producto);
 
             return response()->json(['producto' => $producto], 200);
         } else {
             return response()->json(['producto' => null], 200);
         }
+    }
+
+    /**
+     * Si el usuario pertenece a una organización y dicha organización tiene
+     * un precio de venta personalizado para el producto, aplica ese precio
+     * sobre el producto (devuelve el producto con el precio actualizado).
+     * Se usa tanto en la búsqueda por código de barras como por nombre,
+     * para que el precio mostrado en el POS sea siempre consistente.
+     */
+    private function aplicarPrecioPersonalizado(Producto $producto): Producto
+    {
+        $idOrganizacion = Auth::user()->id_organizacion;
+
+        // Si el usuario tiene organización, buscar precio de venta personalizado
+        if ($idOrganizacion) {
+            $precioOrg = \App\Models\PrecioVenta::where('id_producto', $producto->id)
+                ->where('id_organizacion', $idOrganizacion)
+                ->where('id_tipoestado', 1) // solo precios activos
+                ->first();
+
+            if ($precioOrg) {
+                // Sobrescribir el precio_venta con el precio personalizado de la organización
+                $producto->precio_venta = $precioOrg->precio;
+            }
+        }
+
+        return $producto;
     }
 }

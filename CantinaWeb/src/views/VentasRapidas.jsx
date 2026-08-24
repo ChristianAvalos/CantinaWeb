@@ -210,7 +210,7 @@ export default function VentasRapidas() {
                 }
 
                 // Si no hay coincidencia exacta, buscar por nombre/código
-                const { data: searchData } = await clienteAxios.get(`api/productos?search=${encodeURIComponent(term)}`, {
+                const { data: searchData } = await clienteAxios.get(`api/productos?search=${encodeURIComponent(term)}&precio_org=1`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
