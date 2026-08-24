@@ -155,6 +155,17 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $request->precio_unitario;
         $subtotal = $cantidad * $precioUnitario;
 
+        // Determinar la dirección del stock y validar si es salida (venta)
+        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($id_transaccion);
+        if ($tipoOperacion === 'salida') {
+            $stockActual = (float) ($producto->stock_actual ?? 0);
+            if ($stockActual < $cantidad) {
+                return response()->json([
+                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidad})."
+                ], 422);
+            }
+        }
+
         $detalle = TransaccionesDetalle::create([
             'id_transaccion' => $id_transaccion,
             'id_producto' => $producto->id,
@@ -168,8 +179,6 @@ class TransaccionesDetalleController extends Controller
         ]);
 
         $montoCabecera = $this->recalcularMontoCabecera($id_transaccion);
-        // Usar el tipo de operación según la transacción padre (compra=entrada, venta=salida)
-        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($id_transaccion);
         $stockActual = $this->calculoStock($producto->id, $cantidad, $tipoOperacion);
 
         return response()->json([
@@ -240,6 +249,18 @@ class TransaccionesDetalleController extends Controller
                     'errors' => [
                         'cantidad' => ["No se puede reducir la cantidad por debajo de {$cantidadMinima} unidades (mínimo por ventas ya realizadas)."]
                     ]
+                ], 422);
+            }
+        }
+
+        // Validación para ventas: si la cantidad aumenta, el incremento no puede superar el stock disponible
+        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($detalle->id_transaccion);
+        if ($tipoOperacion === 'salida' && $cantidadNueva > $cantidadAnterior) {
+            $stockActual = (float) ($producto->stock_actual ?? 0);
+            $incremento = $cantidadNueva - $cantidadAnterior;
+            if ($stockActual < $incremento) {
+                return response()->json([
+                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$incremento})."
                 ], 422);
             }
         }

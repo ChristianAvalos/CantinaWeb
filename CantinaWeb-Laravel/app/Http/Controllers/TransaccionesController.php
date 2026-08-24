@@ -12,6 +12,7 @@ use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
 use App\Helpers\StockHelper;
+use App\Models\Producto;
 
 class TransaccionesController extends Controller
 {
@@ -153,6 +154,105 @@ class TransaccionesController extends Controller
         return response()->json($transaccion, 201);
     }
 
+    /**
+     * Crea una venta POS de forma ATÓMICA: cabecera + detalles en una sola
+     * transacción de BD, validando el stock de cada producto antes de descontar.
+     * Si falla cualquier detalle, se revierte todo (no quedan ventas a medias).
+     */
+    public function crearVentaPos(Request $request)
+    {
+        $data = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string|max:1000',
+            'fecha' => 'required|date',
+            'id_organizacion' => 'required|exists:organizacion,id',
+            'id_persona' => 'nullable|exists:personas,id',
+            'id_TipoPago' => 'required|exists:tipo_pagos,id',
+            'id_FormaPago' => 'required|exists:forma_pagos,id',
+            'monto_recibido' => 'nullable|numeric',
+            'vuelto' => 'nullable|numeric',
+            'iva' => 'nullable|numeric',
+            'detalles' => 'required|array|min:1',
+            'detalles.*.codigo_barras' => 'required|string',
+            'detalles.*.cantidad' => 'required|numeric|min:0.0001',
+            'detalles.*.precio_unitario' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $venta = DB::transaction(function () use ($data) {
+                // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
+                $cabecera = Transacciones::create([
+                    'nombre' => $data['nombre'],
+                    'descripcion' => $data['descripcion'] ?? null,
+                    'fecha' => $data['fecha'],
+                    'id_organizacion' => $data['id_organizacion'],
+                    'id_persona' => $data['id_persona'] ?? null,
+                    'id_TipoEstado' => 3,            // Finalizado
+                    'id_TipoMovimiento' => 2,        // Venta
+                    'id_TipoPago' => $data['id_TipoPago'],
+                    'id_FormaPago' => $data['id_FormaPago'],
+                    'monto' => 0,
+                    'monto_recibido' => $data['monto_recibido'] ?? null,
+                    'vuelto' => $data['vuelto'] ?? null,
+                    'iva' => $data['iva'] ?? null,
+                    'id_usuario' => Auth::user()->id,
+                    'UrevUsuario' => Auth::user()->name,
+                    'UrevFechaHora' => now(),
+                ]);
+
+                // 2) Detalles: validar stock y descontar
+                $montoTotal = 0;
+                foreach ($data['detalles'] as $detalle) {
+                    $producto = Producto::where('codigo_barras', $detalle['codigo_barras'])->first();
+                    if (!$producto) {
+                        throw new \Exception("Producto no encontrado (código: {$detalle['codigo_barras']})");
+                    }
+
+                    $cantidad = (float) $detalle['cantidad'];
+                    $precioUnitario = (float) $detalle['precio_unitario'];
+                    $subtotal = $cantidad * $precioUnitario;
+                    $stockActual = (float) ($producto->stock_actual ?? 0);
+
+                    // Validar stock (venta = salida)
+                    if ($stockActual < $cantidad) {
+                        throw new \Exception(
+                            "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidad})"
+                        );
+                    }
+
+                    TransaccionesDetalle::create([
+                        'id_transaccion' => $cabecera->id,
+                        'id_producto' => $producto->id,
+                        'cantidad' => $cantidad,
+                        'precio_unitario' => $precioUnitario,
+                        'subtotal' => $subtotal,
+                        'UrevUsuario' => Auth::user()->name,
+                        'UrevFechaHora' => now(),
+                    ]);
+
+                    StockHelper::calcular($producto->id, $cantidad, 'salida', Auth::user()->name);
+                    $montoTotal += $subtotal;
+                }
+
+                // 3) Recalcular monto de la cabecera
+                $cabecera->update([
+                    'monto' => $montoTotal,
+                    'UrevUsuario' => Auth::user()->name,
+                    'UrevFechaHora' => now(),
+                ]);
+
+                return $cabecera->load(['persona', 'tipoPago', 'formaPago', 'tipoEstado']);
+            });
+
+            return response()->json([
+                'message' => 'Venta realizada correctamente.',
+                'venta' => $venta,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
 
     /**
      * Store a newly created resource in storage.
@@ -185,6 +285,17 @@ class TransaccionesController extends Controller
     {
         $data = $request->validated();
         $transaccion = Transacciones::findOrFail($id);
+
+        // No permitir editar una transacción ya finalizada o anulada.
+        // Las correcciones de cabecera se hacen con /corregir y las reversiones con /anular.
+        $estadoActual = (int) $transaccion->id_TipoEstado;
+        if ($estadoActual === 3 || $estadoActual === 7) {
+            return response()->json([
+                'message' => $estadoActual === 7
+                    ? 'No se puede editar una transacción anulada.'
+                    : 'No se puede editar una transacción finalizada. Usá "Corregir datos" para la cabecera o "Anular" para revertirla.'
+            ], 422);
+        }
 
         $detalleQuery = TransaccionesDetalle::where('id_transaccion', $transaccion->id);
         $tieneDetalles = $detalleQuery->exists();

@@ -384,44 +384,35 @@ export default function VentasRapidas() {
         setIsProcessing(true);
 
         try {
-            // 1. Crear la transacción cabecera
+            // Crear la venta de forma ATÓMICA: cabecera + detalles en una sola
+            // llamada. El backend valida el stock y revierte todo si falla algo.
             const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const transactionPayload = {
                 nombre: `Venta POS - ${new Date().toLocaleString('es-PY')}`,
                 descripcion: `Venta rápida - ${cart.length} producto(s)`,
                 fecha: fechaActual,
                 id_organizacion: user?.id_organizacion || '',
-                id_TipoEstado: '3',        // Finalizado
-                id_TipoMovimiento: '2',    // Venta
                 id_persona: selectedCliente.id || '',
                 id_TipoPago: selectedTipoPago,
                 id_FormaPago: selectedFormaPago,
-                monto: total,
                 monto_recibido: pagoRecibidoNumero,
                 vuelto: vuelto,
                 iva: iva,
-            };
-
-            const { data: transaccionCreada } = await clienteAxios.post('api/creartransaccion', transactionPayload, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            const idTransaccion = transaccionCreada?.id;
-            if (!idTransaccion) throw new Error('No se recibió ID de transacción');
-
-            // 2. Crear los detalles uno por uno
-            for (const item of cart) {
-                await clienteAxios.post('api/creartransaccion_detalle', {
-                    id_transaccion: idTransaccion,
+                detalles: cart.map((item) => ({
                     codigo_barras: item.codigo_barras,
                     cantidad: item.cantidad,
                     precio_unitario: item.precio_venta,
-                }, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-            }
+                })),
+            };
 
-            // 3. Éxito
+            const { data: ventaData } = await clienteAxios.post('api/ventas/pos', transactionPayload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const idTransaccion = ventaData?.venta?.id;
+            if (!idTransaccion) throw new Error('No se recibió ID de transacción');
+
+            // Éxito
             setUltimaVentaId(idTransaccion);
             setVentaCompletada(true);
             toast.success('¡Venta completada con éxito!', { autoClose: 1000 });
