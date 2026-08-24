@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::put('/update_transaccion/{id}',[TransaccionesController::class,'updateTransaccion']);
     Route::get('/transacciones/grafico', [TransaccionesController::class, 'grafico']);
     Route::post('/transacciones/{id}/anular', [TransaccionesController::class, 'AnularTransaccion']);
+    Route::post('/transacciones/{id}/corregir', [TransaccionesController::class, 'corregirTransaccion']);
 
     //transacciones detalle
     Route::get('/transacciones_detalle',[TransaccionesDetalleController::class,'index']);

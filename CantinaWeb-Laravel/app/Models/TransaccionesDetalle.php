@@ -38,13 +38,15 @@ class   TransaccionesDetalle extends Model
     }
 
     /**
-     * Total de unidades vendidas de este producto en todas las transacciones.
+     * Total de unidades vendidas de este producto en todas las transacciones
+     * (excluye ventas anuladas, ya que su stock fue revertido).
      */
     public function getCantidadVendidaAttribute(): float
     {
         return (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
-                $query->where('id_TipoMovimiento', 2); // ventas
+                $query->where('id_TipoMovimiento', 2) // ventas
+                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
             })
             ->sum('cantidad');
     }
@@ -54,18 +56,21 @@ class   TransaccionesDetalle extends Model
      * considerando que otras compras del mismo producto también aportan stock.
      * Fórmula: max(0, totalVendido - otrasCompras)
      * donde otrasCompras = totalComprado - cantidadDeEsteDetalle
+     * (tanto compras como ventas anuladas se excluyen del cálculo).
      */
     public function getCantidadMinimaAttribute(): float
     {
         $totalComprado = (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
-                $query->where('id_TipoMovimiento', 1); // compras
+                $query->where('id_TipoMovimiento', 1) // compras
+                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
             })
             ->sum('cantidad');
 
         $totalVendido = (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
-                $query->where('id_TipoMovimiento', 2); // ventas
+                $query->where('id_TipoMovimiento', 2) // ventas
+                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
             })
             ->sum('cantidad');
 

@@ -16,6 +16,10 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
     // Modo solo lectura: deshabilita toda la edición (se usa para "Ver")
     const esSoloLectura = modo === 'ver';
+    // Modo corrección: solo permite editar cabecera no contable (typos en factura, etc.)
+    const esCorreccion = modo === 'corregir';
+    // Campos bloqueados cuando no se debe modificar la operación (estado, pagos, montos)
+    const esBloqueado = esSoloLectura || esCorreccion;
 
     //area de las transacciones
     const [form, setForm] = useState({
@@ -393,10 +397,51 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         return true;
     };
 
+    // Guarda SOLO los campos de cabecera no contables (corrección de typos)
+    const guardarCorreccion = async () => {
+        if (isSaving || !transaccion.id) {
+            return;
+        }
+
+        setIsSaving(true);
+        setErrores({});
+        try {
+            const response = await clienteAxios.post(`api/transacciones/${transaccion.id}/corregir`, {
+                nombre: form.nombre,
+                descripcion: form.descripcion || null,
+                fecha: form.fecha,
+                nro_comprobante: form.nro_comprobante || null,
+                id_TipoComprobante: form.id_TipoComprobante || null,
+                id_persona: form.id_persona || null,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success(response.data?.message || 'Corrección guardada correctamente.');
+            if (refrescarTransacciones !== null && typeof refrescarTransacciones === 'function') {
+                refrescarTransacciones();
+            }
+            onClose();
+        } catch (error) {
+            if (error.response?.status === 422) {
+                setErrores(error.response.data.errors || {});
+            }
+            toast.error(error.response?.data?.message || 'Error al corregir la transacción.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     // Función para manejar la creación o edición de la transaccion
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (esSoloLectura || isSaving) {
+            return;
+        }
+
+        // En modo corrección solo se actualiza la cabecera no contable
+        if (esCorreccion) {
+            await guardarCorreccion();
             return;
         }
 
@@ -477,7 +522,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             {/* Contenido del modal */}
             <div className="bg-white rounded-lg shadow-lg relative z-[1036] p-3 sm:p-6 w-[95vw] max-w-full sm:max-w-5xl border border-red-500 overflow-y-auto max-h-screen">
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">
-                    {modo === 'crear' ? `Crear ${tipoTransaccion}` : modo === 'editar' ? `Editar ${tipoTransaccion}` : `Ver ${tipoTransaccion}`}
+                    {modo === 'crear' ? `Crear ${tipoTransaccion}` : modo === 'editar' ? `Editar ${tipoTransaccion}` : modo === 'corregir' ? `Corregir ${tipoTransaccion}` : `Ver ${tipoTransaccion}`}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
@@ -565,8 +610,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Forma de pago</label>
                                 <select
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esBloqueado}
+                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_FormaPago}
                                     onChange={(e) => setForm({ ...form, id_FormaPago: e.target.value })}
                                 >
@@ -584,8 +629,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de pago</label>
                                 <select
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esBloqueado}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoPago}
                                     onChange={(e) => setForm({ ...form, id_TipoPago: e.target.value })}
                                 >
@@ -603,8 +648,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                                 <select
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esBloqueado}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoEstado}
                                     onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
                                 >
@@ -621,8 +666,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
                                 <select
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esBloqueado}
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={organizacionSeleccionada}
                                     onChange={(e) => {
                                         const id = e.target.value;
@@ -749,8 +794,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
                                     <input
                                         type="text"
-                                        disabled={esSoloLectura}
-                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                        disabled={esBloqueado}
+                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                         placeholder="Monto recibido en Gs."
                                         value={formatearGuarani(form.monto_recibido) || ''}
                                         onChange={(e) => {
@@ -810,7 +855,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     <div className="mt-1">
                         <div className="flex  items-center justify-between mb-2">
                             <h3 className="text-lg font-semibold">{`Detalles de ${tipoTransaccion}`}</h3>
-                            {!esSoloLectura && (
+                            {!esBloqueado && (
                                 <button
                                     type="button"
                                     onClick={async () => {
@@ -881,7 +926,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                 <td className="px-3 py-2 border">{detalle.fecha_vencimiento || 'Sin fecha'}</td>
                                                 <td className="px-3 py-2 border">{formatearGuarani(detalle.subtotal)}</td>
                                                 <td className="px-3 py-2 border">
-                                                    {esSoloLectura ? (
+                                                    {esBloqueado ? (
                                                         <span className="text-gray-400">—</span>
                                                     ) : (
                                                         <div className="flex space-x-2">
@@ -989,6 +1034,23 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
                             >
                                 Cerrar
+                            </button>
+                        </div>
+                    ) : esCorreccion ? (
+                        <div className="flex justify-end space-x-3 mt-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                            >
+                                {isSaving ? 'Guardando...' : 'Guardar corrección'}
                             </button>
                         </div>
                     ) : (

@@ -321,10 +321,36 @@ class TransaccionesController extends Controller
             return response()->json(['message' => 'La transacción ya está anulada.'], 422);
         }
 
-        // 1) Revertir el stock de cada detalle (operación inversa a la original)
-        $detalles = TransaccionesDetalle::where('id_transaccion', $transaccion->id)->get();
+        // 1) Validar stock disponible antes de revertir
+        $detalles = TransaccionesDetalle::with('producto')->where('id_transaccion', $transaccion->id)->get();
         $operacionInversa = $this->direccionInversa($transaccion);
 
+        // Si la reversión va a QUITAR stock (compra o ajuste positivo),
+        // verificar que el stock actual alcance (que no se haya vendido/consumido ya).
+        if ($operacionInversa === 'salida') {
+            $sinStock = [];
+            foreach ($detalles as $detalle) {
+                $stockActual = (float) ($detalle->producto->stock_actual ?? 0);
+                $cantidad = (float) $detalle->cantidad;
+                if ($stockActual < $cantidad) {
+                    $sinStock[] = sprintf(
+                        '%s (stock: %s, requerido: %s)',
+                        $detalle->producto->nombre ?? 'Producto #' . $detalle->id_producto,
+                        $stockActual,
+                        $cantidad
+                    );
+                }
+            }
+
+            if (count($sinStock) > 0) {
+                return response()->json([
+                    'message' => 'No se puede anular: parte de esta transacción ya fue vendida o consumida (stock insuficiente). Anulá primero las ventas asociadas. Detalle: ' . implode('; ', $sinStock) . '.',
+                    'errors' => ['stock' => $sinStock],
+                ], 422);
+            }
+        }
+
+        // 2) Revertir el stock de cada detalle (operación inversa a la original)
         foreach ($detalles as $detalle) {
             StockHelper::calcular(
                 $detalle->id_producto,
@@ -334,7 +360,7 @@ class TransaccionesController extends Controller
             );
         }
 
-        // 2) Marcar como Anulada
+        // 3) Marcar como Anulada
         $transaccion->update([
             'id_TipoEstado' => 7,
             'UrevUsuario' => Auth::user()->name,
@@ -344,6 +370,47 @@ class TransaccionesController extends Controller
         return response()->json([
             'message' => 'Transacción anulada correctamente. Stock revertido.',
             'transaccion' => $transaccion->load('tipoEstado'),
+        ], 200);
+    }
+
+    /**
+     * Corrige solo los datos de cabecera NO contables de una transacción
+     * (nombre, descripción, fecha, nro_comprobante, tipo de comprobante y persona).
+     * No modifica estado, movimiento, montos ni stock: permite arreglar un
+     * error de tipeo (ej. número de factura) sin anular la operación.
+     */
+    public function corregirTransaccion(Request $request, $id)
+    {
+        $transaccion = Transacciones::findOrFail($id);
+
+        // No corregir transacciones ya anuladas
+        if ((int) $transaccion->id_TipoEstado === 7) {
+            return response()->json(['message' => 'No se puede corregir una transacción anulada.'], 422);
+        }
+
+        $data = $request->validate([
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
+            'fecha' => ['required', 'date'],
+            'nro_comprobante' => ['nullable', 'string', 'max:50'],
+            'id_TipoComprobante' => ['nullable', 'integer'],
+            'id_persona' => ['nullable', 'integer'],
+        ]);
+
+        $transaccion->update([
+            'nombre' => $data['nombre'],
+            'descripcion' => $data['descripcion'] ?? null,
+            'fecha' => $data['fecha'],
+            'nro_comprobante' => $data['nro_comprobante'] ?? null,
+            'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
+            'id_persona' => $data['id_persona'] ?? null,
+            'UrevUsuario' => Auth::user()->name,
+            'UrevFechaHora' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Transacción corregida correctamente.',
+            'transaccion' => $transaccion->load(['tipoComprobante', 'persona']),
         ], 200);
     }
 

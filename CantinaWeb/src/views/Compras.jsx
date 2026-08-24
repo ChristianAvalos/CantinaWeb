@@ -65,7 +65,7 @@ export default function Compras() {
     const [tipoAlertaModal, setTipoAlertaModal] = useState('informativo');
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
-    const [compraAEliminar, setCompraAEliminar] = useState(null);
+    const [compraAAnular, setCompraAAnular] = useState(null);
 
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
@@ -113,32 +113,31 @@ export default function Compras() {
         }
     };
 
-    //para la eliminacion de compras seleccionados 
-    const handleDelete = async (id) => {
-
-        setCompraAEliminar(id);
-        setAccionConfirmadaModal('delete');
+    //para la anulacion de compras (estilo SAP: no se borra, se anula)
+    const handleAnular = (compra) => {
+        setCompraAAnular(compra);
+        setAccionConfirmadaModal('anular');
         setTipoAlertaModal('confirmacion');
-        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar esta compra?');
+        setMensajeAlertaModal(`¿Estás seguro de que deseas anular la compra #${compra.id}? Se revertirá el stock de los productos.`);
         setMostrarAlertaModal(true);
     };
 
-    const confirmarEliminacion = async () => {
+    const confirmarAnulacion = async () => {
         try {
-            await clienteAxios.delete(`api/transacciones/${compraAEliminar}`, {
+            const response = await clienteAxios.post(`api/transacciones/${compraAAnular.id}/anular`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}` // Configurar el token en los headers
                 }
             });
 
-            toast.success('Compra eliminada correctamente.');
+            toast.success(response.data?.message || 'Compra anulada correctamente.');
             fetchCompras();
-        } catch {
+        } catch (error) {
             setTipoAlertaModal('informativo');
-            setMensajeAlertaModal('Hubo un problema al eliminar la compra.');
+            setMensajeAlertaModal(error.response?.data?.message || 'Hubo un problema al anular la compra.');
             setMostrarAlertaModal(true);
         } finally {
-            setCompraAEliminar(null);
+            setCompraAAnular(null);
         }
     }
 
@@ -150,10 +149,14 @@ export default function Compras() {
 
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
-        if (accionConfirmadaModal == 'delete') {
-            confirmarEliminacion();
+        if (accionConfirmadaModal === 'anular') {
+            confirmarAnulacion();
         }
 
+    };
+
+    const handleVer = (compra) => {
+        openModal('ver', compra);
     };
 
     const handleAplicarFiltros = (nuevosFiltros) => {
@@ -214,16 +217,28 @@ export default function Compras() {
                                                     <td>{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(compra.monto)}</td>
-                                                    <td>{compra.tipo_estado.descripcion}</td>
+                                                    <td className={Number(compra.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
+                                                        {compra.tipo_estado.descripcion}
+                                                    </td>
                                                     <td className="text-center">{compra.UrevCalc}</td>
                                                     <td>
-                                                        <div className="flex space-x-2">
-                                                            <button onClick={() => openModal('editar', compra)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                        <div className="flex items-center justify-center space-x-2">
+                                                            {/* Ver detalle (solo lectura) */}
+                                                            <button onClick={() => handleVer(compra)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            <button onClick={() => handleDelete(compra.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
-                                                            </button>
+                                                            {/* Corregir cabecera (oculto si ya está anulada) */}
+                                                            {Number(compra.id_TipoEstado) !== 7 && (
+                                                                <button onClick={() => openModal('corregir', compra)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/edit.png" alt="Corregir" />
+                                                                </button>
+                                                            )}
+                                                            {/* Anular (oculto si ya está anulada) */}
+                                                            {Number(compra.id_TipoEstado) !== 7 && (
+                                                                <button onClick={() => handleAnular(compra)} title="Anular compra" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

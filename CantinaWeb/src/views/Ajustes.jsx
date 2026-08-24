@@ -59,7 +59,7 @@ export default function Ajustes() {
     const [tipoAlertaModal, setTipoAlertaModal] = useState('informativo');
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
-    const [AjusteAEliminar, setAjusteAEliminar] = useState(null);
+    const [ajusteAAnular, setAjusteAAnular] = useState(null);
 
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
@@ -107,32 +107,31 @@ export default function Ajustes() {
         }
     };
 
-    //para la eliminacion de ajustes seleccionados 
-    const handleDelete = async (id) => {
-
-        setAjusteAEliminar(id);
-        setAccionConfirmadaModal('delete');
+    //para la anulacion de ajustes (estilo SAP: no se borra, se anula)
+    const handleAnular = (ajuste) => {
+        setAjusteAAnular(ajuste);
+        setAccionConfirmadaModal('anular');
         setTipoAlertaModal('confirmacion');
-        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar esta compra?');
+        setMensajeAlertaModal(`¿Estás seguro de que deseas anular el ajuste #${ajuste.id}? Se revertirá el stock de los productos.`);
         setMostrarAlertaModal(true);
     };
 
-    const confirmarEliminacion = async () => {
+    const confirmarAnulacion = async () => {
         try {
-            const response = await clienteAxios.delete(`api/transacciones/${AjusteAEliminar}`, {
+            const response = await clienteAxios.post(`api/transacciones/${ajusteAAnular.id}/anular`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}` // Configurar el token en los headers
                 }
             });
 
-            toast.success('Ajuste eliminado correctamente.');
+            toast.success(response.data?.message || 'Ajuste anulado correctamente.');
             fetchAjustes();
         } catch (error) {
             setTipoAlertaModal('informativo');
-            setMensajeAlertaModal('Hubo un problema al eliminar el ajuste.');
+            setMensajeAlertaModal(error.response?.data?.message || 'Hubo un problema al anular el ajuste.');
             setMostrarAlertaModal(true);
         } finally {
-            setAjusteAEliminar(null);
+            setAjusteAAnular(null);
         }
     }
 
@@ -144,10 +143,14 @@ export default function Ajustes() {
 
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
-        if (accionConfirmadaModal == 'delete') {
-            confirmarEliminacion();
+        if (accionConfirmadaModal === 'anular') {
+            confirmarAnulacion();
         }
 
+    };
+
+    const handleVer = (ajuste) => {
+        openModal('ver', ajuste);
     };
 
     const handleAplicarFiltros = (nuevosFiltros) => {
@@ -208,20 +211,32 @@ export default function Ajustes() {
                                                     <td className="text-center">{ajuste.lote}</td>
                                                     <td className="text-center">{ajuste.nro_comprobante}</td>
                                                     <td>{ajuste.tipo_movimiento.nombre}</td>
-                                                    <td>{ajuste.tipo_estado.descripcion}</td>
+                                                    <td className={Number(ajuste.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
+                                                        {ajuste.tipo_estado.descripcion}
+                                                    </td>
                                                     <td>{ajuste.nombre}</td>
                                                     <td>{ajuste.descripcion}</td>
                                                     <td>{ajuste.persona ? ajuste.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(ajuste.monto)}</td>
                                                     <td className="text-center">{ajuste.UrevCalc}</td>
                                                     <td>
-                                                        <div className="flex space-x-2">
-                                                            <button onClick={() => openModal('editar', ajuste)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                        <div className="flex items-center justify-center space-x-2">
+                                                            {/* Ver detalle (solo lectura) */}
+                                                            <button onClick={() => handleVer(ajuste)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            <button onClick={() => handleDelete(ajuste.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
-                                                            </button>
+                                                            {/* Corregir cabecera (oculto si ya está anulado) */}
+                                                            {Number(ajuste.id_TipoEstado) !== 7 && (
+                                                                <button onClick={() => openModal('corregir', ajuste)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/edit.png" alt="Corregir" />
+                                                                </button>
+                                                            )}
+                                                            {/* Anular (oculto si ya está anulado) */}
+                                                            {Number(ajuste.id_TipoEstado) !== 7 && (
+                                                                <button onClick={() => handleAnular(ajuste)} title="Anular ajuste" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
