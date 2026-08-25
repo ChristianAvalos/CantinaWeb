@@ -4,7 +4,7 @@ import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';
 
 const sectionRoutes = {
-  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/ajustes', '/transacciones', '/precio-ventas'],
+  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/ajustes', '/transacciones', '/precio-ventas'],
   definiciones: ['/productos', '/categorias', '/personas'],
   herramientas: ['/organizacion', '/usuarios', '/usuarios/roles'],
   reportes: ['/usuarios/reporte'],
@@ -232,6 +232,15 @@ export default function SideNav() {
                       <Link to="/ventas-rapidas" className={getItemLinkClasses('/ventas-rapidas')}>
                         <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas Rápidas" className="h-5 w-5 shrink-0" />
                         <span>Ventas Rápidas</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {hasPermission('Cobranzas') && (
+                    <li>
+                      <Link to="/cobranzas" className={getItemLinkClasses('/cobranzas')}>
+                        <img src="/img/Icon/check-edit.png" alt="Cobranzas" className="h-5 w-5 shrink-0" />
+                        <span>Cobranzas</span>
                       </Link>
                     </li>
                   )}

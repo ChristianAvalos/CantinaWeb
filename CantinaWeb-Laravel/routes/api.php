@@ -22,6 +22,7 @@ use App\Http\Controllers\TipoPersonaController;
 use App\Http\Controllers\TipoUnidadMedidaController;
 use App\Http\Controllers\TransaccionesController;
 use App\Http\Controllers\TransaccionesDetalleController;
+use App\Http\Controllers\CuotasController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -83,13 +84,17 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //Transacciones
     Route::get('/transacciones',[TransaccionesController::class,'index']);
-    Route::delete('/transacciones/{id}', [TransaccionesController::class, 'DeleteTransaccion']);
     Route::post('/creartransaccion',[TransaccionesController::class,'createTransaccion']);
     Route::put('/update_transaccion/{id}',[TransaccionesController::class,'updateTransaccion']);
     Route::get('/transacciones/grafico', [TransaccionesController::class, 'grafico']);
     Route::post('/transacciones/{id}/anular', [TransaccionesController::class, 'AnularTransaccion']);
     Route::post('/transacciones/{id}/corregir', [TransaccionesController::class, 'corregirTransaccion']);
     Route::post('/ventas/pos', [TransaccionesController::class, 'crearVentaPos']);
+
+    //Cuotas de ventas a crédito/cuotas
+    Route::get('/cuotas',[CuotasController::class,'index']);
+    Route::post('/cuotas/{id}/pagar', [CuotasController::class, 'pagar']);
+    Route::post('/cuotas/{id}/revertir', [CuotasController::class, 'revertirPago']);
 
     //transacciones detalle
     Route::get('/transacciones_detalle',[TransaccionesDetalleController::class,'index']);

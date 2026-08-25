@@ -208,11 +208,11 @@ export default function Ventas() {
                                             ventas.map((venta) => (
                                                 <tr key={venta.id}>
                                                     <td>{venta.id}</td>
-                                                    <td className="text-center">{venta.organizacion.RazonSocial}</td>
+                                                    <td className="text-center">{venta.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center">{venta.nro_comprobante}</td>
-                                                    <td>{venta.tipo_movimiento.nombre}</td>
+                                                    <td>{venta.tipo_movimiento?.nombre || 'Sin movimiento'}</td>
                                                     <td className={Number(venta.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
-                                                        {venta.tipo_estado.descripcion}
+                                                        {venta.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
                                                     <td>{venta.nombre}</td>
                                                     <td>{venta.descripcion}</td>

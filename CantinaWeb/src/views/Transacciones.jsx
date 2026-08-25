@@ -1,7 +1,5 @@
-import clienteAxios from "../config/axios";
 import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from '../components/ModalTransaccion';
-import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones';
 import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
@@ -62,7 +60,6 @@ export default function Transacciones() {
     const [tipoAlertaModal, setTipoAlertaModal] = useState('informativo');
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
-    const [transaccionAEliminar, setTransaccionAEliminar] = useState(null);
 
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
@@ -109,36 +106,6 @@ export default function Transacciones() {
         }
     };
 
-    //para la eliminacion de transacciones seleccionados 
-    const handleDelete = async (id) => {
-
-        setTransaccionAEliminar(id);
-        setAccionConfirmadaModal('delete');
-        setTipoAlertaModal('confirmacion');
-        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar esta transaccion?');
-        setMostrarAlertaModal(true);
-    };
-
-    const confirmarEliminacion = async () => {
-        try {
-            const response = await clienteAxios.delete(`api/transacciones/${transaccionAEliminar}`, {
-                headers: {
-                    Authorization: `Bearer ${token}` // Configurar el token en los headers
-                }
-            });
-
-            toast.success('Transaccion eliminada correctamente.');
-            fetchTransacciones();
-        } catch (error) {
-            setTipoAlertaModal('informativo');
-            setMensajeAlertaModal('Hubo un problema al eliminar la transaccion.');
-            setMostrarAlertaModal(true);
-        } finally {
-            setTransaccionAEliminar(null);
-        }
-    }
-
-
     const handleClose = () => {
         setMostrarAlertaModal(false);
         setAccionConfirmadaModal(null);
@@ -146,9 +113,6 @@ export default function Transacciones() {
 
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
-        if (accionConfirmadaModal == 'delete') {
-            confirmarEliminacion();
-        }
 
         if (accionConfirmadaModal == 'resetPassword') {
             resetPassword();
@@ -218,9 +182,6 @@ export default function Transacciones() {
                                                         <div className="flex space-x-2">
                                                             <button onClick={() => openModal('editar', transaccion)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
                                                                 <img src="/img/Icon/edit.png" alt="Edit" />
-                                                            </button>
-                                                            <button onClick={() => handleDelete(transaccion.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
                                                             </button>
                                                         </div>
                                                     </td>

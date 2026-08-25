@@ -7,6 +7,16 @@ import { formatDateToInput } from '../helpers/HelpersFechas';
 import ModalTransaccionDetalle from './ModalTransaccionDetalle';
 import { obtenerTransaccionesDetalle } from '../helpers/HelpersTransacciones';
 
+// Suma días a una fecha 'YYYY-MM-DD' (o a hoy si es null) y devuelve 'YYYY-MM-DD' local
+function sumarDiasLocal(fecha, dias) {
+    const base = fecha ? new Date(`${fecha}T00:00:00`) : new Date();
+    base.setDate(base.getDate() + dias);
+    const y = base.getFullYear();
+    const m = String(base.getMonth() + 1).padStart(2, '0');
+    const d = String(base.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
     const tipoPersonaFiltro = tipoTransaccion === 'compra'
         ? 'Proveedor'
@@ -47,6 +57,20 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [tipoEstado, setTipoEstado] = useState([]);
     const [formaPago, setFormaPago] = useState([]);
     const [tipoComprobante, setTipoComprobante] = useState([]);
+
+    // Cuotas para ventas a crédito/cuotas
+    const [cuotasConfig, setCuotasConfig] = useState({
+        numeroCuotas: 1,
+        fechaPrimeraCuota: sumarDiasLocal(null, 30),
+    });
+    const [cuotas, setCuotas] = useState([]);
+
+    // Determina si la venta es a crédito/cuotas según el tipo de pago seleccionado
+    const tipoPagoSeleccionado = tipoPago.find(tp => String(tp.id) === String(form.id_TipoPago));
+    const esCreditoOCuotas = tipoTransaccion === 'venta'
+        && tipoPagoSeleccionado
+        && ['crédito', 'credito', 'cuotas'].includes(String(tipoPagoSeleccionado.nombre || '').trim().toLowerCase());
+
     //para personas
     const [personas, setPersonas] = useState([]);
     const [personaSeleccionada, setPersonaSeleccionada] = useState({
@@ -59,7 +83,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
     //area del detalle
     const [transaccionDetalle, settransaccionDetalle] = useState([]);
-    const [transaccionDetalleSeleccionado, setTransaccionDetalleSeleccionado] = useState(null);
+    const [transaccionDetalleSeleccionado, setTransaccionDetalleSeleccionado] = useState({});
 
 
     //errores
@@ -104,12 +128,19 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     }, []);
 
     // Función única para crear/actualizar transacción
-    const guardarTransaccion = async (modo) => {
+    const guardarTransaccion = async (modo, opciones = {}) => {
+        const { finalizar = false, incluirCuotas = false } = opciones;
         try {
             const formData = new FormData();
             Object.entries(form).forEach(([key, value]) => {
                 formData.append(key, value);
             });
+            if (finalizar) {
+                formData.append('finalizar', '1');
+            }
+            if (incluirCuotas && cuotas.length > 0) {
+                formData.append('cuotas', JSON.stringify(cuotas));
+            }
             let idTransaccion = transaccion.id;
             let response;
             // for (let pair of formData.entries()) {
@@ -133,15 +164,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             }
             return { success: true, id: idTransaccion };
         } catch (error) {
+            const mensaje = error.response?.data?.message || 'Error al guardar la transaccion en la base de datos.';
             if (error.response && error.response.status === 422) {
-                setErrores(error.response.data.errors);
-
+                setErrores(error.response.data.errors || { general: [mensaje] });
             } else {
-                setErrores({ general: ['Error al guardar la transaccion'] });
-
+                setErrores({ general: [mensaje] });
             }
-            return { success: false, message: error.response?.data?.errors || 'Error al guardar la transaccion en la base de datos.' };
-
+            return { success: false, message: mensaje };
         }
     };
 
@@ -322,6 +351,46 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         });
     }, [form.monto, form.monto_recibido]);
 
+    // Generar el plan de cuotas cuando cambia la configuración o el monto
+    useEffect(() => {
+        if (!esCreditoOCuotas) {
+            setCuotas([]);
+            return;
+        }
+
+        const montoTotal = Math.round(Number(form.monto) || 0);
+        const n = Math.max(1, parseInt(cuotasConfig.numeroCuotas, 10) || 1);
+        const fechaInicio = cuotasConfig.fechaPrimeraCuota;
+
+        if (montoTotal <= 0 || !fechaInicio) {
+            setCuotas([]);
+            return;
+        }
+
+        const montoCuota = Math.floor(montoTotal / n);
+        let acumulado = 0;
+        const lista = [];
+        for (let i = 0; i < n; i++) {
+            const monto = (i === n - 1) ? (montoTotal - acumulado) : montoCuota;
+            acumulado += monto;
+            lista.push({
+                numero: i + 1,
+                monto,
+                fecha_vencimiento: sumarDiasLocal(fechaInicio, i * 30),
+            });
+        }
+        setCuotas(lista);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [esCreditoOCuotas, cuotasConfig, form.monto]);
+
+    // Actualiza un campo de una cuota específica
+    const actualizarCuota = (index, campo, valor) => {
+        setCuotas(prev => prev.map((c, i) => {
+            if (i !== index) return c;
+            return { ...c, [campo]: campo === 'monto' ? (Number(valor) || 0) : valor };
+        }));
+    };
+
     // Actualizar el estado del formulario cuando cambie la transaccion
     useEffect(() => {
         if (modo === 'editar') {
@@ -385,8 +454,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
 
     // Validación: monto recibido no puede ser menor al monto en ventas
+    // (excepto ventas a crédito/cuotas, donde no se cobra en el momento)
     const validarMontoRecibido = () => {
-        if (tipoTransaccion === 'venta') {
+        if (tipoTransaccion === 'venta' && !esCreditoOCuotas) {
             const monto = Number(form.monto) || 0;
             const montoRecibido = Number(form.monto_recibido) || 0;
             if (montoRecibido < monto) {
@@ -452,7 +522,17 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setIsSaving(true);
         setErrores({});
         try {
-            const result = await guardarTransaccion(modo);
+            // Si la venta es a crédito/cuotas, exigir cuotas configuradas
+            if (tipoTransaccion === 'venta' && esCreditoOCuotas && cuotas.length === 0) {
+                toast.warning('Configurá el plan de cuotas de la venta.');
+                setIsSaving(false);
+                return;
+            }
+
+            const result = await guardarTransaccion(modo, {
+                finalizar: tipoTransaccion === 'compra' || tipoTransaccion === 'venta',
+                incluirCuotas: tipoTransaccion === 'venta' && esCreditoOCuotas,
+            });
             if (result.success) {
                 toast.success(result.message || 'Transacción guardada exitosamente.');
                 if (refrescarTransacciones !== null && typeof refrescarTransacciones === 'function') {
@@ -836,6 +916,76 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         </div>
                     </div>
 
+                    {/* ── Panel de cuotas (solo ventas a crédito/cuotas) ── */}
+                    {esCreditoOCuotas && (
+                        <div className="mb-4 w-full border border-blue-200 rounded-lg p-4 bg-blue-50/50">
+                            <h3 className="font-semibold text-gray-700 mb-3">Plan de cuotas</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Número de cuotas</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={cuotasConfig.numeroCuotas}
+                                        onChange={(e) => setCuotasConfig(prev => ({ ...prev, numeroCuotas: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Primera cuota</label>
+                                    <input
+                                        type="date"
+                                        value={cuotasConfig.fechaPrimeraCuota}
+                                        onChange={(e) => setCuotasConfig(prev => ({ ...prev, fechaPrimeraCuota: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="flex items-end">
+                                    <div className="text-sm text-gray-600">
+                                        <span className="font-semibold">Total:</span> {formatearGuarani(form.monto)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {cuotas.length > 0 ? (
+                                <table className="min-w-full border border-gray-200 rounded-lg">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="px-2 py-2 border text-left">N°</th>
+                                            <th className="px-2 py-2 border text-right">Monto</th>
+                                            <th className="px-2 py-2 border text-left">Vencimiento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {cuotas.map((cuota, idx) => (
+                                            <tr key={idx}>
+                                                <td className="px-2 py-2 border text-center">{cuota.numero}</td>
+                                                <td className="px-2 py-2 border text-right">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={cuota.monto}
+                                                        onChange={(e) => actualizarCuota(idx, 'monto', e.target.value)}
+                                                        className="w-28 text-right px-2 py-1 border border-gray-300 rounded-md"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border">
+                                                    <input
+                                                        type="date"
+                                                        value={cuota.fecha_vencimiento}
+                                                        onChange={(e) => actualizarCuota(idx, 'fecha_vencimiento', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded-md"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-sm text-gray-500">Ingresá el monto de la venta y la fecha para generar las cuotas.</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Campo para Descripción: textarea ubicado debajo de los inputs y antes de la grilla */}
                     <div className="mb-4 w-full">
@@ -918,13 +1068,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     {transaccionDetalle && transaccionDetalle.length > 0 ? (
                                         transaccionDetalle.map((detalle, id) => (
                                             <tr key={id}>
-                                                <td className="px-3 py-2 border">{detalle.lote}</td>
-                                                <td className="px-3 py-2 border">{detalle.producto.codigo_barras}</td>
-                                                <td className="px-3 py-2 border">{detalle.producto.nombre}</td>
-                                                <td className="px-3 py-2 border">{formatearMiles(Number(detalle.cantidad))}</td>
-                                                <td className="px-3 py-2 border">{formatearGuarani(detalle.precio_unitario)}</td>
-                                                <td className="px-3 py-2 border">{detalle.fecha_vencimiento || 'Sin fecha'}</td>
-                                                <td className="px-3 py-2 border">{formatearGuarani(detalle.subtotal)}</td>
+                                                <td className="px-3 py-2 border">{detalle?.lote}</td>
+                                                <td className="px-3 py-2 border">{detalle?.producto?.codigo_barras}</td>
+                                                <td className="px-3 py-2 border">{detalle?.producto?.nombre}</td>
+                                                <td className="px-3 py-2 border">{formatearMiles(Number(detalle?.cantidad))}</td>
+                                                <td className="px-3 py-2 border">{formatearGuarani(detalle?.precio_unitario)}</td>
+                                                <td className="px-3 py-2 border">{detalle?.fecha_vencimiento || 'Sin fecha'}</td>
+                                                <td className="px-3 py-2 border">{formatearGuarani(detalle?.subtotal)}</td>
                                                 <td className="px-3 py-2 border">
                                                     {esBloqueado ? (
                                                         <span className="text-gray-400">—</span>

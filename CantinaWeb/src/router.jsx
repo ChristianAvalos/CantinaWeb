@@ -23,6 +23,7 @@ const Persona = lazy(() => import("./views/Personas"));
 const Compras = lazy(() => import("./views/Compras"));
 const Ventas = lazy(() => import("./views/Ventas"));
 const VentasRapidas = lazy(() => import("./views/VentasRapidas"));
+const Cobranzas = lazy(() => import("./views/Cobranzas"));
 const Ajustes = lazy(() => import("./views/Ajustes"));
 const PrecioVentas = lazy(() => import("./views/PrecioVentas"));
 
@@ -115,6 +116,14 @@ const router = createBrowserRouter ([
                 element: withSuspense(
                 <ProtectedRoute permission="Ventas">
                     <VentasRapidas/>
+                </ProtectedRoute>
+                )
+            },
+            {
+                path:'/cobranzas',
+                element: withSuspense(
+                <ProtectedRoute permission="Ventas">
+                    <Cobranzas/>
                 </ProtectedRoute>
                 )
             },

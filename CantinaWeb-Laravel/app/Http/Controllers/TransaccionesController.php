@@ -13,6 +13,8 @@ use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
 use App\Helpers\StockHelper;
 use App\Models\Producto;
+use App\Models\TipoPago;
+use App\Models\Cuota;
 
 class TransaccionesController extends Controller
 {
@@ -302,31 +304,45 @@ class TransaccionesController extends Controller
         $montoDetalles = (float) $detalleQuery->sum('subtotal');
         $montoNormalizado = $tieneDetalles ? $montoDetalles : (float) ($data['monto'] ?? 0);
 
-        
+        // Al cerrar (submit final) una compra/venta manual, se fuerza el estado Finalizado (3).
+        $idTipoMovimiento = (int) ($data['id_TipoMovimiento'] ?? $transaccion->id_TipoMovimiento);
+        $finalizar = (bool) $request->input('finalizar', false);
+        $idTipoEstado = ($finalizar && in_array($idTipoMovimiento, [1, 2], true))
+            ? 3
+            : $data['id_TipoEstado'];
 
-        $transaccion->update([
-            'nombre' => $data['nombre'],
-            'descripcion' => $data['descripcion'] ?? null,
-            'fecha' => $data['fecha'],
-            'lote' => $data['lote'] ?? null,
-            'id_persona' => $data['id_persona'],
-            'id_TipoEstado' => $data['id_TipoEstado'],
-            'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
-            'nro_comprobante' => $data['nro_comprobante'] ?? null, 
-            'id_TipoPago' => $data['id_TipoPago'],
-            'id_FormaPago' => $data['id_FormaPago'],
-            'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
-            'id_Caja' => $data['id_Caja'] ?? null,
-            'id_Banco' => $data['id_Banco'] ?? null,
-            'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
-            'id_usuario' => Auth::user()->id,
-            'id_TipoMovimiento' => $data['id_TipoMovimiento'],
-            'monto' => $montoNormalizado,
-            'UrevUsuario' => Auth::user()->name,
-            'UrevFechaHora' => now(),
-        ]);
+        try {
+            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $request) {
+                $transaccion->update([
+                    'nombre' => $data['nombre'],
+                    'descripcion' => $data['descripcion'] ?? null,
+                    'fecha' => $data['fecha'],
+                    'lote' => $data['lote'] ?? null,
+                    'id_persona' => $data['id_persona'],
+                    'id_TipoEstado' => $idTipoEstado,
+                    'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
+                    'nro_comprobante' => $data['nro_comprobante'] ?? null,
+                    'id_TipoPago' => $data['id_TipoPago'],
+                    'id_FormaPago' => $data['id_FormaPago'],
+                    'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
+                    'id_Caja' => $data['id_Caja'] ?? null,
+                    'id_Banco' => $data['id_Banco'] ?? null,
+                    'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
+                    'id_usuario' => Auth::user()->id,
+                    'id_TipoMovimiento' => $data['id_TipoMovimiento'],
+                    'monto' => $montoNormalizado,
+                    'UrevUsuario' => Auth::user()->name,
+                    'UrevFechaHora' => now(),
+                ]);
 
-        return response()->json($transaccion, 200);
+                // Sincronizar cuotas si es una venta a crédito/cuotas
+                $this->sincronizarCuotas($transaccion, $request);
+            });
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($transaccion->load('tipoPago'), 200);
     }
 
     public function Grafico(Request $request)
@@ -404,19 +420,6 @@ class TransaccionesController extends Controller
         ]);
     }
 
-
-    /**
-     * Remove the specified resource from storage.
-     */
-
-    public function DeleteTransaccion($id)
-    {
-        // Eliminar la transacción por su ID
-        $transaccion = Transacciones::findOrFail($id);
-        $transaccion->delete();
-
-        return response()->json(['message' => 'Transacción eliminada correctamente.'], 200);
-    }
 
     /**
      * Anula una transacción (estilo SAP):
@@ -552,5 +555,101 @@ class TransaccionesController extends Controller
     private function direccionInversa(Transacciones $transaccion): string
     {
         return $this->direccionMovimiento($transaccion) === 'entrada' ? 'salida' : 'entrada';
+    }
+
+    /**
+     * Indica si la transacción es una venta pagada a crédito o en cuotas.
+     */
+    private function esVentaCredito(Transacciones $transaccion): bool
+    {
+        if ((int) $transaccion->id_TipoMovimiento !== 2) {
+            return false;
+        }
+
+        $tipoPago = TipoPago::find($transaccion->id_TipoPago);
+        if (! $tipoPago) {
+            return false;
+        }
+
+        $nombre = mb_strtolower(trim($tipoPago->nombre ?? ''));
+
+        return in_array($nombre, ['crédito', 'credito', 'cuotas'], true);
+    }
+
+    /**
+     * Extrae el array de cuotas desde el request (puede venir como array o JSON string).
+     * Devuelve null cuando no se enviaron cuotas.
+     */
+    private function extraerCuotas(Request $request): ?array
+    {
+        $raw = $request->input('cuotas');
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (is_array($raw)) {
+            return $raw;
+        }
+
+        $decoded = json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Reemplaza las cuotas de una transacción por las recibidas en el request.
+     * Solo actúa cuando la transacción es una venta a crédito/cuotas.
+     */
+    private function sincronizarCuotas(Transacciones $transaccion, Request $request): void
+    {
+        if (! $this->esVentaCredito($transaccion)) {
+            return;
+        }
+
+        $cuotas = $this->extraerCuotas($request);
+        if ($cuotas === null) {
+            return;
+        }
+
+        $montoTotal = (float) $transaccion->monto;
+
+        $normalizadas = [];
+        $suma = 0.0;
+        foreach ($cuotas as $index => $cuota) {
+            $numero = (int) ($cuota['numero'] ?? ($index + 1));
+            $monto = (float) ($cuota['monto'] ?? 0);
+            $fecha = $cuota['fecha_vencimiento'] ?? null;
+
+            if ($monto <= 0 || ! $fecha) {
+                throw new \InvalidArgumentException("La cuota #{$numero} debe tener un monto mayor a 0 y una fecha de vencimiento.");
+            }
+
+            $suma += $monto;
+            $normalizadas[] = compact('numero', 'monto', 'fecha');
+        }
+
+        if (count($normalizadas) === 0) {
+            return;
+        }
+
+        // Tolerancia de redondeo (centavos)
+        if (abs($suma - $montoTotal) > 0.5) {
+            throw new \InvalidArgumentException('La suma de las cuotas no coincide con el monto total de la venta.');
+        }
+
+        Cuota::where('id_transaccion', $transaccion->id)->delete();
+
+        foreach ($normalizadas as $cuota) {
+            Cuota::create([
+                'id_transaccion' => $transaccion->id,
+                'numero' => $cuota['numero'],
+                'monto' => $cuota['monto'],
+                'fecha_vencimiento' => $cuota['fecha'],
+                'estado' => 'pendiente',
+                'UrevUsuario' => Auth::user()->name,
+                'UrevFechaHora' => now(),
+            ]);
+        }
     }
 }

@@ -19,7 +19,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
         return Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || '');
     });
     const [subTotal, setSubTotal] = useState(transaccionDetalle.producto?.subtotal || '');
-    const [fecha_vencimiento, setFechaVencimiento] = useState(transaccionDetalle.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
+    const [fecha_vencimiento, setFechaVencimiento] = useState(transaccionDetalle?.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
 
     const [errores, setErrores] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -52,7 +52,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 const numero = Number(transaccionDetalle.precio_unitario);
                 setPrecioUnitario(Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || ''));
             }
-            setFechaVencimiento(transaccionDetalle.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
+            setFechaVencimiento(transaccionDetalle?.fecha_vencimiento ? formatDateToInput(transaccionDetalle.fecha_vencimiento) : '');
         }
     }, [transaccionDetalle, modo]); // Dependencia en 'transacciondetalle' y 'modo'
 
@@ -155,13 +155,19 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
             // Cerrar el modal después de guardar
             onClose();
         } catch (error) {
+            const mensaje = error.response?.data?.message || 'Error al guardar el detalle';
             if (error.response && error.response.status === 422) {
-                // Si la respuesta es un error de validación, capturamos los errores
-                setErrores(error.response.data.errors);
-
+                const erroresValidacion = error.response.data.errors;
+                if (erroresValidacion && typeof erroresValidacion === 'object') {
+                    setErrores(erroresValidacion);
+                } else {
+                    // Errores de negocio (ej. stock insuficiente) vienen con "message"
+                    setErrores({ general: [mensaje] });
+                    toast.error(mensaje);
+                }
             } else {
                 console.error('Error al guardar el detalle', error);
-                toast.error('Error al guardar el detalle'); // Mostrar mensaje de error genérico
+                toast.error(mensaje);
             }
         } finally {
             setIsSaving(false);
@@ -283,13 +289,13 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
                                 <input
                                     type="date"
-                                    className={`w-full px-3 py-2 border ${errores.fecha_vencimiento ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full px-3 py-2 border ${errores?.fecha_vencimiento ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                     placeholder="Introduce la fecha de vencimiento"
                                     value={fecha_vencimiento}
                                     onChange={(e) => setFechaVencimiento(e.target.value)}
                                 />
 
-                                {errores.fecha_vencimiento && <p className="text-red-500 text-sm">{errores.fecha_vencimiento[0]}</p>}
+                                {errores?.fecha_vencimiento && <p className="text-red-500 text-sm">{errores?.fecha_vencimiento[0]}</p>}
                             </div>
                         </div>
                     </div>

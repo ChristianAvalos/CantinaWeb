@@ -86,13 +86,18 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
 
         } catch (error) {
+            const mensaje = error.response?.data?.message || 'Error al guardar la persona';
             if (error.response && error.response.status === 422) {
-                // Si la respuesta es un error de validación, capturamos los errores
-                setErrores(error.response.data.errors);
-
+                const erroresValidacion = error.response.data.errors;
+                if (erroresValidacion && typeof erroresValidacion === 'object') {
+                    setErrores(erroresValidacion);
+                } else {
+                    setErrores({ general: [mensaje] });
+                    toast.error(mensaje);
+                }
             } else {
                 console.error('Error al guardar la persona', error);
-                toast.error('Error al guardar la persona'); // Mostrar mensaje de error genérico
+                toast.error(mensaje);
             }
         }
     };

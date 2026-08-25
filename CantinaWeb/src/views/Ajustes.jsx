@@ -207,12 +207,12 @@ export default function Ajustes() {
                                             ajustes.map((ajuste) => (
                                                 <tr key={ajuste.id}>
                                                     <td>{ajuste.id}</td>
-                                                    <td className="text-center">{ajuste.organizacion.RazonSocial}</td>
+                                                    <td className="text-center">{ajuste.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center">{ajuste.lote}</td>
                                                     <td className="text-center">{ajuste.nro_comprobante}</td>
-                                                    <td>{ajuste.tipo_movimiento.nombre}</td>
+                                                    <td>{ajuste.tipo_movimiento?.nombre || 'Sin movimiento'}</td>
                                                     <td className={Number(ajuste.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
-                                                        {ajuste.tipo_estado.descripcion}
+                                                        {ajuste.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
                                                     <td>{ajuste.nombre}</td>
                                                     <td>{ajuste.descripcion}</td>

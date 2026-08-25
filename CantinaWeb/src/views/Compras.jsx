@@ -211,14 +211,14 @@ export default function Compras() {
                                             compras.map((compra) => (
                                                 <tr key={compra.id}>
                                                     <td>{compra.id}</td>
-                                                    <td className="text-center">{compra.organizacion.RazonSocial}</td>
+                                                    <td className="text-center">{compra.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center">{compra.nro_comprobante}</td>
                                                     <td>{compra.nombre}</td>
                                                     <td>{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(compra.monto)}</td>
                                                     <td className={Number(compra.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
-                                                        {compra.tipo_estado.descripcion}
+                                                        {compra.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
                                                     <td className="text-center">{compra.UrevCalc}</td>
                                                     <td>

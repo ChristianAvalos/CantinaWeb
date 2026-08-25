@@ -139,13 +139,18 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
             // Cerrar el modal después de guardar
             onClose();
         } catch (error) {
+            const mensaje = error.response?.data?.message || 'Error al guardar el producto';
             if (error.response && error.response.status === 422) {
-                // Si la respuesta es un error de validación, capturamos los errores
-                setErrores(error.response.data.errors);
-
+                const erroresValidacion = error.response.data.errors;
+                if (erroresValidacion && typeof erroresValidacion === 'object') {
+                    setErrores(erroresValidacion);
+                } else {
+                    setErrores({ general: [mensaje] });
+                    toast.error(mensaje);
+                }
             } else {
                 console.error('Error al guardar el producto', error);
-                toast.error('Error al guardar el producto');
+                toast.error(mensaje);
             }
         }
     };

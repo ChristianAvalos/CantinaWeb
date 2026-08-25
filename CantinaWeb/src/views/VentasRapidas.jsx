@@ -79,8 +79,8 @@ export default function VentasRapidas() {
     const debouncedSearch = useDebounce(searchTerm, 250);
 
     // ─── Estados de pago ──────────────────────────────────────────
-    const [tipoPago, setTipoPago] = useState([]);
     const [formaPago, setFormaPago] = useState([]);
+    // El POS solo cobra al contado: selectedTipoPago se fija al id de "Contado"
     const [selectedTipoPago, setSelectedTipoPago] = useState('');
     const [selectedFormaPago, setSelectedFormaPago] = useState('');
 
@@ -154,10 +154,13 @@ export default function VentasRapidas() {
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
                 ]);
-                setTipoPago(tpRes.data || []);
                 setFormaPago(fpRes.data || []);
-                // Seleccionar primer valor por defecto
-                if (tpRes.data?.length) setSelectedTipoPago(String(tpRes.data[0].id));
+                // El POS es de mostrador: forzar el tipo de pago "Contado"
+                const tipos = tpRes.data || [];
+                const contado = tipos.find(tp =>
+                    String(tp.nombre || tp.descripcion || '').trim().toLowerCase() === 'contado'
+                ) || tipos[0];
+                if (contado) setSelectedTipoPago(String(contado.id));
                 if (fpRes.data?.length) setSelectedFormaPago(String(fpRes.data[0].id));
             } catch (err) {
                 console.error('Error cargando opciones de pago:', err);
@@ -431,9 +434,9 @@ export default function VentasRapidas() {
 
         } catch (err) {
             console.error('Error al procesar la venta:', err);
-            const mensaje = err.response?.data?.message || err.response?.data?.errors
-                ? Object.values(err.response.data.errors).flat().join(', ')
-                : 'Error al procesar la venta';
+            const mensaje = err.response?.data?.message
+                || (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : null)
+                || 'Error al procesar la venta';
             toast.error(mensaje);
         } finally {
             setIsProcessing(false);
@@ -720,15 +723,10 @@ export default function VentasRapidas() {
                         <span className="flex items-center gap-1.5"><IconCash /> Método de pago</span>
                     </label>
                     <div className="space-y-2">
-                        <select
-                            value={selectedTipoPago}
-                            onChange={(e) => setSelectedTipoPago(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-white"
-                        >
-                            {tipoPago.map(tp => (
-                                <option key={tp.id} value={tp.id}>{tp.nombre || tp.descripcion}</option>
-                            ))}
-                        </select>
+                        <div className="flex items-center justify-between px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-600">
+                            <span className="font-medium">Tipo de pago</span>
+                            <span className="font-bold text-green-700">Contado</span>
+                        </div>
                         <select
                             value={selectedFormaPago}
                             onChange={(e) => setSelectedFormaPago(e.target.value)}

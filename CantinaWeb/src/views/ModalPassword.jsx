@@ -50,14 +50,16 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
             }
         } catch (error) {
+            const mensaje = error.response?.data?.message || 'Ocurrió un error al cambiar la contraseña';
             if (error.response && error.response.status === 422) {
-                setErrores(error.response.data.errors);
+                const erroresValidacion = error.response.data.errors;
+                setErrores((erroresValidacion && typeof erroresValidacion === 'object') ? erroresValidacion : { general: [mensaje] });
             } else if (error.response && error.response.status === 400) {
                 // Mostrar el mensaje específico en el campo de contraseña actual
-                setErrores({ currentPassword: [error.response.data.message] });
+                setErrores({ currentPassword: [mensaje] });
             } else {
                 console.error('Ocurrió un error al cambiar la contraseña', error);
-                toast.error('Ocurrió un error al cambiar la contraseña');
+                toast.error(mensaje);
             }
 
         }
