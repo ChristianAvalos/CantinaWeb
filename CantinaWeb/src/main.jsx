@@ -6,12 +6,15 @@ import '@fortawesome/fontawesome-free/css/solid.min.css'
 import router from './router'
 import './index.css'
 import { ThemeProvider } from './context/ThemeContext'
+import ErrorBoundary from './components/ErrorBoundary'
 
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

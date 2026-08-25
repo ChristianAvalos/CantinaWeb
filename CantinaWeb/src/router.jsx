@@ -4,6 +4,7 @@ import Layout from "./layouts/Layout";
 import AuthLayout from "./layouts/AuthLayout";
 import ProtectedRoute from "./hooks/ProtectedRoute";
 import Spinner from './components/Spinner';
+import RouteError from './components/RouteError';
 
 const Inicio = lazy(() => import("./views/Inicio"));
 const Login = lazy(() => import("./views/Login"));
@@ -34,6 +35,7 @@ const router = createBrowserRouter ([
     {
         path: '/',
         element:  <Layout/>,
+        errorElement: <RouteError/>,
         children: [
             {
                 index:true,
@@ -161,6 +163,7 @@ const router = createBrowserRouter ([
     {
         path: '/auth',
         element: <AuthLayout />,
+        errorElement: <RouteError />,
         children: [
             {
                 path: '', // Ruta vacía para '/auth'
@@ -178,7 +181,8 @@ const router = createBrowserRouter ([
     },
     {
         path:'/errorEstadoUsuario',
-        element: withSuspense(<ErrorEstadoUsuario/>)
+        element: withSuspense(<ErrorEstadoUsuario/>),
+        errorElement: <RouteError/>
     }
 ])
 
