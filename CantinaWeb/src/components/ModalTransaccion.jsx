@@ -17,6 +17,18 @@ function sumarDiasLocal(fecha, dias) {
     return `${y}-${m}-${d}`;
 }
 
+// Formatea un número de factura en formato 001-002-0000001 (3-3-7 dígitos).
+// Se usa tanto para la vista como para guardar el valor con guiones (campo varchar).
+function formatearNroFactura(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '');
+    if (!digitos) return '';
+    const partes = [];
+    partes.push(digitos.slice(0, 3));
+    if (digitos.length > 3) partes.push(digitos.slice(3, 6));
+    if (digitos.length > 6) partes.push(digitos.slice(6, 13));
+    return partes.join('-');
+}
+
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
     const tipoPersonaFiltro = tipoTransaccion === 'compra'
         ? 'Proveedor'
@@ -70,6 +82,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const esCreditoOCuotas = tipoTransaccion === 'venta'
         && tipoPagoSeleccionado
         && ['crédito', 'credito', 'cuotas'].includes(String(tipoPagoSeleccionado.nombre || '').trim().toLowerCase());
+
+    // Determina si el tipo de comprobante seleccionado es una Factura, para
+    // formatear el número de comprobante con guiones (001-002-0000001).
+    const tipoComprobanteSeleccionado = tipoComprobante.find(tc => String(tc.id) === String(form.id_TipoComprobante));
+    const esFactura = ['factura'].includes(String(tipoComprobanteSeleccionado?.nombre || '').trim().toLowerCase());
 
     //para personas
     const [personas, setPersonas] = useState([]);
@@ -724,9 +741,16 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     type="text"
                                     disabled={esSoloLectura}
                                     className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    placeholder="Introduce el comprobante"
-                                    value={form.nro_comprobante}
-                                    onChange={(e) => setForm({ ...form, nro_comprobante: e.target.value })}
+                                    placeholder={esFactura ? '001-002-0000001' : 'Introduce el comprobante'}
+                                    value={esFactura ? formatearNroFactura(form.nro_comprobante) : (form.nro_comprobante || '')}
+                                    onChange={(e) => {
+                                        if (esFactura) {
+                                            // En factura se guarda el número YA formateado con guiones (el campo es varchar)
+                                            setForm({ ...form, nro_comprobante: formatearNroFactura(e.target.value) });
+                                        } else {
+                                            setForm({ ...form, nro_comprobante: e.target.value });
+                                        }
+                                    }}
                                 />
                                 {errores.nro_comprobante && <p className="text-red-500 text-sm">{errores.nro_comprobante[0]}</p>}
                             </div>
@@ -993,39 +1017,41 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             </div>
 
                             {cuotas.length > 0 ? (
-                                <table className="min-w-full border border-gray-200 rounded-lg">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="px-2 py-2 border text-left">N°</th>
-                                            <th className="px-2 py-2 border text-right">Monto</th>
-                                            <th className="px-2 py-2 border text-left">Vencimiento</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {cuotas.map((cuota, idx) => (
-                                            <tr key={idx}>
-                                                <td className="px-2 py-2 border text-center">{cuota.numero}</td>
-                                                <td className="px-2 py-2 border text-right">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        value={cuota.monto}
-                                                        onChange={(e) => actualizarCuota(idx, 'monto', e.target.value)}
-                                                        className="w-28 text-right px-2 py-1 border border-gray-300 rounded-md"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border">
-                                                    <input
-                                                        type="date"
-                                                        value={cuota.fecha_vencimiento}
-                                                        onChange={(e) => actualizarCuota(idx, 'fecha_vencimiento', e.target.value)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded-md"
-                                                    />
-                                                </td>
+                                <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                                    <table className="min-w-full">
+                                        <thead>
+                                            <tr className="bg-gray-50">
+                                                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">N°</th>
+                                                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Monto</th>
+                                                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Vencimiento</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {cuotas.map((cuota, idx) => (
+                                                <tr key={idx} className="transition-colors hover:bg-blue-50/50">
+                                                    <td className="px-3 py-3 text-center text-sm text-gray-700">{cuota.numero}</td>
+                                                    <td className="px-3 py-3 text-right">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={cuota.monto}
+                                                            onChange={(e) => actualizarCuota(idx, 'monto', e.target.value)}
+                                                            className="w-28 rounded-md border border-gray-300 px-2 py-1 text-right text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        <input
+                                                            type="date"
+                                                            value={cuota.fecha_vencimiento}
+                                                            onChange={(e) => actualizarCuota(idx, 'fecha_vencimiento', e.target.value)}
+                                                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             ) : (
                                 <p className="text-sm text-gray-500">Ingresá el monto de la venta y la fecha para generar las cuotas.</p>
                             )}
@@ -1094,37 +1120,36 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             )}
                         </div>
 
-                        <div className="overflow-x-auto mt-2">
-                            <table className="min-w-full border border-gray-300 rounded-lg">
-                                <thead className="bg-gray-300">
-                                    <tr>
-                                        <th className="px-2 py-2 border">Lote</th>
-                                        <th className="px-2 py-2 border">Codigo de barra</th>
-                                        <th className="px-3 py-2 border">Producto</th>
-                                        <th className="px-3 py-2 border">Cantidad</th>
-                                        <th className="px-3 py-2 border">Precio unitario</th>
-                                        <th className="px-3 py-2 border">Vencimineto</th>
-                                        <th className="px-3 py-2 border">Sub total</th>
-                                        <th className="px-3 py-2 border">Acciones</th>
+                        <div className="mt-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Lote</th>
+                                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Código de barra</th>
+                                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Producto</th>
+                                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Cantidad</th>
+                                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Precio unitario</th>
+                                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Vencimiento</th>
+                                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Sub total</th>
+                                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {/* Aquí deberías mapear los detalles cargados */}
+                                <tbody className="divide-y divide-gray-100">
                                     {transaccionDetalle && transaccionDetalle.length > 0 ? (
                                         transaccionDetalle.map((detalle, id) => (
-                                            <tr key={id}>
-                                                <td className="px-3 py-2 border">{detalle?.lote}</td>
-                                                <td className="px-3 py-2 border">{detalle?.producto?.codigo_barras}</td>
-                                                <td className="px-3 py-2 border">{detalle?.producto?.nombre}</td>
-                                                <td className="px-3 py-2 border">{formatearMiles(Number(detalle?.cantidad))}</td>
-                                                <td className="px-3 py-2 border">{formatearGuarani(detalle?.precio_unitario)}</td>
-                                                <td className="px-3 py-2 border">{detalle?.fecha_vencimiento || 'Sin fecha'}</td>
-                                                <td className="px-3 py-2 border">{formatearGuarani(detalle?.subtotal)}</td>
-                                                <td className="px-3 py-2 border">
+                                            <tr key={id} className="transition-colors hover:bg-blue-50/50">
+                                                <td className="px-3 py-3 text-sm text-gray-700">{detalle?.lote || '—'}</td>
+                                                <td className="px-3 py-3 text-sm text-gray-600">{detalle?.producto?.codigo_barras}</td>
+                                                <td className="px-3 py-3 text-sm font-medium text-gray-900">{detalle?.producto?.nombre}</td>
+                                                <td className="px-3 py-3 text-right text-sm tabular-nums text-gray-700">{formatearMiles(Number(detalle?.cantidad))}</td>
+                                                <td className="px-3 py-3 text-right text-sm tabular-nums text-gray-700">{formatearGuarani(detalle?.precio_unitario)}</td>
+                                                <td className="px-3 py-3 text-sm text-gray-600">{detalle?.fecha_vencimiento || 'Sin fecha'}</td>
+                                                <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">{formatearGuarani(detalle?.subtotal)}</td>
+                                                <td className="px-3 py-3">
                                                     {esBloqueado ? (
                                                         <span className="text-gray-400">—</span>
                                                     ) : (
-                                                        <div className="flex space-x-2">
+                                                        <div className="flex justify-end gap-1">
                                                             <button
                                                                 type='button'
                                                                 onClick={async () => {
@@ -1146,13 +1171,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                                     } else if (result.message) {
                                                                         toast.error(result.message);
                                                                     }
-                                                                }} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                                }} className="flex items-center rounded-md p-1.5 transition-colors hover:bg-blue-100 focus:outline-none">
+                                                                <img src="/img/Icon/edit.png" alt="Edit" className="h-4 w-4" />
                                                             </button>
                                                             <button
                                                                 type='button'
-                                                                onClick={() => handleDelete(detalle.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete transaccion detalle" />
+                                                                onClick={() => handleDelete(detalle.id)} className="flex items-center rounded-md p-1.5 transition-colors hover:bg-red-100 focus:outline-none">
+                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete transaccion detalle" className="h-4 w-4" />
                                                             </button>
                                                         </div>
                                                     )}
@@ -1161,14 +1186,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={8} className="px-3 py-2 text-center text-gray-500 border">
+                                            <td colSpan={8} className="px-3 py-10 text-center text-sm text-gray-400">
                                                 No hay detalles cargados.
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
-
                         </div>
                         {/* Controles de paginación */}
                         <div className="flex flex-col items-center sm:flex-row sm:justify-between py-2 space-y-2 sm:space-y-0">
