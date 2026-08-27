@@ -120,6 +120,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [transaccionAEliminar, setTransaccionAEliminar] = useState(null);
 
     const nombreRef = useRef(null);
+    // Snapshot del id original al abrir el modal: si no existía, es una transacción NUEVA.
+    // Sirve para saber que, al cancelar, la cabecera auto-guardada (necesaria para cargar
+    // detalles) debe anularse y no quedar en estado 'Activo' sin forma de cambiarla.
+    const idOriginalRef = useRef(transaccion.id || null);
+    const esTransaccionNueva = !idOriginalRef.current;
     // Enfocar el campo de nombre al abrir el modal
     useEffect(() => {
         if (nombreRef.current) {
@@ -579,10 +584,50 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }
     }
 
+    // Cerrar el modal (botón Cancelar o clic fuera). Si es una transacción NUEVA que ya
+    // guardó la cabecera (por haber agregado detalles) pero NO se finalizó, se anula
+    // primero para que no quede en estado 'Activo' sin forma de cambiarla.
+    const manejarCerrar = () => {
+        if (esTransaccionNueva && transaccion.id) {
+            setTransaccionAEliminar(transaccion.id);
+            setAccionConfirmadaModal('cancelar_transaccion');
+            setTipoAlertaModal('confirmacion');
+            setMensajeAlertaModal(
+                totalRegistros > 0
+                    ? 'La transacción tiene detalles cargados. ¿Anularla? Se revertirá el stock y quedará como Anulada.'
+                    : '¿Anular la transacción? Se marcará como Anulada para que no quede en estado Activo.'
+            );
+            setMostrarAlertaModal(true);
+            return;
+        }
+        onClose();
+    };
+
+    // Confirma la anulación de una transacción nueva cancelada (reutiliza /anular:
+    // revierte el stock de los detalles y marca estado 7 = Anulada).
+    const confirmarCancelarTransaccion = async () => {
+        const id = transaccionAEliminar;
+        setTransaccionAEliminar(null);
+        try {
+            await clienteAxios.post(`api/transacciones/${id}/anular`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success('Transacción cancelada correctamente.');
+            if (refrescarTransacciones !== null && typeof refrescarTransacciones === 'function') {
+                refrescarTransacciones();
+            }
+            onClose();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error al cancelar la transacción.');
+        }
+    };
+
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
         if (accionConfirmadaModal === 'delete') {
             confirmarEliminacion();
+        } else if (accionConfirmadaModal === 'cancelar_transaccion') {
+            confirmarCancelarTransaccion();
         }
     };
     const handleClose = () => {
@@ -597,7 +642,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     return (
         <div className="fixed inset-0 flex items-center justify-center z-[1035]">
             {/* Fondo oscuro semi-transparente */}
-            <div className="bg-gray-800 opacity-75 absolute inset-0 z-[1031]" onClick={onClose}></div>
+            <div className="bg-gray-800 opacity-75 absolute inset-0 z-[1031]" onClick={manejarCerrar}></div>
 
             {/* Contenido del modal */}
             <div className="bg-white rounded-lg shadow-lg relative z-[1036] p-3 sm:p-6 w-[95vw] max-w-full sm:max-w-5xl border border-red-500 overflow-y-auto max-h-screen">
@@ -1207,7 +1252,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         <div className="flex justify-end space-x-3 mt-2">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={manejarCerrar}
                                 className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
                             >
                                 Cancelar
