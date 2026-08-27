@@ -702,19 +702,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.fecha && <p className="text-red-500 text-sm">{errores.fecha[0]}</p>}
                             </div>
 
-                            {/* Campo para lote
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.lote ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Introduce el lote"
-                                    value={form.lote}
-                                    onChange={(e) => setForm({ ...form, lote: e.target.value })}
-                                />
-                                {errores.lote && <p className="text-red-500 text-sm">{errores.lote[0]}</p>}
-                            </div> */}
-
                             {/* Tipo de comprobante */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de comprobante</label>
