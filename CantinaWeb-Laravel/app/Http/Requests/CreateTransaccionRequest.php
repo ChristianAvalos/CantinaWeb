@@ -24,8 +24,18 @@ class CreateTransaccionRequest extends FormRequest
         $esVenta = (int) $this->input('id_TipoMovimiento') === 2;
 
         // En compras el tipo de comprobante debe ser SIEMPRE Factura.
+        // En ventas se permiten Factura, Ticket, Nota de Crédito y Nota de Débito (no Boleta).
         $reglasTipoComprobante = $esVenta
-            ? 'nullable|exists:tipo_comprobantes,id'
+            ? ['nullable', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
+                if ($value === null) {
+                    return;
+                }
+                $tipo = \App\Models\TipoComprobante::find($value);
+                $permitidosVenta = ['factura', 'ticket', 'nota de crédito', 'nota de debito'];
+                if ($tipo && !in_array(strtolower(trim($tipo->nombre)), $permitidosVenta, true)) {
+                    $fail('El tipo de comprobante seleccionado no es válido para ventas.');
+                }
+            }]
             : ['required', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
                 $tipo = \App\Models\TipoComprobante::find($value);
                 if ($tipo && strtolower(trim($tipo->nombre)) !== 'factura') {

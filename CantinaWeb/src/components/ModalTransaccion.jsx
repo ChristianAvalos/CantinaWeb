@@ -448,7 +448,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             try {
                 const tipoEstadoUrl = tipoTransaccion === 'compra'
                     ? 'api/tipo_estado?filtro=compra'   // compra: Activo/Inactivo/Finalizado
-                    : 'api/tipo_estado';                 // venta/ajuste: todos los estados
+                    : tipoTransaccion === 'venta'
+                        ? 'api/tipo_estado?filtro=venta' // venta: Activo/Inactivo/Finalizado
+                        : 'api/tipo_estado';              // ajuste: todos los estados
 
                 const [tpRes, fpRes, teRes, tcRes, orgRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
@@ -473,6 +475,15 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         tiposComprobante = [factura];
                         setForm(prev => ({ ...prev, id_TipoComprobante: String(factura.id) }));
                     }
+                }
+
+                // En ventas se permiten Factura, Ticket, Nota de Crédito y Nota de Débito
+                // (se excluye Boleta, que no es un comprobante fiscal).
+                if (tipoTransaccion === 'venta') {
+                    const permitidosVenta = ['factura', 'ticket', 'nota de crédito', 'nota de debito'];
+                    tiposComprobante = (tiposComprobante || []).filter(tc =>
+                        permitidosVenta.includes(String(tc.nombre || '').trim().toLowerCase())
+                    );
                 }
                 setTipoComprobante(tiposComprobante);
 
