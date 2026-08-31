@@ -827,7 +827,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             </div>
 
                             {/* Tipo de estado */}
-                            <div>
+                            {/* <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de estado</label>
                                 <select
                                     disabled={esBloqueado}
@@ -843,7 +843,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     ))}
                                 </select>
                                 {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
-                            </div>
+                            </div> */}
 
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
