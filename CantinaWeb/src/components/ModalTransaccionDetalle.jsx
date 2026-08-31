@@ -69,9 +69,17 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                         if (data && data.producto) {
                         setNombre(data.producto.nombre || '');
                         setUnidadMedida(data.producto.unidad_medida || '');
-                        // Autocompletar precio unitario si el producto tiene un precio de compra definido
-                        if (data.producto.precio_compra && modo === 'crear') {
-                            setPrecioUnitario(String(data.producto.precio_compra));
+                        // Autocompletar el precio unitario según el tipo de transacción:
+                        // - Venta: precio de venta (considera el precio personalizado de precio_ventas)
+                        // - Compra/Ajuste: precio de compra
+                        if (modo === 'crear') {
+                            if (tipoTransaccion === 'venta') {
+                                if (data.producto.precio_venta) {
+                                    setPrecioUnitario(String(data.producto.precio_venta));
+                                }
+                            } else if (data.producto.precio_compra) {
+                                setPrecioUnitario(String(data.producto.precio_compra));
+                            }
                         }
                     } else {
                         setNombre('');
@@ -223,7 +231,8 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 )}
                             </div>
 
-                             {/* Campo para lote */}
+                             {/* Campo para lote (no aplica en ventas) */}
+                            {tipoTransaccion !== 'venta' && (
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
                                 <input
@@ -237,10 +246,11 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                     <p className="text-red-500 text-sm">{errores.lote[0]}</p>
                                 )}
                             </div>
+                            )}
                             
                             {/* Campo para cantidad */}
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Cantidad a vender' : 'Cantidad'}</label>
                                 <input
                                     type="text"
                                     min="0"
@@ -263,9 +273,9 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                     <p className="text-red-500 text-sm">{errores.cantidad[0]}</p>
                                 )}
                             </div>
-                            {/* Campo para precio compra */}
+                            {/* Campo para precio unitario / precio de venta */}
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Precio unitario</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Precio de venta' : 'Precio unitario'}</label>
                                 <input
                                     type="text"
                                     min="0"
@@ -284,7 +294,8 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                     <p className="text-red-500 text-sm">{errores.precio_unitario[0]}</p>
                                 )}
                             </div>
-                            {/* Campo para vencimiento */}
+                            {/* Campo para vencimiento (no aplica en ventas) */}
+                            {tipoTransaccion !== 'venta' && (
                             <div className="mb-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
                                 <input
@@ -297,6 +308,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
 
                                 {errores?.fecha_vencimiento && <p className="text-red-500 text-sm">{errores?.fecha_vencimiento[0]}</p>}
                             </div>
+                            )}
                         </div>
                     </div>
 

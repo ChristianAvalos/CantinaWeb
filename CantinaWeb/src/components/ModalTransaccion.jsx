@@ -83,6 +83,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         && tipoPagoSeleccionado
         && ['crédito', 'credito', 'cuotas'].includes(String(tipoPagoSeleccionado.nombre || '').trim().toLowerCase());
 
+    // Determina si la forma de pago es Efectivo (solo ahí aplican monto recibido y vuelto)
+    const formaPagoSeleccionada = formaPago.find(fp => String(fp.id) === String(form.id_FormaPago));
+    const esEfectivo = tipoTransaccion === 'venta'
+        && formaPagoSeleccionada
+        && String(formaPagoSeleccionada.nombre || '').trim().toLowerCase() === 'efectivo';
+
     // Determina si el tipo de comprobante seleccionado es una Factura, para
     // formatear el número de comprobante con guiones (001-002-0000001).
     const tipoComprobanteSeleccionado = tipoComprobante.find(tc => String(tc.id) === String(form.id_TipoComprobante));
@@ -358,8 +364,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         const monto = Number(form.monto) || 0;
         const montoRecibido = Number(form.monto_recibido) || 0;
 
-        // Vuelto: diferencia entre lo recibido y el total (nunca negativo)
-        const vueltoCalculado = montoRecibido > monto ? montoRecibido - monto : 0;
+        // Vuelto: diferencia entre lo recibido y el total (nunca negativo).
+        // Solo aplica si hay un monto definido (evita vuelto = montoRecibido con monto 0).
+        const vueltoCalculado = monto > 0 && montoRecibido > monto ? montoRecibido - monto : 0;
 
         // IVA: 10% sobre la base imponible (monto / 11 = IVA incluido paraguayo)
         const ivaCalculado = Math.round(monto / 11);
@@ -372,6 +379,18 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             return { ...prev, vuelto: vueltoCalculado, iva: ivaCalculado };
         });
     }, [form.monto, form.monto_recibido]);
+
+    // Si la forma de pago no es Efectivo, el monto recibido no aplica → se limpia
+    useEffect(() => {
+        if (tipoTransaccion === 'venta' && !esEfectivo && form.id_FormaPago) {
+            setForm(prev => {
+                if (Number(prev.monto_recibido) === 0) {
+                    return prev;
+                }
+                return { ...prev, monto_recibido: 0 };
+            });
+        }
+    }, [esEfectivo, tipoTransaccion, form.id_FormaPago]);
 
     // Generar el plan de cuotas cuando cambia la configuración o el monto
     useEffect(() => {
@@ -499,12 +518,15 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     }, []);
 
 
-    // Validación: monto recibido no puede ser menor al monto en ventas
-    // (excepto ventas a crédito/cuotas, donde no se cobra en el momento)
+    // Validación: el monto recibido (y el vuelto) solo aplica cuando la venta se paga en EFECTIVO.
     const validarMontoRecibido = () => {
-        if (tipoTransaccion === 'venta' && !esCreditoOCuotas) {
+        if (tipoTransaccion === 'venta' && esEfectivo && !esCreditoOCuotas) {
             const monto = Number(form.monto) || 0;
             const montoRecibido = Number(form.monto_recibido) || 0;
+            if (montoRecibido <= 0) {
+                setErrores({ monto_recibido: ['Debe cargar el monto recibido en efectivo.'] });
+                return false;
+            }
             if (montoRecibido < monto) {
                 setErrores({ monto_recibido: ['El monto recibido no puede ser menor al monto total.'] });
                 return false;
@@ -947,9 +969,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
                             
-                            {/* Campos exclusivos para venta: Monto Recibido, Vuelto e IVA */}
+                            {/* Campos exclusivos para venta */}
                             {tipoTransaccion === 'venta' && (
                             <>
+                                {/* Monto Recibido y Vuelto solo aplican con forma de pago EFECTIVO.
+                                    En modo "ver" (solo lectura) también se muestran si hay datos guardados. */}
+                                {(esEfectivo || (esSoloLectura && (Number(form.monto_recibido) > 0 || Number(form.vuelto) > 0))) && (
+                                <>
                                 <div className="mb-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
                                     <input
@@ -978,6 +1004,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     />
                                     {errores.vuelto && <p className="text-red-500 text-sm">{errores.vuelto[0]}</p>}
                                 </div>
+                                </>
+                                )}
 
                                 <div className="mb-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
@@ -1093,10 +1121,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     onClick={async () => {
                                         setErrores({});
 
-                                        if (!validarMontoRecibido()) {
-                                            return;
-                                        }
-
                                         // Si la transacción ya tiene id, solo actualizar (modo 'editar')
                                         const modoGuardar = transaccion.id ? 'editar' : 'crear';
                                         const result = await guardarTransaccion(modoGuardar);
@@ -1164,9 +1188,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                             <button
                                                                 type='button'
                                                                 onClick={async () => {
-                                                                    if (!validarMontoRecibido()) {
-                                                                        return;
-                                                                    }
                                                                     // Siempre actualizar la cabecera si ya existe
                                                                     const modoGuardar = detalle.id ? 'editar' : 'crear';
                                                                     console.log(detalle.id, modoGuardar);

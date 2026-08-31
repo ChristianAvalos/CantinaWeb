@@ -331,6 +331,9 @@ class TransaccionesController extends Controller
                     'id_usuario' => Auth::user()->id,
                     'id_TipoMovimiento' => $data['id_TipoMovimiento'],
                     'monto' => $montoNormalizado,
+                    'monto_recibido' => $data['monto_recibido'] ?? null,
+                    'vuelto' => $data['vuelto'] ?? null,
+                    'iva' => $data['iva'] ?? null,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
