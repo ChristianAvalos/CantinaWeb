@@ -447,8 +447,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         const fetchInitialData = async () => {
             try {
                 const tipoEstadoUrl = tipoTransaccion === 'compra'
-                    ? 'api/tipo_estado?filtro=basico'       // compra: solo Activo/Inactivo
-                    : 'api/tipo_estado';                     // venta/ajuste: todos los estados
+                    ? 'api/tipo_estado?filtro=compra'   // compra: Activo/Inactivo/Finalizado
+                    : 'api/tipo_estado';                 // venta/ajuste: todos los estados
 
                 const [tpRes, fpRes, teRes, tcRes, orgRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
@@ -460,8 +460,21 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 setTipoPago(tpRes.data);
                 setFormaPago(fpRes.data);
                 setTipoEstado(teRes.data);
-                setTipoComprobante(tcRes.data);
                 setOrganizacion(orgRes.data);
+
+                // En compras el tipo de comprobante es SIEMPRE Factura: se filtra
+                // la lista a solo Factura y queda predefinida (y bloqueada) en el combo.
+                let tiposComprobante = tcRes.data;
+                if (tipoTransaccion === 'compra') {
+                    const factura = (tiposComprobante || []).find(tc =>
+                        String(tc.nombre || '').trim().toLowerCase() === 'factura'
+                    );
+                    if (factura) {
+                        tiposComprobante = [factura];
+                        setForm(prev => ({ ...prev, id_TipoComprobante: String(factura.id) }));
+                    }
+                }
+                setTipoComprobante(tiposComprobante);
 
                 if (teRes.data?.length && !form.id_TipoEstado) {
                     setForm(prev => ({ ...prev, id_TipoEstado: String(teRes.data[0].id) }));
@@ -706,8 +719,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tipo de comprobante</label>
                                 <select
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esSoloLectura || tipoTransaccion === 'compra'}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura || tipoTransaccion === 'compra' ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoComprobante}
                                     onChange={(e) => setForm({ ...form, id_TipoComprobante: e.target.value })}
                                 >

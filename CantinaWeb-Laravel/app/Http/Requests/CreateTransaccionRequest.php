@@ -23,6 +23,16 @@ class CreateTransaccionRequest extends FormRequest
     {
         $esVenta = (int) $this->input('id_TipoMovimiento') === 2;
 
+        // En compras el tipo de comprobante debe ser SIEMPRE Factura.
+        $reglasTipoComprobante = $esVenta
+            ? 'nullable|exists:tipo_comprobantes,id'
+            : ['required', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
+                $tipo = \App\Models\TipoComprobante::find($value);
+                if ($tipo && strtolower(trim($tipo->nombre)) !== 'factura') {
+                    $fail('En compras, el tipo de comprobante debe ser Factura.');
+                }
+            }];
+
         $rules = [
             'nombre' => 'required|string|max:255',
             'fecha' => 'required|date',
@@ -34,7 +44,7 @@ class CreateTransaccionRequest extends FormRequest
             'vuelto' => 'nullable|numeric',
             'iva' => 'nullable|numeric',
             'id_TipoEstado' => 'required|exists:tipo_estados,id',
-            'id_TipoComprobante' => $esVenta ? 'nullable|exists:tipo_comprobantes,id' : 'required|nullable|exists:tipo_comprobantes,id',
+            'id_TipoComprobante' => $reglasTipoComprobante,
             'id_TipoMovimiento' => 'required|exists:tipo_movimientos,id',
             'nro_comprobante' => $esVenta ? 'nullable|string|max:100' : 'required|string|max:100',
             'id_persona' => $esVenta ? 'nullable|exists:personas,id' : 'required|exists:personas,id',

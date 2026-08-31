@@ -24,6 +24,10 @@ class TipoEstadoController extends Controller
         if ($request->get('filtro') === 'basico') {
             $estadosBasicos = ['Activo', 'Inactivo'];
             $query->whereIn('descripcion', $estadosBasicos);
+        } elseif ($request->get('filtro') === 'compra') {
+            // Compras: Activo, Inactivo y Finalizado
+            $estadosCompra = ['Activo', 'Inactivo', 'Finalizado'];
+            $query->whereIn('descripcion', $estadosCompra);
         }
 
         $tipoEstados = $query->get();
