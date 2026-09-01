@@ -65,4 +65,10 @@ class TipoEstado extends Model
     {
         return $this->hasMany(PrecioVenta::class, 'id_tipoestado');
     }
+
+    //relacion con cuotas
+    public function cuotas()
+    {
+        return $this->hasMany(Cuota::class, 'id_TipoEstado');
+    }
 }

@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateTransaccionRequest;
 use App\Helpers\StockHelper;
 use App\Models\Producto;
 use App\Models\TipoPago;
+use App\Models\TipoEstado;
 use App\Models\Cuota;
 
 class TransaccionesController extends Controller
@@ -338,7 +339,7 @@ class TransaccionesController extends Controller
                     'UrevFechaHora' => now(),
                 ]);
 
-                // Sincronizar cuotas si es una venta a crédito/cuotas
+                // Sincronizar cuotas si la transacción se paga a crédito/cuotas
                 $this->sincronizarCuotas($transaccion, $request);
             });
         } catch (\InvalidArgumentException $e) {
@@ -561,11 +562,11 @@ class TransaccionesController extends Controller
     }
 
     /**
-     * Indica si la transacción es una venta pagada a crédito o en cuotas.
+     * Indica si la transacción (compra o venta) se paga a crédito o en cuotas.
      */
-    private function esVentaCredito(Transacciones $transaccion): bool
+    private function esCreditoCuotas(Transacciones $transaccion): bool
     {
-        if ((int) $transaccion->id_TipoMovimiento !== 2) {
+        if (! in_array((int) $transaccion->id_TipoMovimiento, [1, 2], true)) {
             return false;
         }
 
@@ -606,7 +607,7 @@ class TransaccionesController extends Controller
      */
     private function sincronizarCuotas(Transacciones $transaccion, Request $request): void
     {
-        if (! $this->esVentaCredito($transaccion)) {
+        if (! $this->esCreditoCuotas($transaccion)) {
             return;
         }
 
@@ -638,8 +639,10 @@ class TransaccionesController extends Controller
 
         // Tolerancia de redondeo (centavos)
         if (abs($suma - $montoTotal) > 0.5) {
-            throw new \InvalidArgumentException('La suma de las cuotas no coincide con el monto total de la venta.');
+            throw new \InvalidArgumentException('La suma de las cuotas no coincide con el monto total de la transacción.');
         }
+
+        $idPendiente = (int) (TipoEstado::where('descripcion', 'Pendiente')->value('id') ?? 4);
 
         Cuota::where('id_transaccion', $transaccion->id)->delete();
 
@@ -649,7 +652,7 @@ class TransaccionesController extends Controller
                 'numero' => $cuota['numero'],
                 'monto' => $cuota['monto'],
                 'fecha_vencimiento' => $cuota['fecha'],
-                'estado' => 'pendiente',
+                'id_TipoEstado' => $idPendiente,
                 'UrevUsuario' => Auth::user()->name,
                 'UrevFechaHora' => now(),
             ]);

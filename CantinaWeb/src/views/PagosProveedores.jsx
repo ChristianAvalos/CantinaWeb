@@ -6,12 +6,12 @@ import { formatearGuarani } from '../helpers/HelpersNumeros';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
 
-const FILTROS_COBRANZAS = [
+const FILTROS_PAGOS_PROVEEDORES = [
     {
         key: 'search',
         label: 'Buscar',
         type: 'text',
-        placeholder: 'Cliente o venta...',
+        placeholder: 'Proveedor o compra...',
     },
     {
         key: 'estado',
@@ -49,7 +49,7 @@ function formatearFechaVista(fecha) {
     return `${d}/${m}/${y}`;
 }
 
-export default function Cobranzas() {
+export default function PagosProveedores() {
     const [cuotas, setCuotas] = useState([]);
     const [paginaActual, setPaginaActual] = useState(1);
     const [totalPaginas, setTotalPaginas] = useState(1);
@@ -69,8 +69,8 @@ export default function Cobranzas() {
     const fetchCuotas = useCallback(async (page = 1, filtros = filtrosAplicados) => {
         try {
             const params = new URLSearchParams({ page: String(page) });
-            // Solo cuotas de ventas (mov 2 = venta)
-            params.append('tipo_movimiento', '2');
+            // Solo cuotas de compras (mov 1 = compra)
+            params.append('tipo_movimiento', '1');
             Object.entries(filtros).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && value !== '') {
                     params.append(key, String(value));
@@ -88,7 +88,7 @@ export default function Cobranzas() {
             setSubtotalPendiente(data.subtotalPendiente || 0);
             setSubtotalPagado(data.subtotalPagado || 0);
         } catch (error) {
-            console.error('Error al cargar las cuotas:', error);
+            console.error('Error al cargar las cuotas de compras:', error);
         }
     }, [filtrosAplicados, token]);
 
@@ -158,8 +158,8 @@ export default function Cobranzas() {
                 <div className="container-fluid">
                     <div className="card">
                         <FiltrosBar
-                            title="Cobranzas"
-                            filterDefinitions={FILTROS_COBRANZAS}
+                            title="Pagos a Proveedores"
+                            filterDefinitions={FILTROS_PAGOS_PROVEEDORES}
                             initialValues={FILTROS_INICIALES}
                             onApply={handleAplicarFiltros}
                         />
@@ -170,8 +170,8 @@ export default function Cobranzas() {
                                     <thead>
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>N°</th>
-                                            <th>Venta</th>
-                                            <th>Cliente</th>
+                                            <th>Compra</th>
+                                            <th>Proveedor</th>
                                             <th>Vencimiento</th>
                                             <th>Monto</th>
                                             <th>Estado</th>
@@ -180,13 +180,13 @@ export default function Cobranzas() {
                                     </thead>
                                     <tbody>
                                         {cuotas.length === 0 ? (
-                                            <NoExistenDatos colSpan={7} mensaje="No existen cuotas." />
+                                            <NoExistenDatos colSpan={7} mensaje="No existen cuotas de compras." />
                                         ) : (
                                             cuotas.map((cuota) => (
                                                 <tr key={cuota.id}>
                                                     <td className="text-center">{cuota.numero}</td>
-                                                    <td>{cuota.transaccion?.nombre || `Venta #${cuota.id_transaccion}`}</td>
-                                                    <td>{cuota.transaccion?.persona?.nombre || 'Consumidor Final'}</td>
+                                                    <td>{cuota.transaccion?.nombre || `Compra #${cuota.id_transaccion}`}</td>
+                                                    <td>{cuota.transaccion?.persona?.nombre || 'Proveedor'}</td>
                                                     <td className="text-center">{formatearFechaVista(cuota.fecha_vencimiento)}</td>
                                                     <td className="text-end">{formatearGuarani(cuota.monto)}</td>
                                                     <td className="text-center">

@@ -24,6 +24,7 @@ const Compras = lazy(() => import("./views/Compras"));
 const Ventas = lazy(() => import("./views/Ventas"));
 const VentasRapidas = lazy(() => import("./views/VentasRapidas"));
 const Cobranzas = lazy(() => import("./views/Cobranzas"));
+const PagosProveedores = lazy(() => import("./views/PagosProveedores"));
 const Ajustes = lazy(() => import("./views/Ajustes"));
 const PrecioVentas = lazy(() => import("./views/PrecioVentas"));
 
@@ -124,6 +125,14 @@ const router = createBrowserRouter ([
                 element: withSuspense(
                 <ProtectedRoute permission="Ventas">
                     <Cobranzas/>
+                </ProtectedRoute>
+                )
+            },
+            {
+                path:'/pagos-proveedores',
+                element: withSuspense(
+                <ProtectedRoute permission="Pagos_Proveedores">
+                    <PagosProveedores/>
                 </ProtectedRoute>
                 )
             },

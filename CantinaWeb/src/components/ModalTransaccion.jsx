@@ -77,10 +77,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     });
     const [cuotas, setCuotas] = useState([]);
 
-    // Determina si la venta es a crédito/cuotas según el tipo de pago seleccionado
+    // Determina si la transacción (compra o venta) es a crédito/cuotas según el tipo de pago seleccionado
     const tipoPagoSeleccionado = tipoPago.find(tp => String(tp.id) === String(form.id_TipoPago));
-    const esCreditoOCuotas = tipoTransaccion === 'venta'
-        && tipoPagoSeleccionado
+    const esCreditoOCuotas = tipoPagoSeleccionado
         && ['crédito', 'credito', 'cuotas'].includes(String(tipoPagoSeleccionado.nombre || '').trim().toLowerCase());
 
     // Determina si la forma de pago es Efectivo (solo ahí aplican monto recibido y vuelto)
@@ -590,16 +589,16 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setIsSaving(true);
         setErrores({});
         try {
-            // Si la venta es a crédito/cuotas, exigir cuotas configuradas
-            if (tipoTransaccion === 'venta' && esCreditoOCuotas && cuotas.length === 0) {
-                toast.warning('Configurá el plan de cuotas de la venta.');
+            // Si la transacción es a crédito/cuotas, exigir cuotas configuradas
+            if (esCreditoOCuotas && cuotas.length === 0) {
+                toast.warning('Configurá el plan de cuotas de la transacción.');
                 setIsSaving(false);
                 return;
             }
 
             const result = await guardarTransaccion(modo, {
                 finalizar: tipoTransaccion === 'compra' || tipoTransaccion === 'venta',
-                incluirCuotas: tipoTransaccion === 'venta' && esCreditoOCuotas,
+                incluirCuotas: esCreditoOCuotas,
             });
             if (result.success) {
                 toast.success(result.message || 'Transacción guardada exitosamente.');

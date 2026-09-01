@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cuota;
+use App\Models\TipoEstado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,12 +21,25 @@ class CuotasController extends Controller
         $search = $request->input('search');
         $fechaDesde = $request->input('fecha_desde');
         $fechaHasta = $request->input('fecha_hasta');
+        $tipoMovimiento = $request->input('tipo_movimiento'); // 1=compras 2=ventas
+
+        // IDs de estado según la tabla tipo_estados (Pendiente / Finalizado)
+        $idPendiente = $this->idEstadoPorDescripcion('Pendiente');
+        $idFinalizado = $this->idEstadoPorDescripcion('Finalizado');
 
         $cuotas = Cuota::with([
+            'tipoEstado',
             'transaccion' => function ($q) {
                 $q->with(['persona', 'tipoPago', 'tipoEstado']);
             },
         ]);
+
+        // Filtrar cuotas por tipo de movimiento (compras/ventas)
+        $cuotas->when($tipoMovimiento, function ($q) use ($tipoMovimiento) {
+            $q->whereHas('transaccion', function ($q2) use ($tipoMovimiento) {
+                $q2->where('id_TipoMovimiento', (int) $tipoMovimiento);
+            });
+        });
 
         // Si no es admin, limitar por la organización del usuario
         if (! $isAdmin) {
@@ -34,8 +48,8 @@ class CuotasController extends Controller
             });
         }
 
-        $cuotas->when($estado && $estado !== 'todas', function ($q) use ($estado) {
-            $q->where('estado', $estado);
+        $cuotas->when($estado && $estado !== 'todas', function ($q) use ($estado, $idPendiente, $idFinalizado) {
+            $q->where('id_TipoEstado', $estado === 'pagada' ? $idFinalizado : $idPendiente);
         });
 
         $cuotas->when($search, function ($q) use ($search) {
@@ -57,16 +71,18 @@ class CuotasController extends Controller
             $q->whereDate('fecha_vencimiento', '<=', $fechaHasta);
         });
 
-        $cuotas = $cuotas->orderByRaw("CASE WHEN estado = 'pendiente' THEN 0 ELSE 1 END")
+        // Ojo: en PostgreSQL el identificador va entre comillas dobles para respetar
+        // las mayúsculas de la columna (en SQL crudo no se escapan automáticamente).
+        $cuotas = $cuotas->orderByRaw('CASE WHEN "id_TipoEstado" = ? THEN 0 ELSE 1 END', [$idPendiente])
             ->orderBy('fecha_vencimiento', 'asc')
             ->paginate(10);
 
         // Totales para el resumen de la página devuelta
         $subtotalPendiente = $cuotas->getCollection()
-            ->where('estado', 'pendiente')
+            ->where('id_TipoEstado', $idPendiente)
             ->sum('monto');
         $subtotalPagado = $cuotas->getCollection()
-            ->where('estado', 'pagada')
+            ->where('id_TipoEstado', $idFinalizado)
             ->sum('monto');
 
         return response()->json([
@@ -83,12 +99,14 @@ class CuotasController extends Controller
     {
         $cuota = Cuota::findOrFail($id);
 
-        if ($cuota->estado === 'pagada') {
+        $idFinalizado = $this->idEstadoPorDescripcion('Finalizado');
+
+        if ($cuota->id_TipoEstado === $idFinalizado) {
             return response()->json(['message' => 'La cuota ya está pagada.'], 422);
         }
 
         $cuota->update([
-            'estado' => 'pagada',
+            'id_TipoEstado' => $idFinalizado,
             'fecha_pago' => $request->input('fecha_pago', now()->format('Y-m-d')),
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now(),
@@ -96,7 +114,7 @@ class CuotasController extends Controller
 
         return response()->json([
             'message' => 'Cuota registrada como pagada correctamente.',
-            'cuota' => $cuota->load('transaccion.persona'),
+            'cuota' => $cuota->load('transaccion.persona', 'tipoEstado'),
         ], 200);
     }
 
@@ -107,12 +125,14 @@ class CuotasController extends Controller
     {
         $cuota = Cuota::findOrFail($id);
 
-        if ($cuota->estado === 'pendiente') {
+        $idPendiente = $this->idEstadoPorDescripcion('Pendiente');
+
+        if ($cuota->id_TipoEstado === $idPendiente) {
             return response()->json(['message' => 'La cuota ya está pendiente.'], 422);
         }
 
         $cuota->update([
-            'estado' => 'pendiente',
+            'id_TipoEstado' => $idPendiente,
             'fecha_pago' => null,
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now(),
@@ -120,7 +140,17 @@ class CuotasController extends Controller
 
         return response()->json([
             'message' => 'Pago revertido correctamente.',
-            'cuota' => $cuota->load('transaccion.persona'),
+            'cuota' => $cuota->load('transaccion.persona', 'tipoEstado'),
         ], 200);
+    }
+
+    /**
+     * Devuelve el id del estado en tipo_estados según su descripción.
+     */
+    private function idEstadoPorDescripcion(string $descripcion): ?int
+    {
+        $id = TipoEstado::where('descripcion', $descripcion)->value('id');
+
+        return $id !== null ? (int) $id : null;
     }
 }

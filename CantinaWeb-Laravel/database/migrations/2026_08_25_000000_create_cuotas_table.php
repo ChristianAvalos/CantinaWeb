@@ -17,13 +17,14 @@ return new class extends Migration
             $table->unsignedInteger('numero');
             $table->decimal('monto', 19, 4);
             $table->date('fecha_vencimiento');
-            $table->string('estado', 20)->default('pendiente'); // pendiente | pagada
+            $table->unsignedBigInteger('id_TipoEstado'); // FK a tipo_estados (Pendiente / Finalizado)
             $table->date('fecha_pago')->nullable();
             $table->string('UrevUsuario')->nullable();
             $table->dateTime('UrevFechaHora')->nullable();
             $table->timestamps();
 
             $table->foreign('id_transaccion')->references('id')->on('transacciones')->onDelete('cascade');
+            $table->foreign('id_TipoEstado')->references('id')->on('tipo_estados');
         });
     }
 

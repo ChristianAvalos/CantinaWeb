@@ -33,6 +33,7 @@ class RolePermissionSeeder extends Seeder
             'Productos',
             'Precio_Ventas',
             'Cobranzas',
+            'Pagos_Proveedores'
         ];
 
         foreach ($permissions as $permission) {
