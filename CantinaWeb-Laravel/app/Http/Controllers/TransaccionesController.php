@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateTransaccionRequest;
 use App\Helpers\StockHelper;
 use App\Models\Producto;
 use App\Models\TipoPago;
+use App\Models\TipoComprobante;
 use App\Models\TipoEstado;
 use App\Models\Comprobante;
 use App\Models\Cuota;
@@ -184,7 +185,13 @@ class TransaccionesController extends Controller
         ]);
 
         try {
-            $venta = DB::transaction(function () use ($data) {
+            // Comprobante por defecto del POS: "Ticket". Si el cliente pide Factura,
+            // se le factura aparte (flujo futuro). El ticket queda identificado en
+            // nro_comprobante con el número de transacción (id de la venta).
+            $tipoTicket = TipoComprobante::whereRaw('LOWER(nombre) = ?', ['ticket'])->first();
+            $ticketTipoComprobanteId = $tipoTicket ? $tipoTicket->id : null;
+
+            $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
                 $cabecera = Transacciones::create([
                     'nombre' => $data['nombre'],
@@ -196,6 +203,7 @@ class TransaccionesController extends Controller
                     'id_TipoMovimiento' => 2,        // Venta
                     'id_TipoPago' => $data['id_TipoPago'],
                     'id_FormaPago' => $data['id_FormaPago'],
+                    'id_TipoComprobante' => $ticketTipoComprobanteId,
                     'monto' => 0,
                     'monto_recibido' => $data['monto_recibido'] ?? null,
                     'vuelto' => $data['vuelto'] ?? null,
@@ -239,9 +247,11 @@ class TransaccionesController extends Controller
                     $montoTotal += $subtotal;
                 }
 
-                // 3) Recalcular monto de la cabecera
+                // 3) Recalcular monto de la cabecera y numerar el ticket con el
+                //    número de transacción (nro_comprobante = id de la venta).
                 $cabecera->update([
                     'monto' => $montoTotal,
+                    'nro_comprobante' => (string) $cabecera->id,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
