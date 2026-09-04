@@ -107,9 +107,9 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
 
         lineas.push(`<div class="ct-prod">${esc(nombre)}</div>`);
         lineas.push(`<div class="ct-fila"><span class="ct-dim">${fmtCant(cant)} x ${formatearGuarani(pu)}</span><span class="ct-monto">${formatearGuarani(st)}</span></div>`);
-        if (item.codigo) {
-            lineas.push(`<div class="ct-muted">${esc(String(item.codigo))}</div>`);
-        }
+        // if (item.codigo) {
+        //     lineas.push(`<div class="ct-muted">${esc(String(item.codigo))}</div>`);
+        // }
     });
 
     if (items.length === 0) {
