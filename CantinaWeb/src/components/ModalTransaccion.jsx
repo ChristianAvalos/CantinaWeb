@@ -379,17 +379,37 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         });
     }, [form.monto, form.monto_recibido]);
 
-    // Si la forma de pago no es Efectivo, el monto recibido no aplica → se limpia
+    // ── Alineación con Venta Rápida (monto_recibido) ──
+    // En EFECTIVO el cajero carga cuánto le dieron (puede ser > total → genera vuelto).
+    // Con tarjeta/otra forma de pago al contado se cobra el total EXACTO: monto_recibido
+    // se iguala automáticamente al monto y no hay vuelto (igual que en VentasRapidas,
+    // donde para no-efectivo se envía monto_recibido = total). En crédito/cuotas aún no
+    // se cobra nada → monto_recibido y vuelto quedan en 0.
     useEffect(() => {
-        if (tipoTransaccion === 'venta' && !esEfectivo && form.id_FormaPago) {
+        if (tipoTransaccion !== 'venta' || !form.id_FormaPago) {
+            return;
+        }
+
+        if (!esEfectivo && !esCreditoOCuotas) {
+            // Tarjeta / transferencia / cheque (pago al contado): se recibe el total.
+            const monto = Number(form.monto) || 0;
             setForm(prev => {
-                if (Number(prev.monto_recibido) === 0) {
+                if (Number(prev.monto_recibido) === monto && Number(prev.vuelto) === 0) {
                     return prev;
                 }
-                return { ...prev, monto_recibido: 0 };
+                return { ...prev, monto_recibido: monto, vuelto: 0 };
             });
+            return;
         }
-    }, [esEfectivo, tipoTransaccion, form.id_FormaPago]);
+
+        // Crédito / cuotas: todavía no hay cobro (aunque la forma de pago sea efectivo).
+        setForm(prev => {
+            if (Number(prev.monto_recibido) === 0 && Number(prev.vuelto) === 0) {
+                return prev;
+            }
+            return { ...prev, monto_recibido: 0, vuelto: 0 };
+        });
+    }, [esEfectivo, esCreditoOCuotas, tipoTransaccion, form.id_FormaPago, form.monto]);
 
     // Generar el plan de cuotas cuando cambia la configuración o el monto
     useEffect(() => {
