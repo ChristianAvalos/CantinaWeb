@@ -369,6 +369,20 @@ export default function VentasRapidas() {
         toast.info('Pedido cancelado', { autoClose: 1000, hideProgressBar: true });
     };
 
+    // ─── Volver a Efectivo tras finalizar la venta ────────────────
+    // Cada venta nueva empieza en Efectivo: si la última fue con tarjeta/otro
+    // medio, se restablece para que la caja quede lista para el próximo cliente.
+    const resetFormaPagoAEfectivo = () => {
+        const efectivo = formaPago.find(fp =>
+            String(fp.nombre || fp.descripcion || '').trim().toLowerCase() === 'efectivo'
+        ) || formaPago.find(fp => Number(fp.id) === 1);
+        if (efectivo) {
+            setSelectedFormaPago(String(efectivo.id));
+        } else if (formaPago.length > 0) {
+            setSelectedFormaPago(String(formaPago[0].id));
+        }
+    };
+
     // ─── Procesar pago ────────────────────────────────────────────
     const procesarPago = async () => {
         if (cart.length === 0) {
@@ -429,6 +443,7 @@ export default function VentasRapidas() {
                 setSearchTerm('');
                 setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
                 setClienteSearch('');
+                resetFormaPagoAEfectivo();
                 searchInputRef.current?.focus();
             }, 1500);
 
