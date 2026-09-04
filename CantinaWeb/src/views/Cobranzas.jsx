@@ -190,14 +190,14 @@ export default function Cobranzas() {
                                                     <td className="text-center">{formatearFechaVista(cuota.fecha_vencimiento)}</td>
                                                     <td className="text-end">{formatearGuarani(cuota.monto)}</td>
                                                     <td className="text-center">
-                                                        {cuota.tipoEstado?.descripcion === 'Finalizado' ? (
+                                                        {cuota.tipo_estado?.descripcion === 'Finalizado' ? (
                                                             <span className="text-green-600 font-semibold">Pagada</span>
                                                         ) : (
                                                             <span className="text-amber-600 font-semibold">Pendiente</span>
                                                         )}
                                                     </td>
                                                     <td className="text-center">
-                                                        {cuota.tipoEstado?.descripcion === 'Finalizado' ? (
+                                                        {cuota.tipo_estado?.descripcion === 'Finalizado' ? (
                                                             <button
                                                                 onClick={() => solicitarRevertir(cuota)}
                                                                 className="text-sm text-slate-500 hover:text-red-600"
