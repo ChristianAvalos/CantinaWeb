@@ -202,14 +202,14 @@ export default function Cobranzas() {
                                                                 onClick={() => solicitarRevertir(cuota)}
                                                                 className="text-sm text-slate-500 hover:text-red-600"
                                                             >
-                                                                Revertir
+                                                                <img src="/img/Icon/rotate.png" alt="Revertir" />
                                                             </button>
                                                         ) : (
                                                             <button
                                                                 onClick={() => solicitarPago(cuota)}
                                                                 className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
                                                             >
-                                                                Registrar pago
+                                                                <img src="/img/Icon/checked.png" alt="Pagar" />
                                                             </button>
                                                         )}
                                                     </td>
