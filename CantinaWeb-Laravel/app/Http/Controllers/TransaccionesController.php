@@ -15,6 +15,7 @@ use App\Helpers\StockHelper;
 use App\Models\Producto;
 use App\Models\TipoPago;
 use App\Models\TipoEstado;
+use App\Models\Comprobante;
 use App\Models\Cuota;
 
 class TransaccionesController extends Controller
@@ -59,6 +60,7 @@ class TransaccionesController extends Controller
             'banco',
             'formaPago',
             'organizacion',
+            'comprobante:id,id_transaccion',
             'caja'
         ]);
         // Si NO es admin, limitar por la organización del usuario
@@ -244,7 +246,28 @@ class TransaccionesController extends Controller
                     'UrevFechaHora' => now(),
                 ]);
 
-                return $cabecera->load(['persona', 'tipoPago', 'formaPago', 'tipoEstado']);
+                // 4) Guardar el snapshot del comprobante impreso. Se guarda una copia
+                //    fiel de lo que se va a imprimir, para que al reimprimir desde la
+                //    tabla Ventas se muestre SIEMPRE lo mismo (aunque los productos,
+                //    clientes u organización cambien después).
+                Comprobante::create([
+                    'id_transaccion' => $cabecera->id,
+                    'id_organizacion' => $cabecera->id_organizacion,
+                    'datos' => $this->generarSnapshotComprobante($cabecera),
+                    'id_usuario' => Auth::id(),
+                    'UrevUsuario' => Auth::user()->name,
+                    'UrevFechaHora' => now(),
+                ]);
+
+                return $cabecera->load([
+                    'persona',
+                    'tipoPago',
+                    'formaPago',
+                    'tipoEstado',
+                    'organizacion',
+                    'transacionDetalles.producto',
+                    'comprobante',
+                ]);
             });
 
             return response()->json([
@@ -254,6 +277,78 @@ class TransaccionesController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Construye el snapshot estructurado del comprobante de una transacción.
+     * Centraliza los datos tal cual se imprimen (empresa, cliente, ítems, montos).
+     */
+    private function generarSnapshotComprobante(Transacciones $transaccion): array
+    {
+        $organizacion = $transaccion->organizacion;
+        $detalles = $transaccion->transacionDetalles()->with('producto')->get();
+
+        $items = $detalles->map(function ($d) {
+            return [
+                'codigo' => $d->producto->codigo_barras ?? '',
+                'producto' => $d->producto->nombre ?? ('Producto #' . $d->id_producto),
+                'cantidad' => (float) $d->cantidad,
+                'precio_unitario' => (float) $d->precio_unitario,
+                'subtotal' => (float) $d->subtotal,
+            ];
+        })->values()->toArray();
+
+        $total = (float) $transaccion->monto;
+        $iva = (float) ($transaccion->iva ?? 0);
+
+        return [
+            'titulo' => 'COMPROBANTE DE VENTA',
+            'numero' => (string) $transaccion->id,
+            // La columna fecha es solo date (sin hora); se usa created_at para mostrar
+            // la hora real de la venta en el comprobante.
+            'fecha' => \Carbon\Carbon::parse($transaccion->created_at ?? now())->format('d/m/Y H:i'),
+            'empresa' => [
+                'RazonSocial' => $organizacion->RazonSocial ?? '',
+                'RUC' => $organizacion->RUC ?? '',
+                'Direccion' => $organizacion->Direccion ?? '',
+                'Telefono' => $organizacion->Telefono ?? '',
+                'Email' => $organizacion->Email ?? '',
+                'Sigla' => $organizacion->Sigla ?? '',
+            ],
+            'cliente' => $transaccion->persona
+                ? [
+                    'nombre' => $transaccion->persona->nombre ?? '',
+                    'documento' => $transaccion->persona->documento ?? '',
+                ]
+                : null,
+            'forma_pago' => $transaccion->formaPago->nombre ?? '',
+            'tipo_pago' => $transaccion->tipoPago->nombre ?? '',
+            'cajero' => $transaccion->UrevUsuario ?? '',
+            'items' => $items,
+            'subtotal' => round(max(0, $total - $iva), 2),
+            'iva' => round($iva, 2),
+            'total' => round($total, 2),
+            'monto_recibido' => round((float) ($transaccion->monto_recibido ?? 0), 2),
+            'vuelto' => round((float) ($transaccion->vuelto ?? 0), 2),
+        ];
+    }
+
+    /**
+     * Devuelve el comprobante (snapshot) guardado de una venta para reimprimir.
+     */
+    public function obtenerComprobante($id)
+    {
+        $transaccion = Transacciones::with('comprobante')->find($id);
+
+        if (! $transaccion || ! $transaccion->comprobante) {
+            return response()->json([
+                'message' => 'La venta no posee un comprobante guardado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'comprobante' => $transaccion->comprobante,
+        ], 200);
     }
 
 

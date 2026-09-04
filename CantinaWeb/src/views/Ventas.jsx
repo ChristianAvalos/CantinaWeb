@@ -1,6 +1,7 @@
 import clienteAxios from "../config/axios";
 import { useCallback, useEffect, useState } from 'react';
 import ModalTransaccion from "../components/ModalTransaccion";
+import ModalComprobante from "../components/ModalComprobante";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerTransacciones } from '../helpers/HelpersTransacciones.jsx';
@@ -60,6 +61,10 @@ export default function Ventas() {
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
     const [ventaAAnular, setVentaAAnular] = useState(null);
+
+    //comprobante de venta (reimpresión)
+    const [comprobante, setComprobante] = useState(null); // { datos, anulada }
+    const [mostrarComprobante, setMostrarComprobante] = useState(false);
 
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
@@ -153,6 +158,30 @@ export default function Ventas() {
         openModal('ver', venta);
     };
 
+    // Recupera el snapshot guardado (lo que se imprimió) y abre la vista previa
+    // para reimprimir SIEMPRE lo mismo, aunque las tablas relacionadas hayan cambiado.
+    const handleReimprimir = async (venta) => {
+        try {
+            const { data } = await clienteAxios.get(`api/ventas/${venta.id}/comprobante`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const datos = data?.comprobante?.datos;
+            if (!datos) {
+                toast.warning('La venta no posee un comprobante guardado.');
+                return;
+            }
+            setComprobante({ datos, anulada: Number(venta.id_TipoEstado) === 7 });
+            setMostrarComprobante(true);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'No se pudo recuperar el comprobante.');
+        }
+    };
+
+    const cerrarComprobante = () => {
+        setMostrarComprobante(false);
+        setComprobante(null);
+    };
+
     const handleAplicarFiltros = (nuevosFiltros) => {
         setFiltrosAplicados(nuevosFiltros);
         setPaginaActual(1);
@@ -223,6 +252,12 @@ export default function Ventas() {
                                                     <td className="text-center">{venta.UrevCalc}</td>
                                                     <td>
                                                         <div className="flex items-center justify-center space-x-2">
+                                                            {/* Reimprimir comprobante (solo si la venta tiene snapshot guardado) */}
+                                                            {venta.comprobante && (
+                                                                <button onClick={() => handleReimprimir(venta)} title="Reimprimir comprobante" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/report-print.png" alt="Reimprimir" />
+                                                                </button>
+                                                            )}
                                                             {/* Ver detalle (solo lectura) */}
                                                             <button onClick={() => handleVer(venta)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                 <img src="/img/Icon/eye.png" alt="Ver" />
@@ -315,6 +350,16 @@ export default function Ventas() {
                     tipoTransaccion='venta'
                     modo={modalMode}
                     onClose={closeModal}
+                />
+            )}
+
+            {/* Modal de reimpresión del comprobante de venta */}
+            {mostrarComprobante && comprobante && (
+                <ModalComprobante
+                    datos={comprobante.datos}
+                    modo="reimpresion"
+                    anulada={comprobante.anulada}
+                    onClose={cerrarComprobante}
                 />
             )}
 

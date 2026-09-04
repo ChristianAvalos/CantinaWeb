@@ -90,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::post('/transacciones/{id}/anular', [TransaccionesController::class, 'AnularTransaccion']);
     Route::post('/transacciones/{id}/corregir', [TransaccionesController::class, 'corregirTransaccion']);
     Route::post('/ventas/pos', [TransaccionesController::class, 'crearVentaPos']);
+    Route::get('/ventas/{id}/comprobante', [TransaccionesController::class, 'obtenerComprobante']);
 
     //Cuotas de ventas a crédito/cuotas
     Route::get('/cuotas',[CuotasController::class,'index']);

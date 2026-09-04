@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Cajas;
 use App\Models\Bancos;
+use App\Models\Comprobante;
 use App\Models\Persona;
 use App\Models\TipoPago;
 use App\Models\FormaPago;
@@ -62,6 +63,12 @@ class Transacciones extends Model
     public function transacionDetalles()
     {
         return $this->hasMany(TransaccionesDetalle::class, 'id_transaccion');
+    }
+
+    //relacion con el comprobante (snapshot impreso) de la venta
+    public function comprobante()
+    {
+        return $this->hasOne(Comprobante::class, 'id_transaccion');
     }
 
     //relacion con tipo movimientos

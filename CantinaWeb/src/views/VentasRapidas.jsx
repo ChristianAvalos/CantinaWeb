@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { formatearGuarani,formatearMiles } from '../helpers/HelpersNumeros';
 import { useAuth } from '../hooks/useAuth';
 import AlertaModal from '../components/AlertaModal';
+import ModalComprobante from '../components/ModalComprobante';
 
 // ─── Debounce helper ────────────────────────────────────────────────
 function useDebounce(value, delay = 300) {
@@ -102,6 +103,10 @@ export default function VentasRapidas() {
     const [pagoRecibido, setPagoRecibido] = useState('');
     const [vuelto, setVuelto] = useState(0);
 
+    // ─── Comprobante de venta (imprimir tras cobrar) ─────────────
+    const [comprobanteDatos, setComprobanteDatos] = useState(null);
+    const [mostrarComprobante, setMostrarComprobante] = useState(false);
+
     // ─── Ref para toast pendiente (evita duplicados por StrictMode) ──
     const pendingToastRef = useRef(null);
     const [toastTick, setToastTick] = useState(0);
@@ -141,10 +146,10 @@ export default function VentasRapidas() {
 
     // Mantener foco en el buscador después de añadir producto
     useEffect(() => {
-        if (!isProcessing && !mostrarAlerta) {
+        if (!isProcessing && !mostrarAlerta && !mostrarComprobante) {
             searchInputRef.current?.focus();
         }
-    }, [cart, isProcessing, mostrarAlerta]);
+    }, [cart, isProcessing, mostrarAlerta, mostrarComprobante]);
 
     // ─── Cargar tipos de pago y formas de pago ────────────────────
     useEffect(() => {
@@ -383,6 +388,26 @@ export default function VentasRapidas() {
         }
     };
 
+    // Reinicia la pantalla para la siguiente venta. Se llama al cerrar el modal
+    // de comprobante (imprima o no) o si el backend no devolvió comprobante.
+    const reiniciarVenta = () => {
+        setCart([]);
+        setVentaCompletada(false);
+        setPagoRecibido('');
+        setVuelto(0);
+        setSearchTerm('');
+        setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
+        setClienteSearch('');
+        setComprobanteDatos(null);
+        setMostrarComprobante(false);
+        resetFormaPagoAEfectivo();
+        searchInputRef.current?.focus();
+    };
+
+    const cerrarComprobante = () => {
+        reiniciarVenta();
+    };
+
     // ─── Procesar pago ────────────────────────────────────────────
     const procesarPago = async () => {
         if (cart.length === 0) {
@@ -434,18 +459,17 @@ export default function VentasRapidas() {
             setVentaCompletada(true);
             toast.success('¡Venta completada con éxito!', { autoClose: 1000 });
 
-            // Limpiar todo después de 1.5 segundos
-            setTimeout(() => {
-                setCart([]);
-                setVentaCompletada(false);
-                setPagoRecibido('');
-                setVuelto(0);
-                setSearchTerm('');
-                setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
-                setClienteSearch('');
-                resetFormaPagoAEfectivo();
-                searchInputRef.current?.focus();
-            }, 1500);
+            // El backend ya guardó el snapshot del comprobante asociado a la venta
+            // (para reimprimir siempre lo mismo). Lo usamos para la vista previa.
+            const datosComprobante = ventaData?.venta?.comprobante?.datos || null;
+            setComprobanteDatos(datosComprobante);
+
+            if (datosComprobante) {
+                // Pausar el reinicio hasta que el operador decida imprimir o no.
+                setMostrarComprobante(true);
+            } else {
+                reiniciarVenta();
+            }
 
         } catch (err) {
             console.error('Error al procesar la venta:', err);
@@ -838,6 +862,15 @@ export default function VentasRapidas() {
                     </div>
                 )}
             </div>
+
+            {/* ═══════════════ COMPROBANTE DE VENTA ═══════════════ */}
+            {mostrarComprobante && comprobanteDatos && (
+                <ModalComprobante
+                    datos={comprobanteDatos}
+                    modo="cobro"
+                    onClose={cerrarComprobante}
+                />
+            )}
 
             {/* ═══════════════ ALERTA MODAL ═══════════════ */}
             {mostrarAlerta && (
