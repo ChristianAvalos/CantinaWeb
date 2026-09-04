@@ -29,8 +29,8 @@ const FILTROS_AJUSTES = [
     },
 ];
 
-const inicioMesActual = dayjs().startOf('month').format('YYYY-MM-DD');
-const finMesActual = dayjs().endOf('month').format('YYYY-MM-DD');
+const inicioMesActual = dayjs().startOf('year').format('YYYY-MM-DD');
+const finMesActual = dayjs().endOf('year').format('YYYY-MM-DD');
 
 const FILTROS_AJUSTES_INICIALES = {
     search: '',
