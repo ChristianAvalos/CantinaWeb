@@ -168,6 +168,13 @@ export default function Compras() {
         openModal('crear')
     };
 
+    // Devuelve las clases de color según el estado de la transacción
+    const claseEstadoTransaccion = (id) => {
+        if (Number(id) === 3) return 'text-green-600 font-semibold'; // Finalizado
+        if (Number(id) === 7) return 'text-red-600 font-semibold';   // Anulada
+        return '';                                                   // resto vacío
+    };
+
 
     return (
         <div>
@@ -217,7 +224,7 @@ export default function Compras() {
                                                     <td>{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(compra.monto)}</td>
-                                                    <td className={Number(compra.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
+                                                    <td className={claseEstadoTransaccion(compra.id_TipoEstado)}>
                                                         {compra.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
                                                     <td className="text-center">{compra.UrevCalc}</td>

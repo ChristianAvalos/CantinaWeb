@@ -191,6 +191,13 @@ export default function Ventas() {
         openModal('crear')
     };
 
+    // Devuelve las clases de color según el estado de la transacción
+    const claseEstadoTransaccion = (id) => {
+        if (Number(id) === 3) return 'text-green-600 font-semibold'; // Finalizado
+        if (Number(id) === 7) return 'text-red-600 font-semibold';   // Anulada
+        return '';                                                   // resto vacío
+    };
+
 
     return (
         <div>
@@ -217,7 +224,6 @@ export default function Ventas() {
                                             <th>ID</th>
                                             <th>Organización</th>
                                             <th>Nro. Comprobante</th>
-                                            <th>Tipo</th>
                                             <th>Estado</th>
                                             <th>Nombre</th>
                                             <th>Descripcción</th>
@@ -239,16 +245,15 @@ export default function Ventas() {
                                                     <td>{venta.id}</td>
                                                     <td className="text-center">{venta.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center">{venta.nro_comprobante}</td>
-                                                    <td>{venta.tipo_movimiento?.nombre || 'Sin movimiento'}</td>
-                                                    <td className={Number(venta.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
-                                                        {venta.tipo_estado?.descripcion || 'Sin estado'}
-                                                    </td>
                                                     <td>{venta.nombre}</td>
                                                     <td>{venta.descripcion}</td>
                                                     <td>{venta.persona ? venta.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(venta.monto)}</td>
                                                     <td className="text-center">{formatearGuarani(venta.monto_recibido)}</td>
                                                     <td className="text-center">{formatearGuarani(venta.vuelto)}</td>
+                                                    <td className={claseEstadoTransaccion(venta.id_TipoEstado)}>
+                                                        {venta.tipo_estado?.descripcion || 'Sin estado'}
+                                                    </td>
                                                     <td className="text-center">{venta.UrevCalc}</td>
                                                     <td>
                                                         <div className="flex items-center justify-center space-x-2">

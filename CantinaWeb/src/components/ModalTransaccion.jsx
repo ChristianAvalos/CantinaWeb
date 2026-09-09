@@ -77,6 +77,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     });
     const [cuotas, setCuotas] = useState([]);
 
+    // Cuotas ya guardadas en la BD: al reabrir una transacción a crédito/cuotas
+    // se muestran tal cual (no se vuelven a generar desde el total).
+    const planCargadoDesdeBDRef = useRef(false);
+    const planCargaIntentadaRef = useRef(false);
+
     // Determina si la transacción (compra o venta) es a crédito/cuotas según el tipo de pago seleccionado
     const tipoPagoSeleccionado = tipoPago.find(tp => String(tp.id) === String(form.id_TipoPago));
     const esCreditoOCuotas = tipoPagoSeleccionado
@@ -418,6 +423,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             return;
         }
 
+        // Si se reabrieron cuotas ya guardadas, no regenerar el plan.
+        if (planCargadoDesdeBDRef.current) {
+            return;
+        }
+
         const montoTotal = Math.round(Number(form.monto) || 0);
         const n = Math.max(1, parseInt(cuotasConfig.numeroCuotas, 10) || 1);
         const fechaInicio = cuotasConfig.fechaPrimeraCuota;
@@ -442,6 +452,32 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setCuotas(lista);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [esCreditoOCuotas, cuotasConfig, form.monto]);
+
+    // Al reabrir una transacción existente a crédito/cuotas, mostrar las cuotas
+    // guardadas en la BD en lugar de regenerar una sola cuota por el total.
+    useEffect(() => {
+        if (!esCreditoOCuotas || planCargaIntentadaRef.current) {
+            return;
+        }
+        planCargaIntentadaRef.current = true;
+
+        const guardadas = Array.isArray(transaccion?.cuotas) ? transaccion.cuotas : [];
+        if (guardadas.length > 0) {
+            planCargadoDesdeBDRef.current = true;
+            setCuotas(guardadas.map((c, i) => ({
+                numero: Number(c?.numero) || (i + 1),
+                monto: Math.round(Number(c?.monto) || 0),
+                fecha_vencimiento: String(c?.fecha_vencimiento || '').slice(0, 10),
+                id_TipoEstado: c?.id_TipoEstado ?? null,
+                fecha_pago: c?.fecha_pago || null,
+            })));
+            setCuotasConfig(prev => ({
+                numeroCuotas: guardadas.length,
+                fechaPrimeraCuota: String(guardadas[0]?.fecha_vencimiento || '').slice(0, 10) || prev.fechaPrimeraCuota,
+            }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [esCreditoOCuotas]);
 
     // Actualiza un campo de una cuota específica
     const actualizarCuota = (index, campo, valor) => {
@@ -1050,22 +1086,36 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Número de cuotas</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={cuotasConfig.numeroCuotas}
-                                        onChange={(e) => setCuotasConfig(prev => ({ ...prev, numeroCuotas: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    {esSoloLectura ? (
+                                        <div className="w-full rounded-md border border-transparent px-3 py-2 text-sm text-gray-900">{cuotasConfig.numeroCuotas}</div>
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={cuotasConfig.numeroCuotas}
+                                            onChange={(e) => {
+                                                planCargadoDesdeBDRef.current = false; // el usuario cambió la configuración → recalcular
+                                                setCuotasConfig(prev => ({ ...prev, numeroCuotas: Math.max(1, parseInt(e.target.value, 10) || 1) }));
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Primera cuota</label>
-                                    <input
-                                        type="date"
-                                        value={cuotasConfig.fechaPrimeraCuota}
-                                        onChange={(e) => setCuotasConfig(prev => ({ ...prev, fechaPrimeraCuota: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    {esSoloLectura ? (
+                                        <div className="w-full rounded-md border border-transparent px-3 py-2 text-sm text-gray-900">{cuotasConfig.fechaPrimeraCuota || '—'}</div>
+                                    ) : (
+                                        <input
+                                            type="date"
+                                            value={cuotasConfig.fechaPrimeraCuota}
+                                            onChange={(e) => {
+                                                planCargadoDesdeBDRef.current = false; // el usuario cambió la configuración → recalcular
+                                                setCuotasConfig(prev => ({ ...prev, fechaPrimeraCuota: e.target.value }));
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    )}
                                 </div>
                                 <div className="flex items-end">
                                     <div className="text-sm text-gray-600">
@@ -1082,6 +1132,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">N°</th>
                                                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Monto</th>
                                                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Vencimiento</th>
+                                                {esSoloLectura && (
+                                                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Estado</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -1089,22 +1142,43 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                 <tr key={idx} className="transition-colors hover:bg-blue-50/50">
                                                     <td className="px-3 py-3 text-center text-sm text-gray-700">{cuota.numero}</td>
                                                     <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={cuota.monto}
-                                                            onChange={(e) => actualizarCuota(idx, 'monto', e.target.value)}
-                                                            className="w-28 rounded-md border border-gray-300 px-2 py-1 text-right text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        />
+                                                        {esSoloLectura ? (
+                                                            <span className="text-sm tabular-nums text-gray-700">{formatearGuarani(cuota.monto)}</span>
+                                                        ) : (
+                                                            <input
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                value={formatearGuarani(cuota.monto) || ''}
+                                                                onChange={(e) => {
+                                                                    // Eliminar puntos y caracteres no numéricos
+                                                                    const soloNumeros = e.target.value.replace(/\D/g, '');
+                                                                    actualizarCuota(idx, 'monto', soloNumeros);
+                                                                }}
+                                                                className="w-28 rounded-md border border-gray-300 px-2 py-1 text-right text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        )}
                                                     </td>
                                                     <td className="px-3 py-3">
-                                                        <input
-                                                            type="date"
-                                                            value={cuota.fecha_vencimiento}
-                                                            onChange={(e) => actualizarCuota(idx, 'fecha_vencimiento', e.target.value)}
-                                                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        />
+                                                        {esSoloLectura ? (
+                                                            <span className="text-sm text-gray-700">{cuota.fecha_vencimiento || '—'}</span>
+                                                        ) : (
+                                                            <input
+                                                                type="date"
+                                                                value={cuota.fecha_vencimiento}
+                                                                onChange={(e) => actualizarCuota(idx, 'fecha_vencimiento', e.target.value)}
+                                                                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        )}
                                                     </td>
+                                                    {esSoloLectura && (
+                                                        <td className="px-3 py-3 text-center whitespace-nowrap">
+                                                            {Number(cuota.id_TipoEstado) === 3 ? (
+                                                                <span className="text-green-600 font-semibold">Pagada</span>
+                                                            ) : (
+                                                                <span className="text-amber-600 font-semibold">Pendiente</span>
+                                                            )}
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                         </tbody>

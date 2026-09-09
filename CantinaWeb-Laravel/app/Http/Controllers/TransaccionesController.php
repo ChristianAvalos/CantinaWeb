@@ -62,6 +62,7 @@ class TransaccionesController extends Controller
             'formaPago',
             'organizacion',
             'comprobante:id,id_transaccion',
+            'cuotas',
             'caja'
         ]);
         // Si NO es admin, limitar por la organización del usuario

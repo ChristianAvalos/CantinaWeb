@@ -247,7 +247,27 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 )}
                             </div>
                             )}
-                            
+                            {/* Campo para precio unitario / precio de venta */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Precio de venta' : 'Precio unitario'}</label>
+                                <input
+                                    type="text"
+                                    min="0"
+                                    className={`w-full px-3 py-2 border ${(errores && errores.precio_unitario) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    placeholder="Introduce el precio unitario"
+                                    value={formatearGuarani(Number(precio_unitario))}
+                                    onChange={(e) => {
+                                        const valorDigitado = e.target.value;
+                                        // Eliminamos puntos y caracteres no numéricos
+                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
+                                        setPrecioUnitario(soloNumeros);
+                                    }}
+
+                                />
+                                {errores && errores.precio_unitario && Array.isArray(errores.precio_unitario) && (
+                                    <p className="text-red-500 text-sm">{errores.precio_unitario[0]}</p>
+                                )}
+                            </div>
                             {/* Campo para cantidad */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Cantidad a vender' : 'Cantidad'}</label>
@@ -271,27 +291,6 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 )}
                                 {errores && errores.cantidad && Array.isArray(errores.cantidad) && (
                                     <p className="text-red-500 text-sm">{errores.cantidad[0]}</p>
-                                )}
-                            </div>
-                            {/* Campo para precio unitario / precio de venta */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Precio de venta' : 'Precio unitario'}</label>
-                                <input
-                                    type="text"
-                                    min="0"
-                                    className={`w-full px-3 py-2 border ${(errores && errores.precio_unitario) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="Introduce el precio unitario"
-                                    value={formatearGuarani(Number(precio_unitario))}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setPrecioUnitario(soloNumeros);
-                                    }}
-
-                                />
-                                {errores && errores.precio_unitario && Array.isArray(errores.precio_unitario) && (
-                                    <p className="text-red-500 text-sm">{errores.precio_unitario[0]}</p>
                                 )}
                             </div>
                             {/* Campo para vencimiento (no aplica en ventas) */}

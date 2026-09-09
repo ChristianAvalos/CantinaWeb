@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Cajas;
 use App\Models\Bancos;
 use App\Models\Comprobante;
+use App\Models\Cuota;
 use App\Models\Persona;
 use App\Models\TipoPago;
 use App\Models\FormaPago;
@@ -69,6 +70,12 @@ class Transacciones extends Model
     public function comprobante()
     {
         return $this->hasOne(Comprobante::class, 'id_transaccion');
+    }
+
+    //relacion con las cuotas (compras/ventas a crédito/cuotas)
+    public function cuotas()
+    {
+        return $this->hasMany(Cuota::class, 'id_transaccion');
     }
 
     //relacion con tipo movimientos
