@@ -183,24 +183,24 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-[1040]">
+        <div className="fixed inset-0 z-[1040] flex items-center justify-center p-2">
             {/* Fondo oscuro semi-transparente */}
             <div className="bg-gray-800 opacity-75 absolute inset-0" onClick={onClose}></div>
 
             {/* Contenido del modal */}
-            <div className="bg-white rounded-lg shadow-lg z-[1041] p-6 w-full max-w-5xl border border-red-500">
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">
+            <div className="relative z-[1041] max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6">
+                <h2 className="mb-4 border-b border-slate-200 pb-3 text-xl font-bold text-slate-800 sm:text-2xl">
                     {modo === 'crear' ? 'Crear Detalle' : 'Editar Detalle'}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-h-[80vh] overflow-y-auto">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-4">
                         {/* Campos del formulario */}
-                        <div className="col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="col-span-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
 
                             {/* Campo para Codigo de barras */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Codigo de barras</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Código de barras</label>
                                 <input
                                     type="text"
                                     ref={codigoBarrasRef}
@@ -216,8 +216,8 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                             </div>
 
                             {/* Campo para nombre */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Nombre</label>
                                 <input
                                     type="text"
                                     disabled
@@ -233,8 +233,8 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
 
                              {/* Campo para lote (no aplica en ventas) */}
                             {tipoTransaccion !== 'venta' && (
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Lote</label>
                                 <input
                                     type="text"
                                     className={`w-full px-3 py-2 border ${(errores && errores.lote) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -248,12 +248,12 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                             </div>
                             )}
                             {/* Campo para precio unitario / precio de venta */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Precio de venta' : 'Precio unitario'}</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{tipoTransaccion === 'venta' ? 'Precio de venta' : 'Precio unitario'}</label>
                                 <input
                                     type="text"
                                     min="0"
-                                    className={`w-full px-3 py-2 border ${(errores && errores.precio_unitario) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${(errores && errores.precio_unitario) ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Introduce el precio unitario"
                                     value={formatearGuarani(Number(precio_unitario))}
                                     onChange={(e) => {
@@ -269,12 +269,12 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                 )}
                             </div>
                             {/* Campo para cantidad */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tipoTransaccion === 'venta' ? 'Cantidad a vender' : 'Cantidad'}</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{tipoTransaccion === 'venta' ? 'Cantidad a vender' : 'Cantidad'}</label>
                                 <input
                                     type="text"
                                     min="0"
-                                    className={`w-full px-3 py-2 border ${(errores && errores.cantidad) ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${(errores && errores.cantidad) ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Introduce la cantidad"
                                     value={formatearMiles(Number(cantidad))}
                                     onChange={(e) => {
@@ -295,8 +295,8 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                             </div>
                             {/* Campo para vencimiento (no aplica en ventas) */}
                             {tipoTransaccion !== 'venta' && (
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Vencimiento</label>
                                 <input
                                     type="date"
                                     className={`w-full px-3 py-2 border ${errores?.fecha_vencimiento ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -314,20 +314,20 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
 
 
                     {/* Botones para cerrar y guardar */}
-                    <div className="flex justify-end space-x-3">
+                    <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+                            className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={isSaving}
-                            className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {isSaving ? 'Guardando...' : (modo === 'crear' ? 'Crear Transaccion' : 'Guardar Cambios')}
+                            {isSaving ? 'Guardando...' : (modo === 'crear' ? 'Crear detalle' : 'Guardar cambios')}
                         </button>
                     </div>
                 </form>

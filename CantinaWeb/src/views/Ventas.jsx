@@ -191,11 +191,12 @@ export default function Ventas() {
         openModal('crear')
     };
 
-    // Devuelve las clases de color según el estado de la transacción
+    // Devuelve las clases del badge según el estado de la transacción
     const claseEstadoTransaccion = (id) => {
-        if (Number(id) === 3) return 'text-green-600 font-semibold'; // Finalizado
-        if (Number(id) === 7) return 'text-red-600 font-semibold';   // Anulada
-        return '';                                                   // resto vacío
+        if (Number(id) === 3) return 'bg-green-100 text-green-700 ring-green-200'; // Finalizado
+        if (Number(id) === 7) return 'bg-red-100 text-red-700 ring-red-200';       // Anulada
+        if (Number(id) === 1) return 'bg-amber-100 text-amber-700 ring-amber-200'; // Activo / borrador
+        return 'bg-slate-100 text-slate-600 ring-slate-200';                       // resto
     };
 
 
@@ -220,43 +221,45 @@ export default function Ventas() {
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>
-                                        <tr className="font-bold g360-gradient rounded text-center">
+                                        <tr className="g360-gradient text-center font-bold">
                                             <th>ID</th>
                                             <th>Organización</th>
                                             <th>Nro. Comprobante</th>
-                                            <th>Estado</th>
                                             <th>Nombre</th>
-                                            <th>Descripcción</th>
-                                            <th>Proveedor</th>
-                                            <th>Monto</th>
-                                            <th>Monto recibido</th>
-                                            <th>Vuelto</th>
-                                            <th>Urev</th>
-                                            <th>Utilidades</th>
+                                            <th>Descripción</th>
+                                            <th>Cliente</th>
+                                            <th className="text-right">Monto</th>
+                                            <th className="text-right">Monto recibido</th>
+                                            <th className="text-right">Vuelto</th>
+                                            <th className="text-center">Estado</th>
+                                            <th className="text-right">Urev</th>
+                                            <th className="text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {ventas.length === 0 ? (
-                                            <NoExistenDatos colSpan={17} mensaje="No existen ventas." />
+                                            <NoExistenDatos colSpan={12} mensaje="No existen ventas." />
                                         ) : (
 
                                             ventas.map((venta) => (
                                                 <tr key={venta.id}>
-                                                    <td>{venta.id}</td>
-                                                    <td className="text-center">{venta.organizacion?.RazonSocial || 'Sin organización'}</td>
-                                                    <td className="text-center">{venta.nro_comprobante}</td>
-                                                    <td>{venta.nombre}</td>
-                                                    <td>{venta.descripcion}</td>
-                                                    <td>{venta.persona ? venta.persona.nombre : 'Sin proveedor'}</td>
-                                                    <td className="text-right">{formatearGuarani(venta.monto)}</td>
-                                                    <td className="text-center">{formatearGuarani(venta.monto_recibido)}</td>
-                                                    <td className="text-center">{formatearGuarani(venta.vuelto)}</td>
-                                                    <td className={claseEstadoTransaccion(venta.id_TipoEstado)}>
-                                                        {venta.tipo_estado?.descripcion || 'Sin estado'}
+                                                    <td className="text-center tabular-nums">{venta.id}</td>
+                                                    <td>{venta.organizacion?.RazonSocial || 'Sin organización'}</td>
+                                                    <td className="text-center tabular-nums">{venta.nro_comprobante}</td>
+                                                    <td className="font-medium text-slate-800">{venta.nombre}</td>
+                                                    <td className="text-slate-600">{venta.descripcion}</td>
+                                                    <td>{venta.persona ? venta.persona.nombre : 'Sin cliente'}</td>
+                                                    <td className="text-right font-semibold tabular-nums">{formatearGuarani(venta.monto)}</td>
+                                                    <td className="text-right tabular-nums">{formatearGuarani(venta.monto_recibido) || '—'}</td>
+                                                    <td className="text-right tabular-nums">{formatearGuarani(venta.vuelto) || '—'}</td>
+                                                    <td className="text-center">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${claseEstadoTransaccion(venta.id_TipoEstado)}`}>
+                                                            {venta.tipo_estado?.descripcion || 'Sin estado'}
+                                                        </span>
                                                     </td>
-                                                    <td className="text-center">{venta.UrevCalc}</td>
+                                                    <td className="text-right tabular-nums">{venta.UrevCalc}</td>
                                                     <td>
-                                                        <div className="flex items-center justify-center space-x-2">
+                                                        <div className="flex items-center justify-center gap-1">
                                                             {/* Reimprimir comprobante (solo si la venta tiene snapshot guardado) */}
                                                             {venta.comprobante && (
                                                                 <button onClick={() => handleReimprimir(venta)} title="Reimprimir comprobante" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
@@ -289,14 +292,15 @@ export default function Ventas() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="">
-                                <span className="text-lg font-semibold text-gray-700">Total de registros: </span>
-                                <span className="text-lg font-bold text-gray-700">{totalRegistros}</span> {/* Aquí el total dinámico */}
-
-                            </div>
-                            <div>
-                                <span className="text-lg font-semibold text-gray-700">Sub Total: </span>
-                                <span className="text-lg font-bold text-gray-700">{formatearGuarani(subTotal)} gs.</span>
+                            <div className="mt-4 flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-slate-200 pt-4">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-sm font-semibold text-slate-600">Total de registros:</span>
+                                    <span className="text-lg font-bold tabular-nums text-slate-800">{totalRegistros}</span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-sm font-semibold text-slate-600">Sub Total:</span>
+                                    <span className="text-lg font-bold tabular-nums text-slate-800">{formatearGuarani(subTotal)} gs.</span>
+                                </div>
                             </div>
 
                             {/* Controles de paginación */}

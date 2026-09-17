@@ -168,11 +168,12 @@ export default function Compras() {
         openModal('crear')
     };
 
-    // Devuelve las clases de color según el estado de la transacción
+    // Devuelve las clases del badge según el estado de la transacción
     const claseEstadoTransaccion = (id) => {
-        if (Number(id) === 3) return 'text-green-600 font-semibold'; // Finalizado
-        if (Number(id) === 7) return 'text-red-600 font-semibold';   // Anulada
-        return '';                                                   // resto vacío
+        if (Number(id) === 3) return 'bg-green-100 text-green-700 ring-green-200'; // Finalizado
+        if (Number(id) === 7) return 'bg-red-100 text-red-700 ring-red-200';       // Anulada
+        if (Number(id) === 1) return 'bg-amber-100 text-amber-700 ring-amber-200'; // Activo / borrador
+        return 'bg-slate-100 text-slate-600 ring-slate-200';                       // resto
     };
 
 
@@ -197,39 +198,41 @@ export default function Compras() {
                             <div className="overflow-x-auto">
                                 <table className="table table-bordered table-striped w-full">
                                     <thead>
-                                        <tr className="font-bold g360-gradient rounded text-center">
+                                        <tr className="g360-gradient text-center font-bold">
                                             <th>ID</th>
                                             <th>Organización</th>
                                             <th>Nro. Comprobante</th>
                                             <th>Nombre</th>
-                                            <th>Descripcción</th>
+                                            <th>Descripción</th>
                                             <th>Proveedor</th>
-                                            <th>Monto</th>
-                                            <th>Estado</th>
-                                            <th>Urev</th>
-                                            <th>Utilidades</th>
+                                            <th className="text-right">Monto</th>
+                                            <th className="text-center">Estado</th>
+                                            <th className="text-right">Urev</th>
+                                            <th className="text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {compras.length === 0 ? (
-                                            <NoExistenDatos colSpan={17} mensaje="No existen compras." />
+                                            <NoExistenDatos colSpan={10} mensaje="No existen compras." />
                                         ) : (
 
                                             compras.map((compra) => (
                                                 <tr key={compra.id}>
-                                                    <td>{compra.id}</td>
-                                                    <td className="text-center">{compra.organizacion?.RazonSocial || 'Sin organización'}</td>
-                                                    <td className="text-center">{compra.nro_comprobante}</td>
-                                                    <td>{compra.nombre}</td>
-                                                    <td>{compra.descripcion}</td>
+                                                    <td className="text-center tabular-nums">{compra.id}</td>
+                                                    <td>{compra.organizacion?.RazonSocial || 'Sin organización'}</td>
+                                                    <td className="text-center tabular-nums">{compra.nro_comprobante}</td>
+                                                    <td className="font-medium text-slate-800">{compra.nombre}</td>
+                                                    <td className="text-slate-600">{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
-                                                    <td className="text-right">{formatearGuarani(compra.monto)}</td>
-                                                    <td className={claseEstadoTransaccion(compra.id_TipoEstado)}>
-                                                        {compra.tipo_estado?.descripcion || 'Sin estado'}
+                                                    <td className="text-right font-semibold tabular-nums">{formatearGuarani(compra.monto)}</td>
+                                                    <td className="text-center">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${claseEstadoTransaccion(compra.id_TipoEstado)}`}>
+                                                            {compra.tipo_estado?.descripcion || 'Sin estado'}
+                                                        </span>
                                                     </td>
-                                                    <td className="text-center">{compra.UrevCalc}</td>
+                                                    <td className="text-right tabular-nums">{compra.UrevCalc}</td>
                                                     <td>
-                                                        <div className="flex items-center justify-center space-x-2">
+                                                        <div className="flex items-center justify-center gap-1">
                                                             {/* Ver detalle (solo lectura) */}
                                                             <button onClick={() => handleVer(compra)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                 <img src="/img/Icon/eye.png" alt="Ver" />
@@ -256,14 +259,15 @@ export default function Compras() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="">
-                                <span className="text-lg font-semibold text-gray-700">Total de registros: </span>
-                                <span className="text-lg font-bold text-gray-700">{totalRegistros}</span> {/* Aquí el total dinámico */}
-
-                            </div>
-                            <div>
-                                <span className="text-lg font-semibold text-gray-700">Sub Total: </span>
-                                <span className="text-lg font-bold text-gray-700">{formatearGuarani(subTotal)} gs.</span>
+                            <div className="mt-4 flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-slate-200 pt-4">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-sm font-semibold text-slate-600">Total de registros:</span>
+                                    <span className="text-lg font-bold tabular-nums text-slate-800">{totalRegistros}</span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-sm font-semibold text-slate-600">Sub Total:</span>
+                                    <span className="text-lg font-bold tabular-nums text-slate-800">{formatearGuarani(subTotal)} gs.</span>
+                                </div>
                             </div>
 
                             {/* Controles de paginación */}

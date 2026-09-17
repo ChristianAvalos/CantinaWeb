@@ -763,18 +763,18 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             <div className="bg-gray-800 opacity-75 absolute inset-0 z-[1031]" onClick={manejarCerrar}></div>
 
             {/* Contenido del modal */}
-            <div className="bg-white rounded-lg shadow-lg relative z-[1036] p-3 sm:p-6 w-[95vw] max-w-full sm:max-w-5xl border border-red-500 overflow-y-auto max-h-screen">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">
+            <div className="relative z-[1036] max-h-[92vh] w-[95vw] max-w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-w-5xl sm:p-6">
+                <h2 className="mb-4 border-b border-slate-200 pb-3 text-xl font-bold text-slate-800 sm:text-2xl">
                     {modo === 'crear' ? `Crear ${tipoTransaccion}` : modo === 'editar' ? `Editar ${tipoTransaccion}` : modo === 'corregir' ? `Corregir ${tipoTransaccion}` : `Ver ${tipoTransaccion}`}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
                         {/* Campos del formulario */}
-                        <div className="col-span-2 sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                        <div className="col-span-2 sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                             {/* Campo para Nombre */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Nombre</label>
                                 <input
                                     type="text"
                                     name='nombre'
@@ -789,8 +789,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             </div>
 
                             {/* Campo para fecha */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Fecha</label>
                                 <input
                                     type="date"
                                     disabled={esSoloLectura}
@@ -805,7 +805,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                             {/* Tipo de comprobante */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Tipo de comprobante</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de comprobante</label>
                                 <select
                                     disabled={esSoloLectura || tipoTransaccion === 'compra'}
                                     className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura || tipoTransaccion === 'compra' ? 'bg-gray-100 text-gray-600' : ''}`}
@@ -823,8 +823,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             </div>
 
                             {/* Campo para comprobante numero */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nro Comprobante</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Nro Comprobante</label>
                                 <input
                                     type="text"
                                     disabled={esSoloLectura}
@@ -845,7 +845,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                             {/* Forma de pago */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Forma de pago</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Forma de pago</label>
                                 <select
                                     disabled={esBloqueado}
                                     className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
@@ -864,7 +864,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                             {/* Tipo de pago */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Tipo de pago</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de pago</label>
                                 <select
                                     disabled={esBloqueado}
                                     className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
@@ -900,8 +900,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
                             </div> */}
 
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Organizacion</label>
+                            {/* Organización: 2 columnas para cerrar la fila de pagos sin dejar huecos */}
+                            <div className="col-span-2">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Organización</label>
                                 <select
                                     disabled={esBloqueado}
                                     className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
@@ -924,8 +925,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
 
                             {/* Campo para Persona (Proveedor/Cliente) */}
-                            <div className="mb-2 col-span-2 relative">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <div className="relative col-span-2">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
                                     {etiquetaPersona}
                                 </label>
                                 <div ref={comboPersonaRef} className="relative">
@@ -1004,22 +1005,15 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
 
 
-                            {/* Campo para monto */}
-                            <div className="mb-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                            {/* Campo para monto (se calcula desde el detalle, no es editable) */}
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Monto</label>
                                 <input
                                     type="text"
-                                    className={`w-full px-3 py-2 border ${errores.monto ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm ${errores.monto ? 'border-red-500' : 'border-gray-300'} bg-gray-50 text-gray-700`}
                                     placeholder="Monto en Gs."
                                     disabled
                                     value={formatearGuarani(form.monto) || ''}
-                                    //onChange={(e) => setMonto(e.target.value)}
-                                    onChange={(e) => {
-                                        const valorDigitado = e.target.value;
-                                        // Eliminamos puntos y caracteres no numéricos
-                                        const soloNumeros = valorDigitado.replace(/\D/g, '');
-                                        setForm({ ...form, monto: soloNumeros });
-                                    }}
                                 />
                                 {errores.monto && <p className="text-red-500 text-sm">{errores.monto[0]}</p>}
                             </div>
@@ -1031,12 +1025,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     En modo "ver" (solo lectura) también se muestran si hay datos guardados. */}
                                 {(esEfectivo || (esSoloLectura && (Number(form.monto_recibido) > 0 || Number(form.vuelto) > 0))) && (
                                 <>
-                                <div className="mb-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Monto Recibido</label>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Monto Recibido</label>
                                     <input
                                         type="text"
                                         disabled={esBloqueado}
-                                        className={`w-full px-3 py-2 border ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                        className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.monto_recibido ? 'border-red-500' : 'border-gray-300'} ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
                                         placeholder="Monto recibido en Gs."
                                         value={formatearGuarani(form.monto_recibido) || ''}
                                         onChange={(e) => {
@@ -1048,11 +1042,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     {errores.monto_recibido && <p className="text-red-500 text-sm">{errores.monto_recibido[0]}</p>}
                                 </div>
 
-                                <div className="mb-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vuelto</label>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Vuelto</label>
                                     <input
                                         type="text"
-                                        className={`w-full px-3 py-2 border ${errores.vuelto ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm ${errores.vuelto ? 'border-red-500' : 'border-gray-300'} bg-gray-50 text-gray-700`}
                                         placeholder="Vuelto en Gs."
                                         disabled
                                         value={formatearGuarani(form.vuelto) || ''}
@@ -1062,11 +1056,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 </>
                                 )}
 
-                                <div className="mb-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">IVA</label>
                                     <input
                                         type="text"
-                                        className={`w-full px-3 py-2 border ${errores.iva ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        className={`w-full rounded-md border px-3 py-2 text-right tabular-nums shadow-sm ${errores.iva ? 'border-red-500' : 'border-gray-300'} bg-gray-50 text-gray-700`}
                                         placeholder="IVA en Gs."
                                         disabled
                                         value={formatearGuarani(form.iva) || ''}
@@ -1206,8 +1200,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                     {/* Grilla de detalles */}
                     <div className="mt-1">
-                        <div className="flex  items-center justify-between mb-2">
-                            <h3 className="text-lg font-semibold">{`Detalles de ${tipoTransaccion}`}</h3>
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <h3 className="text-lg font-semibold text-slate-700">{`Detalles de ${tipoTransaccion}`}</h3>
                             {!esBloqueado && (
                                 <button
                                     type="button"
@@ -1241,14 +1235,14 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                             toast.error(result.message);
                                         }
                                     }}
-                                    className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-800 transition"
+                                    className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700"
                                 >
                                     Agregar
                                 </button>
                             )}
                         </div>
 
-                        <div className="mt-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                        <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                             <table className="min-w-full">
                                 <thead>
                                     <tr className="bg-gray-50">
@@ -1371,45 +1365,45 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                     {/* Botones para cerrar y guardar */}
                     {esSoloLectura ? (
-                        <div className="flex justify-end mt-2">
+                        <div className="mt-4 flex justify-end border-t border-slate-200 pt-4">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
                             >
                                 Cerrar
                             </button>
                         </div>
                     ) : esCorreccion ? (
-                        <div className="flex justify-end space-x-3 mt-2">
+                        <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSaving}
-                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSaving ? 'Guardando...' : 'Guardar corrección'}
                             </button>
                         </div>
                     ) : (
-                        <div className="flex justify-end space-x-3 mt-2">
+                        <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4">
                             <button
                                 type="button"
                                 onClick={manejarCerrar}
-                                className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSaving}
-                                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition"
+                                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSaving ? 'Guardando...' : (transaccion.id ? 'Guardar Cambios' : 'Crear Transaccion')}
                             </button>
