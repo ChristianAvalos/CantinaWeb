@@ -38,7 +38,7 @@ export default function Registro() {
             <div className="bg-white shadow-md rounded-md mt-10 px-5 py-4">
                 <div className="flex flex-col items-center">
                     <img src="/img/Logo Institucional.png" alt="Logo" className="w-24" />
-                    <h1 className="text-3xl font-bold  mb-2">Crear tu cuenta</h1>
+                    <h1 className="text-3xl font-bold  mb-2 text-slate-900">Crear tu cuenta</h1>
                     <p className="mb-6 text-gray-600">Crea tu cuenta llenando el formulario</p>
                 </div>
 

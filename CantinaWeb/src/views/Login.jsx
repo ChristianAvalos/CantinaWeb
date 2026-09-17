@@ -41,7 +41,7 @@ export default function Login() {
                     <img src="/img/Logo Institucional.png" alt="Logo" className="w-24 mb-4" />
                 </div>
 
-                <h1 className="text-3xl font-bold text-center mb-2">Iniciar sesión</h1>
+                <h1 className="text-3xl font-bold text-center mb-2 text-slate-900">Iniciar sesión</h1>
                 <p className="text-center text-gray-500 mb-6">Accede a tu cuenta para gestionar tus eventos</p>
                 <form onSubmit={handleSubmit} noValidate>
                     {errores && errores.map((error, i) => <Alerta key={i}>{error}</Alerta>)}
