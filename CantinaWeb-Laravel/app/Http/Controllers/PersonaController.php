@@ -34,6 +34,7 @@ class PersonaController extends Controller
         $driver = DB::getDriverName();
 
         $personasQuery = Persona::with('TipoPersona') 
+            ->with('tipoDocumento')
             ->when(is_numeric($idTipoPersona), function ($query) use ($idTipoPersona) {
                 $query->where('id_tipo_persona', (int) $idTipoPersona);
             })

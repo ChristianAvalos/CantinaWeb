@@ -12,6 +12,7 @@ use Database\Seeders\FormaPagoSeeder;
 use Database\Seeders\TipoEstadoSeeder;
 use Database\Seeders\TipoMonedaSeeder;
 use Database\Seeders\TipoPersonaSeeder;
+use Database\Seeders\TipoDocumentoSeeder;
 use Database\Seeders\UserAdministrador;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\UnidadesMedidaSeeder;
@@ -40,6 +41,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CategoriasSeeder::class);
         $this->call(UnidadesMedidaSeeder::class);
         $this->call(TipoPersonaSeeder::class);
+        $this->call(TipoDocumentoSeeder::class);
         $this->call(BancosSeeder::class);
         $this->call(TipoMonedaSeeder::class);
         $this->call(TipoPagoSeeder::class);

@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TipoComprobanteController;
+use App\Http\Controllers\TipoDocumentoController;
 use App\Http\Controllers\TipoEstadoController;
 use App\Http\Controllers\TipoMonedaController;
 use App\Http\Controllers\TipoMovimientosController;
@@ -126,6 +127,9 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //Tipo de personas
     Route::get('/tipo_personas',[TipoPersonaController::class,'index']);
+
+    //Tipo de documentos
+    Route::get('/tipo_documentos',[TipoDocumentoController::class,'index']);
     
     //Tipo de movimientos
     Route::get('/tipo_movimientos',[TipoMovimientosController::class,'index']);

@@ -6,7 +6,7 @@ import AlertaModal from "../components/AlertaModal"
 import { obtenerPersonas } from '../helpers/HelperPersonas';
 import NoExistenDatos from "../components/NoExistenDatos";
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
-import { formatearMiles, formatearGuarani } from '../helpers/HelpersNumeros';
+import { formatearPorFormato } from '../helpers/HelpersNumeros';
 import FiltrosBar from "../components/FiltrosBar";
 
 const FILTROS_PERSONAS = [
@@ -20,6 +20,16 @@ const FILTROS_PERSONAS = [
 
 const FILTROS_PERSONAS_INICIALES = {
     search: '',
+};
+
+// El formato del documento del listado sale del catálogo `tipo_documentos`
+// (ruc, miles, libre). En datos antiguos sin tipo de documento se deduce:
+// un RUC siempre se guarda con el guion del dígito verificador.
+const formatearDocumentoPersona = (persona) => {
+    const formato = persona?.tipo_documento?.formato
+        ?? ((persona?.documento || '').toString().includes('-') ? 'ruc' : 'miles');
+
+    return formatearPorFormato(persona?.documento, formato);
 };
 
 
@@ -225,7 +235,7 @@ export default function Personas() {
                                             <tr key={persona.id}>
                                                 <td>{persona.id}</td>
                                                 <td>{persona.nombre}</td>
-                                                <td>{formatearMiles(persona.documento)}</td>
+                                                <td>{formatearDocumentoPersona(persona)}</td>
                                                 <td>{persona.direccion}</td>
                                                 <td>{persona.telefono}</td>
                                                 <td>{persona.email}</td>

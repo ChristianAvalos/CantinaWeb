@@ -46,6 +46,79 @@ export function limpiarFormato(valor) {
     return valor.toString().replace(/\./g, '').replace(/-/g, '');
 }
 
+/**
+ * Calcula el dígito verificador de un RUC paraguayo (módulo 11).
+ * Pesos 2..9 (ciclo) aplicados de derecha a izquierda sobre la base del RUC.
+ * Regla: resto 0 -> DV 0, resto 1 -> DV 1, resto >= 2 -> DV = 11 - resto.
+ * @param {string|number} base RUC sin el dígito verificador (ej. 5291959)
+ * @returns {number|null} dígito verificador (0-9) o null si no hay dígitos
+ */
+export function calcularDigitoVerificadorRuc(base) {
+    const digitos = (base === '' || base === null || base === undefined)
+        ? ''
+        : base.toString().split('-')[0].replace(/\D/g, '');
+
+    if (digitos === '') return null;
+
+    let suma = 0;
+    let peso = 2;
+
+    for (let i = digitos.length - 1; i >= 0; i--) {
+        suma += Number(digitos[i]) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+    }
+
+    const resto = suma % 11;
+
+    return (resto === 0 || resto === 1) ? resto : 11 - resto;
+}
+
+/**
+ * Formatea un RUC paraguayo SIN separador de miles: <base>-<dígito verificador>.
+ * El dígito verificador SIEMPRE se calcula (módulo 11), por lo que la base puede
+ * tener cualquier cantidad de dígitos: 5291959 -> 5291959-5, 80012345 -> 80012345-1.
+ * @param {string|number} valor RUC o base del RUC (con o sin guion)
+ * @returns {string}
+ */
+export function formatearRuc(valor) {
+    if (valor === '' || valor === null || valor === undefined) return '';
+
+    // La base son los dígitos anteriores al guion (la base del RUC tiene hasta 8 dígitos)
+    const base = valor.toString().trim().split('-')[0].replace(/\D/g, '').slice(0, 8);
+    if (base === '') return '';
+
+    const digitoVerificador = calcularDigitoVerificadorRuc(base);
+
+    return digitoVerificador === null ? base : `${base}-${digitoVerificador}`;
+}
+
+/**
+ * Aplica el formato correspondiente a un documento según el `formato` definido
+ * en el catálogo de tipos de documento (BD): 'ruc', 'miles' o 'libre'.
+ * @param {string|number} valor
+ * @param {string} formato
+ * @returns {string}
+ */
+export function formatearPorFormato(valor, formato) {
+    switch (formato) {
+        case 'ruc':
+            return formatearRuc(valor);
+        case 'miles':
+            return formatearMiles(valor);
+        default:
+            return valor === '' || valor === null || valor === undefined ? '' : valor.toString();
+    }
+}
+
+/**
+ * Indica si un formato de documento corresponde a RUC.
+ * @param {string} formato
+ * @returns {boolean}
+ */
+export function esFormatoRuc(formato) {
+    return (formato || '').toString().trim().toLowerCase() === 'ruc';
+}
+
 export function formatearGuarani(valor) {
     if (valor === '' || valor === null || valor === undefined) return '';
 

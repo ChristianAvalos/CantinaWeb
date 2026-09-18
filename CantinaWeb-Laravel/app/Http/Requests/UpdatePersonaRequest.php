@@ -28,6 +28,7 @@ class UpdatePersonaRequest extends FormRequest
                 'telefono' => ['nullable','string'],
                 'email' => ['nullable','email'],
                 'id_tipo_persona' => ['required','integer'],
+                'id_tipo_documento' => ['nullable','integer'],
                 'id_tipoestado' => ['nullable','integer']
             ];
     }

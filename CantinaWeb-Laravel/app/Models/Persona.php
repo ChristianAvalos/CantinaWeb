@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use App\Models\TipoEstado;
 use App\Models\TipoPersona;
+use App\Models\TipoDocumento;
 use App\Models\Transacciones;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ class Persona extends Model
         'telefono',
         'email',
         'id_tipo_persona',
+        'id_tipo_documento',
         'id_tipoestado',
         'UrevUsuario',
         'UrevFechaHora'
@@ -40,6 +42,12 @@ class Persona extends Model
     public function tipoPersona()
     {
         return $this->belongsTo(TipoPersona::class, 'id_tipo_persona');
+    }
+
+    //relacion con tipo documento (C.I., RUC, ...)
+    public function tipoDocumento()
+    {
+        return $this->belongsTo(TipoDocumento::class, 'id_tipo_documento');
     }
 
     //relacion con transacciones
