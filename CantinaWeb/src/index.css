@@ -135,6 +135,79 @@ textarea {
   min-height: 100vh;
 }
 
+/* ------------------------------------------------------------------
+   Scroll fino y personalizado (global: vertical y horizontal)
+   - Vertical: área sensible de 10px, pulgar visible de ~4px.
+   - Horizontal: área sensible de 8px, pulgar visible de ~4px
+     (más delgada para no robar altura en las tablas).
+   - Track transparente: solo se ve el pulgar, no el "carril" gris.
+------------------------------------------------------------------ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb, rgba(100, 116, 139, 0.45)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb, rgba(100, 116, 139, 0.45));
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scroll-thumb-hover, rgba(51, 65, 85, 0.72));
+  }
+
+  /* Horizontal: menos borde para que el pulgar quede igual de grueso
+     aunque la barra sea más delgada. */
+  *::-webkit-scrollbar-thumb:horizontal {
+    border-width: 2px;
+  }
+
+  *::-webkit-scrollbar-thumb:horizontal:hover {
+    background-color: var(--scroll-thumb-hover, rgba(51, 65, 85, 0.72));
+  }
+
+  /* Esquinas donde se cruzan vertical y horizontal */
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* Contenedores de tablas con scroll horizontal (overflow-x-auto) */
+.scroll-x-sutil {
+  --scroll-thumb: rgba(100, 116, 139, 0.4);
+  --scroll-thumb-hover: rgba(51, 65, 85, 0.7);
+}
+
+/* Variante para el sidenav: pulgar claro sobre el degradado del tema
+   (se adapta automáticamente si el tema de la marca es claro u oscuro). */
+.sidebar {
+  --scroll-thumb: rgb(var(--g360-on) / 0.3);
+  --scroll-thumb-hover: rgb(var(--g360-on) / 0.55);
+  scrollbar-gutter: stable;
+}
+
+/* Contenedores con scroll dentro de modales/paneles claros */
+.scroll-sutil {
+  --scroll-thumb: rgba(100, 116, 139, 0.4);
+  --scroll-thumb-hover: rgba(51, 65, 85, 0.7);
+  scrollbar-gutter: stable;
+}
+
 /* Utilidades adicionales */
 .g360-danger {
   background-color: rgb(239 68 68);
