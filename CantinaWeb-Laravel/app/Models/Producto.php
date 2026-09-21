@@ -73,6 +73,12 @@ class Producto extends Model
     {
         return $this->hasMany(PrecioVenta::class, 'id_producto');
     }
+
+    //relacion con el kardex: historial de movimientos de stock del producto
+    public function movimientosHistorial()
+    {
+        return $this->hasMany(MovimientoHistorial::class, 'id_producto');
+    }
     
 
 }

@@ -237,7 +237,8 @@ class ProductoController extends Controller
             'precio_venta' => $data['precio_venta'],
             'stock_minimo' => $data['stock_minimo'],
             // stock_actual NO se actualiza aquí a propósito: el stock solo se
-            // mueve mediante transacciones (compra/venta/ajuste) vía StockHelper.
+            // mueve mediante transacciones (compra/venta/ajuste) vía InventarioService,
+            // que deja el movimiento registrado en el kardex (movimiento_historial).
             'id_TipoEstado' => $data['id_TipoEstado'] ?? null,
             'imagen' => $data['imagen'],
             'created_at' => $data['fecha'] ?? $producto->created_at,

@@ -6,11 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\TransaccionesDetalle;
 use App\Models\Transacciones;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\UpdateTransaccionDetalleRequest; 
 use App\Http\Requests\CreateTransaccionDetalleRequest; 
-use App\Helpers\StockHelper;
+use App\Services\InventarioService;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Models\Producto;
+use App\Models\TipoMovimientos;
 
 class TransaccionesDetalleController extends Controller
 {
@@ -30,50 +32,24 @@ class TransaccionesDetalleController extends Controller
         return $subtotal;
     }
 
-    private function calculoStock($id_producto, $cantidad, $tipoOperacion): float
-    {
-        return StockHelper::calcular($id_producto, (float) $cantidad, $tipoOperacion, Auth::user()->name);
-    }
-
     /**
-     * Determina si una transacción es de entrada o salida según su tipo.
-     * - Compra (id_TipoMovimiento=1): siempre entrada
-     * - Venta  (id_TipoMovimiento=2): siempre salida
-     * - Ajuste (id_TipoMovimiento=3): según id_TipoEstado (5=Positivo→entrada, 6=Negativo→salida)
+     * Busca un producto por código de barras dentro del alcance de la transacción.
+     *
+     * Los productos se crean con `id_organizacion = NULL` (ver ProductoController),
+     * así que se aceptan tanto los de la organización de la transacción como los
+     * que no tienen organización asignada. Es el mismo criterio que usa
+     * ProductoController@index.
      */
-    private function tipoOperacionDesdeTransaccion($idTransaccion): string
+    private function buscarProductoPorCodigo(?string $codigoBarras, $idOrganizacion): ?Producto
     {
-        $transaccion = Transacciones::find($idTransaccion);
-        if (!$transaccion) {
-            return 'entrada'; // fallback seguro
-        }
-
-        $tipoMovimiento = (int) $transaccion->id_TipoMovimiento;
-
-        if ($tipoMovimiento === 1) {
-            return 'entrada';            // Compra
-        }
-
-        if ($tipoMovimiento === 2) {
-            return 'salida';             // Venta
-        }
-
-        // Ajuste (id_TipoMovimiento=3): la dirección la determina el TipoEstado
-        // 5 = Positivo (suma stock), 6 = Negativo (resta stock)
-        if ($tipoMovimiento === 3) {
-            $tipoEstado = (int) $transaccion->id_TipoEstado;
-            return $tipoEstado === 6 ? 'salida' : 'entrada';
-        }
-
-        return 'entrada'; // fallback
-    }
-
-    /**
-     * Retorna la operación inversa: si la original fue entrada → salida, y viceversa.
-     */
-    private function tipoOperacionInversa($idTransaccion): string
-    {
-        return $this->tipoOperacionDesdeTransaccion($idTransaccion) === 'entrada' ? 'salida' : 'entrada';
+        return Producto::where('codigo_barras', $codigoBarras)
+            ->when($idOrganizacion, function ($q) use ($idOrganizacion) {
+                $q->where(function ($q2) use ($idOrganizacion) {
+                    $q2->whereNull('id_organizacion')
+                        ->orWhere('id_organizacion', $idOrganizacion);
+                });
+            })
+            ->first();
     }
 
     /**
@@ -138,54 +114,84 @@ class TransaccionesDetalleController extends Controller
 
         $usuario = Auth::user()->name;
 
-        // Buscar el producto por código de barras y organización
-        $producto = \App\Models\Producto::where('codigo_barras', $request->codigo_barras)
-            ->first();
-        if (!$producto) {
-            return response()->json(['message' => 'Producto no encontrado'], 404);
-        }
-
         // Aquí deberías recibir el id_transaccion desde el frontend, si no, ajusta según tu lógica
         $id_transaccion = $request->input('id_transaccion');
         if (!$id_transaccion) {
             return response()->json(['message' => 'ID de transacción requerido'], 422);
         }
 
+        $transaccion = Transacciones::find($id_transaccion);
+        if (!$transaccion) {
+            return response()->json(['message' => 'Transacción no encontrada'], 404);
+        }
+
+        $producto = $this->buscarProductoPorCodigo($request->codigo_barras, $transaccion->id_organizacion);
+
+        if (!$producto) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
+        }
+
         $cantidad = (float) $request->cantidad;
         $precioUnitario = (float) $request->precio_unitario;
         $subtotal = $cantidad * $precioUnitario;
 
-        // Determinar la dirección del stock y validar si es salida (venta)
-        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($id_transaccion);
-        if ($tipoOperacion === 'salida') {
-            $stockActual = (float) ($producto->stock_actual ?? 0);
-            if ($stockActual < $cantidad) {
-                return response()->json([
-                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidad})."
-                ], 422);
-            }
+        // Dirección del stock: la resuelve la propia transacción (sin consultar de nuevo).
+        $tipoOperacion = $transaccion->direccionStock();
+
+        // Detalle + movimiento de stock en una sola transacción de BD: si el kardex
+        // rechaza el movimiento (stock insuficiente), el detalle no queda creado.
+        try {
+            $resultado = DB::transaction(function () use (
+                $transaccion,
+                $producto,
+                $cantidad,
+                $precioUnitario,
+                $subtotal,
+                $tipoOperacion,
+                $data,
+                $usuario,
+                $request
+            ) {
+                $detalle = TransaccionesDetalle::create([
+                    'id_transaccion' => $transaccion->id,
+                    'id_producto' => $producto->id,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal' => $subtotal,
+                    'lote' => isset($data['lote']) ? $data['lote'] : null,
+                    'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
+                    'UrevUsuario' => $usuario,
+                    'UrevFechaHora' => $request->Fecha ?? now(),
+                ]);
+
+                // Único camino para mover stock: escribe el kardex y actualiza el producto.
+                $movimiento = InventarioService::registrarDocumento(
+                    $transaccion,
+                    $producto->id,
+                    $cantidad,
+                    $tipoOperacion,
+                    [
+                        'id_transaccion_detalle' => $detalle->id,
+                        'costo_unitario' => $precioUnitario,
+                        'fecha' => $request->Fecha ?? now(),
+                    ]
+                );
+
+                $montoCabecera = $this->recalcularMontoCabecera($transaccion->id);
+
+                return [$detalle, $movimiento, $montoCabecera];
+            });
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $detalle = TransaccionesDetalle::create([
-            'id_transaccion' => $id_transaccion,
-            'id_producto' => $producto->id,
-            'cantidad' => $cantidad,
-            'precio_unitario' => $precioUnitario,
-            'subtotal' => $subtotal,
-            'lote' => isset($data['lote']) ? $data['lote'] : null,
-            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
-            'UrevUsuario' => $usuario,
-            'UrevFechaHora' => $request->Fecha ?? now(),
-        ]);
-
-        $montoCabecera = $this->recalcularMontoCabecera($id_transaccion);
-        $stockActual = $this->calculoStock($producto->id, $cantidad, $tipoOperacion);
+        [$detalle, $movimiento, $montoCabecera] = $resultado;
 
         return response()->json([
             'message' => 'Detalle creado exitosamente.',
             'detalle' => $detalle,
             'monto_cabecera' => $montoCabecera,
-            'stock_actual' => $stockActual,
+            'stock_actual' => (float) $movimiento->stock_nuevo,
         ], 201);
     }
 
@@ -227,9 +233,9 @@ class TransaccionesDetalleController extends Controller
         $idProductoAnterior = $detalle->id_producto;
         $cantidadAnterior = (float) $detalle->cantidad;
 
-        // Buscar el producto por código de barras y organización
-        $producto = \App\Models\Producto::where('codigo_barras', $data['codigo_barras'])
-            ->first();
+        $transaccion = Transacciones::findOrFail($detalle->id_transaccion);
+
+        $producto = $this->buscarProductoPorCodigo($data['codigo_barras'], $transaccion->id_organizacion);
 
         if (!$producto) {
             return response()->json(['message' => 'Producto no encontrado'], 404);
@@ -240,7 +246,7 @@ class TransaccionesDetalleController extends Controller
         $subtotal = $cantidadNueva * $precioUnitario;
 
         // Validación para compras: la nueva cantidad no puede ser menor a lo ya vendido
-        $tipoMovimiento = (int) (Transacciones::find($detalle->id_transaccion)->id_TipoMovimiento ?? 0);
+        $tipoMovimiento = (int) ($transaccion->id_TipoMovimiento ?? 0);
         if ($tipoMovimiento === 1) {
             $cantidadMinima = $detalle->cantidad_minima;
             if ($cantidadNueva < $cantidadMinima) {
@@ -254,8 +260,8 @@ class TransaccionesDetalleController extends Controller
         }
 
         // Validación para ventas: si la cantidad aumenta, el incremento no puede superar el stock disponible
-        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($detalle->id_transaccion);
-        if ($tipoOperacion === 'salida' && $cantidadNueva > $cantidadAnterior) {
+        $tipoOperacion = $transaccion->direccionStock();
+        if ($tipoOperacion === TipoMovimientos::DIRECCION_SALIDA && $cantidadNueva > $cantidadAnterior) {
             $stockActual = (float) ($producto->stock_actual ?? 0);
             $incremento = $cantidadNueva - $cantidadAnterior;
             if ($stockActual < $incremento) {
@@ -265,33 +271,69 @@ class TransaccionesDetalleController extends Controller
             }
         }
 
-        // Guardar directamente usando update (fillable)
-        $detalle->update([
-            'id_producto' => $producto->id,
-            'cantidad' => $cantidadNueva,
-            'lote' => isset($data['lote']) ? $data['lote'] : null,
-            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
-            'precio_unitario' => $precioUnitario,
-            'subtotal' => $subtotal,
-            'UrevUsuario' => $usuario,
-            'UrevFechaHora' => now(),
-        ]);
+        // El cambio del detalle y el movimiento de stock son atómicos: si el kardex
+        // rechaza el movimiento, el detalle NO queda modificado.
+        try {
+            DB::transaction(function () use (
+                $detalle,
+                $producto,
+                $cantidadNueva,
+                $cantidadAnterior,
+                $precioUnitario,
+                $subtotal,
+                $data,
+                $usuario,
+                $idProductoAnterior,
+                $transaccion
+            ) {
+                $detalle->update([
+                    'id_producto' => $producto->id,
+                    'cantidad' => $cantidadNueva,
+                    'lote' => isset($data['lote']) ? $data['lote'] : null,
+                    'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal' => $subtotal,
+                    'UrevUsuario' => $usuario,
+                    'UrevFechaHora' => now(),
+                ]);
 
-        // Ajustar stock según el cambio
-        $tipoOperacion = $this->tipoOperacionDesdeTransaccion($detalle->id_transaccion);
-        if ($idProductoAnterior === $producto->id) {
-            // Mismo producto: solo cambió la cantidad
-            $diferencia = $cantidadNueva - $cantidadAnterior;
-            if ($diferencia >= 0) {
-                $this->calculoStock($producto->id, abs($diferencia), $tipoOperacion);
-            } else {
-                // Si la diferencia es negativa, usar la operación inversa
-                $this->calculoStock($producto->id, abs($diferencia), $this->tipoOperacionInversa($detalle->id_transaccion));
-            }
-        } else {
-            // Cambió el producto: revertir stock del viejo (operación inversa) y aplicar al nuevo
-            $this->calculoStock($idProductoAnterior, $cantidadAnterior, $this->tipoOperacionInversa($detalle->id_transaccion));
-            $this->calculoStock($producto->id, $cantidadNueva, $tipoOperacion);
+                $direccionOriginal = $transaccion->direccionStock();
+                $direccionInversa = $transaccion->direccionStockInversa();
+
+                if ($idProductoAnterior === $producto->id) {
+                    // Mismo producto: solo se registra la diferencia como movimiento.
+                    $diferencia = $cantidadNueva - $cantidadAnterior;
+
+                    if (abs($diferencia) > 0.0001) {
+                        InventarioService::registrarDocumento(
+                            $transaccion,
+                            $producto->id,
+                            abs($diferencia),
+                            $diferencia > 0 ? $direccionOriginal : $direccionInversa,
+                            [
+                                'id_transaccion_detalle' => $detalle->id,
+                                'costo_unitario' => $precioUnitario,
+                                'motivo' => 'Ajuste por edición del detalle #' . $detalle->id,
+                            ]
+                        );
+                    }
+                } else {
+                    // Cambió el producto: se revierte el anterior y se aplica el nuevo.
+                    InventarioService::registrarDocumento($transaccion, $idProductoAnterior, $cantidadAnterior, $direccionInversa, [
+                        'id_transaccion_detalle' => $detalle->id,
+                        'motivo' => 'Reversión por cambio de producto en el detalle #' . $detalle->id,
+                        'id_movimiento_origen' => InventarioService::buscarMovimientoOrigen($detalle->id, $idProductoAnterior),
+                    ]);
+
+                    InventarioService::registrarDocumento($transaccion, $producto->id, $cantidadNueva, $direccionOriginal, [
+                        'id_transaccion_detalle' => $detalle->id,
+                        'costo_unitario' => $precioUnitario,
+                        'motivo' => 'Alta por cambio de producto en el detalle #' . $detalle->id,
+                    ]);
+                }
+            });
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         $montoCabecera = $this->recalcularMontoCabecera($detalle->id_transaccion);
@@ -308,20 +350,53 @@ class TransaccionesDetalleController extends Controller
      */
     public function deleteTransaccionDetalle($id)
     {
-        // Eliminar la transacción por su ID
-        $transaccionesDetalle = TransaccionesDetalle::findOrFail($id);
-        $idTransaccion = $transaccionesDetalle->id_transaccion;
-        $transaccionesDetalle->delete();
+        $detalle = TransaccionesDetalle::findOrFail($id);
+        $idTransaccion = $detalle->id_transaccion;
+        $idProducto = $detalle->id_producto;
+        $cantidad = (float) $detalle->cantidad;
 
-        $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
+        $transaccion = Transacciones::findOrFail($idTransaccion);
+
         // Al eliminar, revertir el stock: si era venta → devolver (entrada), si era compra → quitar (salida)
-        $tipoOperacion = $this->tipoOperacionInversa($idTransaccion);
-        $stockActual = $this->calculoStock($transaccionesDetalle->id_producto, $transaccionesDetalle->cantidad, $tipoOperacion);
+        $direccionInversa = $transaccion->direccionStockInversa();
+
+        // El movimiento original que se está revirtiendo (para dejar el enlace en el kardex).
+        $origenId = InventarioService::buscarMovimientoOrigen($detalle->id, $idProducto);
+
+        try {
+            $resultado = DB::transaction(function () use (
+                $detalle,
+                $transaccion,
+                $idTransaccion,
+                $idProducto,
+                $cantidad,
+                $direccionInversa,
+                $origenId
+            ) {
+                // Se revierte el stock ANTES de borrar: si el kardex rechaza el
+                // movimiento (stock insuficiente), el detalle no se elimina.
+                $movimiento = InventarioService::registrarDocumento($transaccion, $idProducto, $cantidad, $direccionInversa, [
+                    'id_transaccion_detalle' => $detalle->id,
+                    'motivo' => 'Eliminación del detalle #' . $detalle->id,
+                    'id_movimiento_origen' => $origenId,
+                ]);
+
+                $detalle->delete();
+
+                $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
+
+                return [$movimiento, $montoCabecera];
+            });
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        [$movimiento, $montoCabecera] = $resultado;
 
         return response()->json([
             'message' => 'Transacción eliminada correctamente.',
             'monto_cabecera' => $montoCabecera,
-            'stock_actual' => $stockActual
+            'stock_actual' => (float) $movimiento->stock_nuevo,
         ], 200);
     }
 }

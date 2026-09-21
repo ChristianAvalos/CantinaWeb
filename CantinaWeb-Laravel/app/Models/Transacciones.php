@@ -78,6 +78,12 @@ class Transacciones extends Model
         return $this->hasMany(Cuota::class, 'id_transaccion');
     }
 
+    //relacion con el movimientosHistorial: movimientos de stock que genero esta transaccion
+    public function movimientosHistorial()
+    {
+        return $this->hasMany(MovimientoHistorial::class, 'id_transaccion');
+    }
+
     //relacion con tipo movimientos
     public function tipoMovimiento()
     {
@@ -141,6 +147,31 @@ class Transacciones extends Model
         return $this->belongsTo(Bancos::class, 'id_Banco');
     }
 
+    /**
+     * Dirección del movimiento de stock que produce esta transacción.
+     * - Compra (1): entrada
+     * - Venta  (2): salida
+     * - Ajuste (3): según el estado (6 = Negativo → salida)
+     *
+     * Única fuente de verdad: se deriva de los atributos ya cargados,
+     * NO consulta la base. Antes esto estaba duplicado en dos controladores.
+     */
+    public function direccionStock(): string
+    {
+        return match ((int) $this->id_TipoMovimiento) {
+            2 => TipoMovimientos::DIRECCION_SALIDA,
+            3 => (int) $this->id_TipoEstado === 6
+                ? TipoMovimientos::DIRECCION_SALIDA
+                : TipoMovimientos::DIRECCION_ENTRADA,
+            default => TipoMovimientos::DIRECCION_ENTRADA,
+        };
+    }
 
-
+    /** Operación inversa: entrada ↔ salida. */
+    public function direccionStockInversa(): string
+    {
+        return $this->direccionStock() === TipoMovimientos::DIRECCION_ENTRADA
+            ? TipoMovimientos::DIRECCION_SALIDA
+            : TipoMovimientos::DIRECCION_ENTRADA;
+    }
 }

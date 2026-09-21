@@ -4,7 +4,7 @@ import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';
 
 const sectionRoutes = {
-  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/pagos-proveedores', '/ajustes', '/transacciones', '/precio-ventas'],
+  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/pagos-proveedores', '/ajustes', '/transacciones', '/precio-ventas', '/historial-inventario'],
   definiciones: ['/productos', '/categorias', '/personas'],
   herramientas: ['/organizacion', '/usuarios', '/usuarios/roles'],
   reportes: ['/usuarios/reporte'],
@@ -199,7 +199,7 @@ export default function SideNav() {
 
             {(hasPermission('Transacciones') || hasPermission('Categorias')  
                 || hasPermission('Compras') || hasPermission('Ventas') || hasPermission('Ajustes')
-                || hasPermission('Precio_Ventas')         
+                || hasPermission('Precio_Ventas') || hasPermission('Historial_Inventario')         
               )
             && (
 
@@ -277,6 +277,15 @@ export default function SideNav() {
                       <Link to="/precio-ventas" className={getItemLinkClasses('/precio-ventas')}>
                         <img src="/img/Icon/account-statement-filled.png" alt="Precio Ventas" className="h-5 w-5 shrink-0" />
                         <span>Precio Ventas</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {hasPermission('Historial_Inventario') && (
+                    <li>
+                      <Link to="/historial-inventario" className={getItemLinkClasses('/historial-inventario')}>
+                        <img src="/img/Icon/account-statement-filled.png" alt="Historial de Inventario" className="h-5 w-5 shrink-0" />
+                        <span>Historial de Inventario</span>
                       </Link>
                     </li>
                   )}

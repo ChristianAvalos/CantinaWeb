@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import clienteAxios from '../config/axios';
 import { toast } from 'react-toastify';
-import { formatearGuarani,formatearMiles } from '../helpers/HelpersNumeros';
+import { formatearGuarani,formatearMiles, formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import { useAuth } from '../hooks/useAuth';
 import AlertaModal from '../components/AlertaModal';
 import ModalComprobante from '../components/ModalComprobante';
@@ -593,7 +593,7 @@ export default function VentasRapidas() {
                                         <div className="flex-1 min-w-0">
                                             <div className="font-semibold text-slate-800 truncate">{prod.nombre}</div>
                                             <div className="text-xs text-slate-500">
-                                                Código: {prod.codigo_barras || '—'} | Stock: {prod.stock_actual ?? prod.cantidad_unidad ?? 'N/D'}
+                                                Código: {prod.codigo_barras || '—'} | Stock: {formatearDecimalSinCeros(prod.stock_actual ?? prod.cantidad_unidad ?? 'N/D')}
                                             </div>
                                         </div>
                                         <div className="ml-3 text-right flex-shrink-0">

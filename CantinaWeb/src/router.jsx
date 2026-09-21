@@ -27,6 +27,7 @@ const Cobranzas = lazy(() => import("./views/Cobranzas"));
 const PagosProveedores = lazy(() => import("./views/PagosProveedores"));
 const Ajustes = lazy(() => import("./views/Ajustes"));
 const PrecioVentas = lazy(() => import("./views/PrecioVentas"));
+const HistorialInventario = lazy(() => import("./views/HistorialInventario"));
 
 function withSuspense(element) {
     return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -173,6 +174,14 @@ const router = createBrowserRouter ([
                 element: withSuspense(
                 <ProtectedRoute permission="Precio_Ventas">
                     <PrecioVentas/>
+                </ProtectedRoute>
+                )
+            },
+            {
+                path:'/historial-inventario',
+                element: withSuspense(
+                <ProtectedRoute permission="Historial_Inventario">
+                    <HistorialInventario/>
                 </ProtectedRoute>
                 )
             },

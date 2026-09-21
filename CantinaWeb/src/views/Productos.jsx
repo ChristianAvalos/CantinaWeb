@@ -4,7 +4,7 @@ import ModalProducto from '../components/ModalProducto';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerProductos } from '../helpers/HelperProductos';
-import { formatearMiles, formatearGuarani, formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
+import { formatearGuarani, formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
 
@@ -225,8 +225,8 @@ export default function Productos() {
                                                     <td className="text-center">{producto.unidad_medida ? producto.unidad_medida.nombre : 'Sin unidad'}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_compra)}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_venta)}</td>
-                                                    <td className="text-end">{formatearMiles(producto.stock_minimo)}</td>
-                                                    <td className="text-end">{formatearMiles(producto.stock_actual)}</td>
+                                                    <td className="text-end">{formatearDecimalSinCeros(producto.stock_minimo)}</td>
+                                                    <td className="text-end">{formatearDecimalSinCeros(producto.stock_actual)}</td>
                                                     <td className="text-center">{producto.tipo_estado ? producto.tipo_estado.descripcion : 'Sin estado'}</td>
 
                                                     <td className="text-center">{producto.UrevCalc}</td>

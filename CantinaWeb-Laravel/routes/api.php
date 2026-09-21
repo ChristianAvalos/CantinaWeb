@@ -5,6 +5,7 @@ use App\Http\Controllers\CategoriasController;
 use App\Http\Controllers\CiudadController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FormaPagoController;
+use App\Http\Controllers\MovimientoHistorialController;
 use App\Http\Controllers\OrganizacionController;
 use App\Http\Controllers\PaisController;
 use App\Http\Controllers\PermissionController;
@@ -103,6 +104,9 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::delete('/transacciones_detalle/{id}', [TransaccionesDetalleController::class, 'deleteTransaccionDetalle']);
     Route::post('/creartransaccion_detalle',[TransaccionesDetalleController::class,'createTransaccionDetalle']);
     Route::put('/update_transaccion_detalle/{id}',[TransaccionesDetalleController::class,'updateTransaccionDetalle']);
+
+    //Kardex: historial de movimientos de stock (solo lectura)
+    Route::get('/movimiento_historial',[MovimientoHistorialController::class,'index']);
 
 
     //Productos

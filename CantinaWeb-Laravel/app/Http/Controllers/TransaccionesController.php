@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
-use App\Helpers\StockHelper;
+use App\Services\InventarioService;
 use App\Models\Producto;
+use App\Models\TipoMovimientos;
 use App\Models\TipoPago;
 use App\Models\TipoComprobante;
 use App\Models\TipoEstado;
@@ -234,7 +235,7 @@ class TransaccionesController extends Controller
                         );
                     }
 
-                    TransaccionesDetalle::create([
+                    $detalleCreado = TransaccionesDetalle::create([
                         'id_transaccion' => $cabecera->id,
                         'id_producto' => $producto->id,
                         'cantidad' => $cantidad,
@@ -244,7 +245,18 @@ class TransaccionesController extends Controller
                         'UrevFechaHora' => now(),
                     ]);
 
-                    StockHelper::calcular($producto->id, $cantidad, 'salida', Auth::user()->name);
+                    // Toda salida de stock pasa por el kardex.
+                    InventarioService::registrarDocumento(
+                        $cabecera,
+                        $producto->id,
+                        $cantidad,
+                        TipoMovimientos::DIRECCION_SALIDA,
+                        [
+                            'id_transaccion_detalle' => $detalleCreado->id,
+                            'costo_unitario' => $precioUnitario,
+                        ]
+                    );
+
                     $montoTotal += $subtotal;
                 }
 
@@ -547,11 +559,11 @@ class TransaccionesController extends Controller
 
         // 1) Validar stock disponible antes de revertir
         $detalles = TransaccionesDetalle::with('producto')->where('id_transaccion', $transaccion->id)->get();
-        $operacionInversa = $this->direccionInversa($transaccion);
+        $operacionInversa = $transaccion->direccionStockInversa();
 
         // Si la reversión va a QUITAR stock (compra o ajuste positivo),
         // verificar que el stock actual alcance (que no se haya vendido/consumido ya).
-        if ($operacionInversa === 'salida') {
+        if ($operacionInversa === TipoMovimientos::DIRECCION_SALIDA) {
             $sinStock = [];
             foreach ($detalles as $detalle) {
                 $stockActual = (float) ($detalle->producto->stock_actual ?? 0);
@@ -574,22 +586,35 @@ class TransaccionesController extends Controller
             }
         }
 
-        // 2) Revertir el stock de cada detalle (operación inversa a la original)
-        foreach ($detalles as $detalle) {
-            StockHelper::calcular(
-                $detalle->id_producto,
-                (float) $detalle->cantidad,
-                $operacionInversa,
-                Auth::user()->name
-            );
-        }
+        // 2) Revertir el stock de cada detalle (operación inversa a la original).
+        //    Cada reversa queda enlazada en el kardex con el movimiento que revierte.
+        try {
+            DB::transaction(function () use ($transaccion, $detalles, $operacionInversa) {
+                foreach ($detalles as $detalle) {
+                    InventarioService::registrarDocumento(
+                        $transaccion,
+                        $detalle->id_producto,
+                        (float) $detalle->cantidad,
+                        $operacionInversa,
+                        [
+                            'id_transaccion_detalle' => $detalle->id,
+                            'costo_unitario' => $detalle->precio_unitario,
+                            'motivo' => 'Anulación de la transacción #' . $transaccion->id,
+                            'id_movimiento_origen' => InventarioService::buscarMovimientoOrigen($detalle->id, $detalle->id_producto),
+                        ]
+                    );
+                }
 
-        // 3) Marcar como Anulada
-        $transaccion->update([
-            'id_TipoEstado' => 7,
-            'UrevUsuario' => Auth::user()->name,
-            'UrevFechaHora' => now(),
-        ]);
+                // 3) Marcar como Anulada
+                $transaccion->update([
+                    'id_TipoEstado' => 7,
+                    'UrevUsuario' => Auth::user()->name,
+                    'UrevFechaHora' => now(),
+                ]);
+            });
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => 'Transacción anulada correctamente. Stock revertido.',
@@ -636,35 +661,6 @@ class TransaccionesController extends Controller
             'message' => 'Transacción corregida correctamente.',
             'transaccion' => $transaccion->load(['tipoComprobante', 'persona']),
         ], 200);
-    }
-
-    /**
-     * Devuelve la dirección de movimiento de una transacción:
-     * - Compra  (1): entrada
-     * - Venta   (2): salida
-     * - Ajuste  (3): según estado (5=Positivo→entrada, 6=Negativo→salida)
-     */
-    private function direccionMovimiento(Transacciones $transaccion): string
-    {
-        $tipoMovimiento = (int) $transaccion->id_TipoMovimiento;
-
-        if ($tipoMovimiento === 2) {
-            return 'salida';   // Venta
-        }
-
-        if ($tipoMovimiento === 3) {
-            return (int) $transaccion->id_TipoEstado === 6 ? 'salida' : 'entrada'; // Ajuste
-        }
-
-        return 'entrada';      // Compra (y fallback)
-    }
-
-    /**
-     * Operación inversa: si la original fue entrada → salida, y viceversa.
-     */
-    private function direccionInversa(Transacciones $transaccion): string
-    {
-        return $this->direccionMovimiento($transaccion) === 'entrada' ? 'salida' : 'entrada';
     }
 
     /**

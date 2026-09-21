@@ -33,24 +33,32 @@ class RolePermissionSeeder extends Seeder
             'Productos',
             'Precio_Ventas',
             'Cobranzas',
-            'Pagos_Proveedores'
+            'Pagos_Proveedores',
+            'Historial_Inventario'
         ];
 
         foreach ($permissions as $permission) {
-            // Crea el permiso
-            $perm = Permission::create([
-            'name' => $permission,
-            'UrevUsuario' => 'Admin', 
-            'UrevFechaHora' => Carbon::now()
-            ]);
+            // firstOrCreate: el seeder se puede volver a correr sin duplicar nada.
+            // Así se agregan permisos nuevos sin re-sembrar toda la base.
+            $perm = Permission::firstOrCreate(
+                ['name' => $permission],
+                [
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => Carbon::now(),
+                ]
+            );
 
-            // Asocia el permiso con el rol de administrador
-            $adminRole->permissions()->attach($perm->id,[
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-                'UrevUsuario' => 'Admin',
-                'UrevFechaHora' => Carbon::now(),
-            ]); 
+            // Asocia el permiso con el rol de administrador (sin duplicar la relación)
+            if ($adminRole) {
+                $adminRole->permissions()->syncWithoutDetaching([
+                    $perm->id => [
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                        'UrevUsuario' => 'Admin',
+                        'UrevFechaHora' => Carbon::now(),
+                    ],
+                ]);
+            }
         }
 
         // // Asocia permisos específicos con el rol de usuario

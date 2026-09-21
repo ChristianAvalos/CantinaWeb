@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\TipoMovimientos;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTransaccionRequest extends FormRequest
 {
@@ -55,7 +57,12 @@ class UpdateTransaccionRequest extends FormRequest
             'iva' => 'nullable|numeric',
             'id_TipoEstado' => 'required|exists:tipo_estados,id',
             'id_TipoComprobante' => $reglasTipoComprobante,
-            'id_TipoMovimiento' => 'required|exists:tipo_movimientos,id',
+            // Solo tipos de DOCUMENTO (Compra/Venta/Ajuste). Nunca un movimiento
+            // de inventario del kardex (101, 201...), que vive en la misma tabla.
+            'id_TipoMovimiento' => [
+                'required',
+                Rule::exists('tipo_movimientos', 'id')->where('ambito', TipoMovimientos::AMBITO_DOCUMENTO),
+            ],
             'nro_comprobante' => $esVenta ? 'nullable|string|max:100' : 'required|string|max:100',
             'id_persona' => $esVenta ? 'nullable|exists:personas,id' : 'required|exists:personas,id',
             'id_TipoPago' => 'required|exists:tipo_pagos,id',
