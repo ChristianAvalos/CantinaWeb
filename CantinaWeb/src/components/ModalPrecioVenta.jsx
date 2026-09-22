@@ -298,6 +298,7 @@ export default function ModalPrecioVenta({
                     {/* Botones para cerrar y guardar */}
                     <div className="flex justify-end space-x-3">
                         <button
+                            type="button"
                             onClick={onClose}
                             className="bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
                         >

@@ -106,6 +106,7 @@ export default function ModalRol({ onClose, modo, rol = {}, refrescarRoles }) {
                     {/* Botones para cerrar y guardar */}
                     <div className="flex justify-end space-x-3">
                         <button
+                            type="button"
                             onClick={onClose}
                             className="g360-danger text-white rounded px-4 py-2 hover:opacity-90 transition"
                         >
