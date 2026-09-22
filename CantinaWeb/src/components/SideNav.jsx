@@ -284,7 +284,7 @@ export default function SideNav() {
                   {hasPermission('Historial_Inventario') && (
                     <li>
                       <Link to="/historial-inventario" className={getItemLinkClasses('/historial-inventario')}>
-                        <img src="/img/Icon/account-statement-filled.png" alt="Historial de Inventario" className="h-5 w-5 shrink-0" />
+                        <img src="/img/Icon/history-list.png" alt="Historial de Inventario" className="h-5 w-5 shrink-0" />
                         <span>Historial de Inventario</span>
                       </Link>
                     </li>
