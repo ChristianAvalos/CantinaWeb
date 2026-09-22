@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use App\Models\TipoPersona;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class TipoPersonaSeeder extends Seeder
@@ -24,16 +24,18 @@ class TipoPersonaSeeder extends Seeder
 
         $now = Carbon::now();
 
-        $data = array_map(function ($nombre) use ($now) {
-            return [
-                'nombre' => $nombre,
-                'UrevUsuario' => 'Admin',
-                'UrevFechaHora' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $registros);
-
-        TipoPersona::insert($data);
+        // updateOrInsert por nombre: re-ejecutar no duplica.
+        // OJO: la tabla es `tipo_persona` (singular), no `tipo_personas`.
+        foreach ($registros as $nombre) {
+            DB::table('tipo_persona')->updateOrInsert(
+                ['nombre' => $nombre],
+                [
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
     }
 }

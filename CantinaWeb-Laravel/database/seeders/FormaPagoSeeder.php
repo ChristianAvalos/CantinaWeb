@@ -26,14 +26,16 @@ class FormaPagoSeeder extends Seeder
         $abreviaturas = ['EF','TD','TC','TR','CH','BE'];
         $now = Carbon::now();
         foreach ($nombres as $i => $nombre) {
-            DB::table('forma_pagos')->insert([
-                'nombre'       => $nombre,
-                'abreviatura'  => $abreviaturas[$i],
-                'UrevUsuario'  => 'Admin',
-                'UrevFechaHora'=> $now,
-                'created_at'   => $now,
-                'updated_at'   => $now,
-            ]);
+            DB::table('forma_pagos')->updateOrInsert(
+                ['nombre' => $nombre],
+                [
+                    'abreviatura'  => $abreviaturas[$i],
+                    'UrevUsuario'  => 'Admin',
+                    'UrevFechaHora'=> $now,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ]
+            );
         }
     }
 }

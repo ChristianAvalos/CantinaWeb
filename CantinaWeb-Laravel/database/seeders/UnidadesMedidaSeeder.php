@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use App\Models\TipoUnidadMedida;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class UnidadesMedidaSeeder extends Seeder
@@ -26,17 +26,18 @@ class UnidadesMedidaSeeder extends Seeder
 
         $now = Carbon::now();
 
-        $data = array_map(function ($item) use ($now) {
-            return [
-                'nombre'        => $item['nombre'],
-                'abreviatura'   => $item['abreviatura'],
-                'UrevUsuario'   => 'Admin',
-                'UrevFechaHora' => $now,
-                'created_at'    => $now,
-                'updated_at'    => $now,
-            ];
-        }, $registros);
-
-        TipoUnidadMedida::insert($data);
+        // updateOrInsert por nombre: re-ejecutar no duplica.
+        foreach ($registros as $item) {
+            DB::table('tipo_unidad_medidas')->updateOrInsert(
+                ['nombre' => $item['nombre']],
+                [
+                    'abreviatura'   => $item['abreviatura'],
+                    'UrevUsuario'   => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ]
+            );
+        }
     }
 }

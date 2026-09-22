@@ -23,13 +23,18 @@ class CiudadesYdepartamentos extends Seeder
             
         ];
         foreach ($data as $departamento => $ciudades) {
-            $departamentoId = DB::table('departamento')->insertGetId(['nombre' => $departamento]);
+            // El departamento puede existir de una corrida anterior: se reutiliza su id.
+            $departamentoId = DB::table('departamento')->where('nombre', $departamento)->value('id');
+
+            if (! $departamentoId) {
+                $departamentoId = DB::table('departamento')->insertGetId(['nombre' => $departamento]);
+            }
 
             foreach ($ciudades as $ciudad) {
-                DB::table('ciudad')->insert([
-                    'departamento_id' => $departamentoId,
-                    'nombre' => $ciudad,
-                ]);
+                DB::table('ciudad')->updateOrInsert(
+                    ['departamento_id' => $departamentoId, 'nombre' => $ciudad],
+                    []
+                );
             }
         }
     }

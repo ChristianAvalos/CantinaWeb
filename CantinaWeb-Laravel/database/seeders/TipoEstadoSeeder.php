@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use App\Models\TipoEstado;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class TipoEstadoSeeder extends Seeder
@@ -26,17 +26,17 @@ class TipoEstadoSeeder extends Seeder
 
         $now = Carbon::now();
 
-        $data = array_map(function ($nombre) use ($now) {
-            return [
-                'id_organizacion' => 1,
-                'descripcion' => $nombre,
-                'UrevUsuario' => 'Admin',
-                'UrevFechaHora' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $registros);
-
-        TipoEstado::insert($data);
+        // updateOrInsert por (organizacion, descripcion): re-ejecutar no duplica.
+        foreach ($registros as $nombre) {
+            DB::table('tipo_estados')->updateOrInsert(
+                ['id_organizacion' => 1, 'descripcion' => $nombre],
+                [
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
     }
 }

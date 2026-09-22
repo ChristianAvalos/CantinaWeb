@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class OrganizacionSeeder extends Seeder
 {
@@ -14,6 +13,11 @@ class OrganizacionSeeder extends Seeder
      */
     public function run(): void
     {
+
+        $organizacionExistente = DB::table('organizacion')->first();
+        if ($organizacionExistente) {
+            return;
+        }
         DB::table('organizacion')->insert([
             'RazonSocial'   => 'CDSystem.',
             'RUC'           => '5291959',

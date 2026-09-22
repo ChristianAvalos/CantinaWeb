@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use App\Models\Categorias;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class CategoriasSeeder extends Seeder
@@ -23,17 +23,17 @@ class CategoriasSeeder extends Seeder
 
         $now = Carbon::now();
 
-        $data = array_map(function ($nombre) use ($now) {
-            return [
-                'id_organizacion' => null,
-                'nombre' => $nombre,
-                'UrevUsuario' => 'Admin',
-                'UrevFechaHora' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $registros);
-
-        Categorias::insert($data);
+        // updateOrInsert por (organizacion, nombre): re-ejecutar no duplica.
+        foreach ($registros as $nombre) {
+            DB::table('categorias')->updateOrInsert(
+                ['id_organizacion' => null, 'nombre' => $nombre],
+                [
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
     }
 }

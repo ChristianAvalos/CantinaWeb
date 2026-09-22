@@ -41,14 +41,17 @@ class BancosSeeder extends Seeder
         ];
         $now = Carbon::now();
         foreach ($nombres as $index => $nombre) {
-            DB::table('bancos')->insert([
-                'nombre'       => $nombre,
-                'abreviatura'  => $abreviaturas[$index],
-                'UrevUsuario'  => 'Admin',
-                'UrevFechaHora'=> $now,
-                'created_at'   => $now,
-                'updated_at'   => $now,
-            ]);
+            // updateOrInsert por nombre: re-ejecutar actualiza, no duplica.
+            DB::table('bancos')->updateOrInsert(
+                ['nombre' => $nombre],
+                [
+                    'abreviatura'  => $abreviaturas[$index],
+                    'UrevUsuario'  => 'Admin',
+                    'UrevFechaHora'=> $now,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ]
+            );
         }
     }
 }

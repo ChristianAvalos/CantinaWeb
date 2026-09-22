@@ -15,20 +15,19 @@ class RolesSeeder extends Seeder
     public function run(): void
     {
 
-        DB::table('roles')->insert([
-            'name' => 'Administrador',
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-            'UrevUsuario' => 'Admin', 
-            'UrevFechaHora' => Carbon::now(),
-        ]);
+        $now = Carbon::now();
 
-        DB::table('roles')->insert([
-            'name' => 'Usuario',
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-            'UrevUsuario' => 'Admin', 
-            'UrevFechaHora' => Carbon::now(),
-        ]);
+        // updateOrInsert por name: re-ejecutar no duplica roles.
+        foreach (['Administrador', 'Usuario'] as $nombre) {
+            DB::table('roles')->updateOrInsert(
+                ['name' => $nombre],
+                [
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
     }
 }

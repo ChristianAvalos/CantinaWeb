@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use App\Models\TipoDocumento;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class TipoDocumentoSeeder extends Seeder
@@ -21,17 +21,18 @@ class TipoDocumentoSeeder extends Seeder
 
         $now = Carbon::now();
 
-        $data = array_map(function ($registro) use ($now) {
-            return [
-                'nombre' => $registro['nombre'],
-                'formato' => $registro['formato'],
-                'UrevUsuario' => 'Admin',
-                'UrevFechaHora' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $registros);
-
-        TipoDocumento::insert($data);
+        // updateOrInsert por nombre: re-ejecutar no duplica.
+        foreach ($registros as $registro) {
+            DB::table('tipo_documentos')->updateOrInsert(
+                ['nombre' => $registro['nombre']],
+                [
+                    'formato' => $registro['formato'],
+                    'UrevUsuario' => 'Admin',
+                    'UrevFechaHora' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
     }
 }

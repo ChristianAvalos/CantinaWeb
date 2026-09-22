@@ -36,7 +36,13 @@ class PaisSeeder extends Seeder
             ['Name' => 'Australia', 'GentilicioMasculino' => 'Australiano', 'GentilicioFemenino' => 'Australiana']
         ];
         foreach ($paises as $pais) {
-            DB::table('pais')->insert($pais);
+            DB::table('pais')->updateOrInsert(
+                ['Name' => $pais['Name']],
+                [
+                    'GentilicioMasculino' => $pais['GentilicioMasculino'],
+                    'GentilicioFemenino'  => $pais['GentilicioFemenino'],
+                ]
+            );
         }
     }
 }

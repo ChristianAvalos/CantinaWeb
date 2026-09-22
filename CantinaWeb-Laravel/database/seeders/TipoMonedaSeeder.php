@@ -27,14 +27,16 @@ class TipoMonedaSeeder extends Seeder
         $now = Carbon::now();
 
         foreach ($nombres as $i => $nombre) {
-            DB::table('tipo_monedas')->insert([
-                'nombre'       => $nombre,
-                'abreviatura'  => $abreviaturas[$i],
-                'UrevUsuario'  => 'Admin',
-                'UrevFechaHora'=> $now,
-                'created_at'   => $now,
-                'updated_at'   => $now,
-            ]);
+            DB::table('tipo_monedas')->updateOrInsert(
+                ['nombre' => $nombre],
+                [
+                    'abreviatura'  => $abreviaturas[$i],
+                    'UrevUsuario'  => 'Admin',
+                    'UrevFechaHora'=> $now,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ]
+            );
         }
     }
 }
