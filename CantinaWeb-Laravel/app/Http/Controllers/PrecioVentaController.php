@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreatePrecioVentaRequest;
-use App\Http\Requests\StorePrecioVentaRequest;
 use App\Http\Requests\UpdatePrecioVentaRequest;
 use App\Http\Resources\PrecioVentaResource;
 use App\Models\PrecioVenta;
@@ -31,24 +30,30 @@ class PrecioVentaController extends Controller
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
-            $precio_ventas = $precio_ventas_Query->get();
-        } else {
-            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
 
-            if ($search) {
-                $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
-                    $q->where('nombre', 'ilike', '%' . $search . '%');
-                });
-            }
+            $precio_ventas = $precio_ventas_Query->get()
+                ->map(fn ($p) => (new PrecioVentaResource($p))->resolve())
+                ->values();
 
-            if (!empty($filtros)) {
-                $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
-            }
-
-            $precio_ventas = $precio_ventas_Query->orderBy('id', 'desc')->paginate(10);
+            return response()->json(['data' => $precio_ventas]);
         }
-        return PrecioVentaResource::collection($precio_ventas);
 
+        $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
+
+        if ($search) {
+            $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
+                $q->where('nombre', 'ilike', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filtros)) {
+            $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
+        }
+
+        $precio_ventas = $precio_ventas_Query->orderBy('id', 'desc')->paginate(10);
+        $precio_ventas->through(fn ($p) => (new PrecioVentaResource($p))->resolve());
+
+        return response()->json($precio_ventas);
     }
 
     /**
@@ -69,7 +74,6 @@ class PrecioVentaController extends Controller
 
             return response()->json(['message' => 'Precio de venta creado correctamente', 'data' => $precioVenta], 201);
         } catch (QueryException $e) {
-            // Si el código de error es 23505 (unique violation en PostgreSQL) o 1062 (MySQL)
             if ($e->getCode() == 23505 || $e->getCode() == 1062) {
                 return response()->json([
                     'errors' => [
