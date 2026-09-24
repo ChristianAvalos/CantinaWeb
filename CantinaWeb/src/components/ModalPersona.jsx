@@ -21,7 +21,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     const [tipoPersona, setTipoPersona] = useState([]);
     const [tiposDocumento, setTiposDocumento] = useState([]);
     const [errores, setErrores] = useState({});
-    const nombreRef = useRef(null);
+    const id_tipo_personaRef = useRef(null);
 
     // Si el tipo de persona es Proveedor, el documento siempre es un RUC
     const tipoPersonaSeleccionada = tipoPersona.find(
@@ -82,8 +82,8 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
     // Enfocar el campo de nombre cuando el modal se abra
     useEffect(() => {
-        if (nombreRef.current) {
-            nombreRef.current.focus();
+        if (id_tipo_personaRef.current) {
+            id_tipo_personaRef.current.focus();
         }
     }, []);
 
@@ -237,6 +237,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                             <select
                                 className={`w-full px-3 py-2 border ${errores.id_tipo_persona ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                 value={form.id_tipo_persona}
+                                ref={id_tipo_personaRef}
                                 onChange={handleTipoPersonaChange}
                             >
                                 <option value="">Seleccione el tipo de persona</option>
@@ -253,7 +254,6 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                             <input
                                 type="text"
-                                ref={nombreRef}
                                 className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                 placeholder="Introduce el nombre"
                                 value={form.nombre}
