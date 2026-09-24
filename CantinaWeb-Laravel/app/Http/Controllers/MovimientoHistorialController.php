@@ -55,17 +55,25 @@ class MovimientoHistorialController extends Controller
                 $q->whereDate('fecha', '<=', $fechaHasta);
             })
             ->when($search, function ($q, $search) {
+                // Se comparan los valores en minúsculas en AMBOS lados:
+                // LOWER(columna) del lado de la BD y el término ya en minúsculas.
+                // Se usa LOWER(...) LIKE (estándar SQL) y NO ILIKE, que es
+                // exclusivo de PostgreSQL.
                 $term = '%' . mb_strtolower($search) . '%';
 
+                // Los identificadores van entre comillas dobles para que la BD
+                // respete el nombre EXACTO de cada columna: `UrevUsuario` está
+                // creada así (mixed case) y sin comillas PostgreSQL la pliega a
+                // `urevusuario` y la consulta falla con "column does not exist".
                 $q->where(function ($q2) use ($term) {
-                    $q2->whereRaw('LOWER(producto_nombre) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(producto_codigo) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(motivo) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(referencia) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(UrevUsuario) LIKE ?', [$term])
+                    $q2->whereRaw('LOWER("producto_nombre") LIKE ?', [$term])
+                        ->orWhereRaw('LOWER("producto_codigo") LIKE ?', [$term])
+                        ->orWhereRaw('LOWER("motivo") LIKE ?', [$term])
+                        ->orWhereRaw('LOWER("referencia") LIKE ?', [$term])
+                        ->orWhereRaw('LOWER("UrevUsuario") LIKE ?', [$term])
                         ->orWhereHas('tipoMovimiento', function ($q3) use ($term) {
-                            $q3->whereRaw('LOWER(nombre) LIKE ?', [$term])
-                                ->orWhereRaw('LOWER(codigo) LIKE ?', [$term]);
+                            $q3->whereRaw('LOWER("nombre") LIKE ?', [$term])
+                                ->orWhereRaw('LOWER("codigo") LIKE ?', [$term]);
                         });
                 });
             })
