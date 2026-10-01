@@ -24,6 +24,27 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Transacciones extends Model
 {
     use HasFactory;
+
+    /**
+     * Estados del documento (tipo_estados).
+     *
+     * El estado determina si el documento ya impactó el kardex: mientras está en
+     * ESTADO_ACTIVO es un "borrador" (parqueado, SIN efecto en stock); recién al
+     * pasar a un estado POSTEADO se registran los movimientos de inventario.
+     */
+    public const ESTADO_ACTIVO     = 1;  // Borrador / parqueado (sin stock)
+    public const ESTADO_FINALIZADO = 3;  // Posteado (compra/venta)
+    public const ESTADO_POSITIVO   = 5;  // Posteado (ajuste de entrada)
+    public const ESTADO_NEGATIVO   = 6;  // Posteado (ajuste de salida)
+    public const ESTADO_ANULADA    = 7;
+
+    /** Estados en los que el documento YA movió stock. */
+    public const ESTADOS_POSTEADOS = [
+        self::ESTADO_FINALIZADO,
+        self::ESTADO_POSITIVO,
+        self::ESTADO_NEGATIVO,
+    ];
+
     protected $table = 'transacciones';
     protected $fillable = [
         'id_organizacion',
@@ -160,7 +181,7 @@ class Transacciones extends Model
     {
         return match ((int) $this->id_TipoMovimiento) {
             2 => TipoMovimientos::DIRECCION_SALIDA,
-            3 => (int) $this->id_TipoEstado === 6
+            3 => (int) $this->id_TipoEstado === self::ESTADO_NEGATIVO
                 ? TipoMovimientos::DIRECCION_SALIDA
                 : TipoMovimientos::DIRECCION_ENTRADA,
             default => TipoMovimientos::DIRECCION_ENTRADA,
@@ -173,5 +194,22 @@ class Transacciones extends Model
         return $this->direccionStock() === TipoMovimientos::DIRECCION_ENTRADA
             ? TipoMovimientos::DIRECCION_SALIDA
             : TipoMovimientos::DIRECCION_ENTRADA;
+    }
+
+    /**
+     * ¿El documento ya impactó el kardex?
+     *
+     * Mientras es borrador (Activo) NO movió stock; al postearse (Finalizado /
+     * Positivo / Negativo) el stock ya fue aplicado y el documento es inmutable.
+     */
+    public function estaPosteada(): bool
+    {
+        return in_array((int) $this->id_TipoEstado, self::ESTADOS_POSTEADOS, true);
+    }
+
+    /** ¿Es un borrador parqueado (aún sin efecto en stock)? */
+    public function esBorrador(): bool
+    {
+        return (int) $this->id_TipoEstado === self::ESTADO_ACTIVO;
     }
 }

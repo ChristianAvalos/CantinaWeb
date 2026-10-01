@@ -30,7 +30,9 @@ class TipoEstadoController extends Controller
             $query->whereIn('descripcion', $estadosOperacion);
         }
 
-        $tipoEstados = $query->get();
+        // Orden estable: garantiza que "Activo" (id 1) sea el primero, usado como
+        // estado por defecto al crear una transacción (borrador parqueado).
+        $tipoEstados = $query->orderBy('id')->get();
 
         return response()->json($tipoEstados);
     }

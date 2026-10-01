@@ -237,8 +237,14 @@ export default function Compras() {
                                                             <button onClick={() => handleVer(compra)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                 <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            {/* Corregir cabecera (oculto si ya está anulada) */}
-                                                            {Number(compra.id_TipoEstado) !== 7 && (
+                                                            {/* Continuar un borrador (estado Activo = creada pero sin finalizar) */}
+                                                            {Number(compra.id_TipoEstado) === 1 && (
+                                                                <button onClick={() => openModal('editar', compra)} title="Continuar" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                </button>
+                                                            )}
+                                                            {/* Corregir cabecera (solo si ya fue finalizada: ni borrador ni anulada) */}
+                                                            {Number(compra.id_TipoEstado) !== 7 && Number(compra.id_TipoEstado) !== 1 && (
                                                                 <button onClick={() => openModal('corregir', compra)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                     <img src="/img/Icon/edit.png" alt="Corregir" />
                                                                 </button>

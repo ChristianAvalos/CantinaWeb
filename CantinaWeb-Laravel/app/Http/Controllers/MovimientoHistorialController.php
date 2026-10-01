@@ -98,8 +98,8 @@ class MovimientoHistorialController extends Controller
             ->first();
 
         $movimientos = $query
-            ->orderByDesc('fecha')
             ->orderByDesc('id')
+            ->orderByDesc('fecha')
             ->paginate(15);
 
         return response()->json([

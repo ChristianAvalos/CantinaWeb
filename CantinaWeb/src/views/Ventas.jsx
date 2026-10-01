@@ -270,8 +270,14 @@ export default function Ventas() {
                                                             <button onClick={() => handleVer(venta)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                 <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            {/* Corregir cabecera (oculto si ya está anulada) */}
-                                                            {Number(venta.id_TipoEstado) !== 7 && (
+                                                            {/* Continuar un borrador (estado Activo = creada pero sin finalizar) */}
+                                                            {Number(venta.id_TipoEstado) === 1 && (
+                                                                <button onClick={() => openModal('editar', venta)} title="Continuar" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                </button>
+                                                            )}
+                                                            {/* Corregir cabecera (solo si ya fue finalizada: ni borrador ni anulada) */}
+                                                            {Number(venta.id_TipoEstado) !== 7 && Number(venta.id_TipoEstado) !== 1 && (
                                                                 <button onClick={() => openModal('corregir', venta)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                     <img src="/img/Icon/edit.png" alt="Corregir" />
                                                                 </button>

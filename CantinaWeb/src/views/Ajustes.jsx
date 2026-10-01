@@ -225,8 +225,14 @@ export default function Ajustes() {
                                                             <button onClick={() => handleVer(ajuste)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                 <img src="/img/Icon/eye.png" alt="Ver" />
                                                             </button>
-                                                            {/* Corregir cabecera (oculto si ya está anulado) */}
-                                                            {Number(ajuste.id_TipoEstado) !== 7 && (
+                                                            {/* Continuar un borrador (estado Activo = creado pero sin finalizar) */}
+                                                            {Number(ajuste.id_TipoEstado) === 1 && (
+                                                                <button onClick={() => openModal('editar', ajuste)} title="Continuar" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
+                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                </button>
+                                                            )}
+                                                            {/* Corregir cabecera (solo si ya fue finalizado: ni borrador ni anulado) */}
+                                                            {Number(ajuste.id_TipoEstado) !== 7 && Number(ajuste.id_TipoEstado) !== 1 && (
                                                                 <button onClick={() => openModal('corregir', ajuste)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
                                                                     <img src="/img/Icon/edit.png" alt="Corregir" />
                                                                 </button>

@@ -6,10 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\TransaccionesDetalle;
 use App\Models\Transacciones;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use App\Http\Requests\UpdateTransaccionDetalleRequest; 
 use App\Http\Requests\CreateTransaccionDetalleRequest; 
-use App\Services\InventarioService;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Models\Producto;
 use App\Models\TipoMovimientos;
@@ -125,6 +123,12 @@ class TransaccionesDetalleController extends Controller
             return response()->json(['message' => 'Transacción no encontrada'], 404);
         }
 
+        // Un documento ya posteado (Finalizado / Positivo / Negativo) es inmutable:
+        // su stock ya fue aplicado al kardex y no se pueden tocar sus detalles.
+        if ($transaccion->estaPosteada()) {
+            return response()->json(['message' => 'No se pueden modificar los detalles de una transacción finalizada.'], 422);
+        }
+
         $producto = $this->buscarProductoPorCodigo($request->codigo_barras, $transaccion->id_organizacion);
 
         if (!$producto) {
@@ -135,63 +139,36 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $request->precio_unitario;
         $subtotal = $cantidad * $precioUnitario;
 
-        // Dirección del stock: la resuelve la propia transacción (sin consultar de nuevo).
-        $tipoOperacion = $transaccion->direccionStock();
-
-        // Detalle + movimiento de stock en una sola transacción de BD: si el kardex
-        // rechaza el movimiento (stock insuficiente), el detalle no queda creado.
-        try {
-            $resultado = DB::transaction(function () use (
-                $transaccion,
-                $producto,
-                $cantidad,
-                $precioUnitario,
-                $subtotal,
-                $tipoOperacion,
-                $data,
-                $usuario,
-                $request
-            ) {
-                $detalle = TransaccionesDetalle::create([
-                    'id_transaccion' => $transaccion->id,
-                    'id_producto' => $producto->id,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precioUnitario,
-                    'subtotal' => $subtotal,
-                    'lote' => isset($data['lote']) ? $data['lote'] : null,
-                    'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
-                    'UrevUsuario' => $usuario,
-                    'UrevFechaHora' => $request->Fecha ?? now(),
-                ]);
-
-                // Único camino para mover stock: escribe el kardex y actualiza el producto.
-                $movimiento = InventarioService::registrarDocumento(
-                    $transaccion,
-                    $producto->id,
-                    $cantidad,
-                    $tipoOperacion,
-                    [
-                        'id_transaccion_detalle' => $detalle->id,
-                        'costo_unitario' => $precioUnitario,
-                        'fecha' => $request->Fecha ?? now(),
-                    ]
-                );
-
-                $montoCabecera = $this->recalcularMontoCabecera($transaccion->id);
-
-                return [$detalle, $movimiento, $montoCabecera];
-            });
-        } catch (\InvalidArgumentException | \RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+        // El detalle se guarda SIN mover stock: el kardex se registra recién al
+        // finalizar (postear) la transacción. Igual validamos temprano para avisar
+        // si no alcanza el stock (validación "suave", sin bloquear el borrador).
+        if ($transaccion->direccionStock() === TipoMovimientos::DIRECCION_SALIDA) {
+            $stockActual = (float) ($producto->stock_actual ?? 0);
+            if ($stockActual < $cantidad) {
+                return response()->json([
+                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidad}).",
+                ], 422);
+            }
         }
 
-        [$detalle, $movimiento, $montoCabecera] = $resultado;
+        $detalle = TransaccionesDetalle::create([
+            'id_transaccion' => $transaccion->id,
+            'id_producto' => $producto->id,
+            'cantidad' => $cantidad,
+            'precio_unitario' => $precioUnitario,
+            'subtotal' => $subtotal,
+            'lote' => isset($data['lote']) ? $data['lote'] : null,
+            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
+            'UrevUsuario' => $usuario,
+            'UrevFechaHora' => $request->Fecha ?? now(),
+        ]);
+
+        $montoCabecera = $this->recalcularMontoCabecera($transaccion->id);
 
         return response()->json([
             'message' => 'Detalle creado exitosamente.',
             'detalle' => $detalle,
             'monto_cabecera' => $montoCabecera,
-            'stock_actual' => (float) $movimiento->stock_nuevo,
         ], 201);
     }
 
@@ -229,11 +206,12 @@ class TransaccionesDetalleController extends Controller
 
         $usuario = Auth::user()->name;
 
-        // Guardar valores anteriores para el cálculo de stock
-        $idProductoAnterior = $detalle->id_producto;
-        $cantidadAnterior = (float) $detalle->cantidad;
-
         $transaccion = Transacciones::findOrFail($detalle->id_transaccion);
+
+        // Un documento ya posteado es inmutable: su stock ya fue aplicado.
+        if ($transaccion->estaPosteada()) {
+            return response()->json(['message' => 'No se pueden modificar los detalles de una transacción finalizada.'], 422);
+        }
 
         $producto = $this->buscarProductoPorCodigo($data['codigo_barras'], $transaccion->id_organizacion);
 
@@ -245,96 +223,27 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $data['precio_unitario'];
         $subtotal = $cantidadNueva * $precioUnitario;
 
-        // Validación para compras: la nueva cantidad no puede ser menor a lo ya vendido
-        $tipoMovimiento = (int) ($transaccion->id_TipoMovimiento ?? 0);
-        if ($tipoMovimiento === 1) {
-            $cantidadMinima = $detalle->cantidad_minima;
-            if ($cantidadNueva < $cantidadMinima) {
-                return response()->json([
-                    'message' => 'La cantidad no puede ser menor al mínimo permitido.',
-                    'errors' => [
-                        'cantidad' => ["No se puede reducir la cantidad por debajo de {$cantidadMinima} unidades (mínimo por ventas ya realizadas)."]
-                    ]
-                ], 422);
-            }
-        }
-
-        // Validación para ventas: si la cantidad aumenta, el incremento no puede superar el stock disponible
-        $tipoOperacion = $transaccion->direccionStock();
-        if ($tipoOperacion === TipoMovimientos::DIRECCION_SALIDA && $cantidadNueva > $cantidadAnterior) {
+        // El stock NO se mueve acá (se aplica al finalizar). Validación "suave"
+        // para avisar temprano si una salida no tiene stock suficiente.
+        if ($transaccion->direccionStock() === TipoMovimientos::DIRECCION_SALIDA) {
             $stockActual = (float) ($producto->stock_actual ?? 0);
-            $incremento = $cantidadNueva - $cantidadAnterior;
-            if ($stockActual < $incremento) {
+            if ($stockActual < $cantidadNueva) {
                 return response()->json([
-                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$incremento})."
+                    'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidadNueva})."
                 ], 422);
             }
         }
 
-        // El cambio del detalle y el movimiento de stock son atómicos: si el kardex
-        // rechaza el movimiento, el detalle NO queda modificado.
-        try {
-            DB::transaction(function () use (
-                $detalle,
-                $producto,
-                $cantidadNueva,
-                $cantidadAnterior,
-                $precioUnitario,
-                $subtotal,
-                $data,
-                $usuario,
-                $idProductoAnterior,
-                $transaccion
-            ) {
-                $detalle->update([
-                    'id_producto' => $producto->id,
-                    'cantidad' => $cantidadNueva,
-                    'lote' => isset($data['lote']) ? $data['lote'] : null,
-                    'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
-                    'precio_unitario' => $precioUnitario,
-                    'subtotal' => $subtotal,
-                    'UrevUsuario' => $usuario,
-                    'UrevFechaHora' => now(),
-                ]);
-
-                $direccionOriginal = $transaccion->direccionStock();
-                $direccionInversa = $transaccion->direccionStockInversa();
-
-                if ($idProductoAnterior === $producto->id) {
-                    // Mismo producto: solo se registra la diferencia como movimiento.
-                    $diferencia = $cantidadNueva - $cantidadAnterior;
-
-                    if (abs($diferencia) > 0.0001) {
-                        InventarioService::registrarDocumento(
-                            $transaccion,
-                            $producto->id,
-                            abs($diferencia),
-                            $diferencia > 0 ? $direccionOriginal : $direccionInversa,
-                            [
-                                'id_transaccion_detalle' => $detalle->id,
-                                'costo_unitario' => $precioUnitario,
-                                'motivo' => 'Ajuste por edición del detalle #' . $detalle->id,
-                            ]
-                        );
-                    }
-                } else {
-                    // Cambió el producto: se revierte el anterior y se aplica el nuevo.
-                    InventarioService::registrarDocumento($transaccion, $idProductoAnterior, $cantidadAnterior, $direccionInversa, [
-                        'id_transaccion_detalle' => $detalle->id,
-                        'motivo' => 'Reversión por cambio de producto en el detalle #' . $detalle->id,
-                        'id_movimiento_origen' => InventarioService::buscarMovimientoOrigen($detalle->id, $idProductoAnterior),
-                    ]);
-
-                    InventarioService::registrarDocumento($transaccion, $producto->id, $cantidadNueva, $direccionOriginal, [
-                        'id_transaccion_detalle' => $detalle->id,
-                        'costo_unitario' => $precioUnitario,
-                        'motivo' => 'Alta por cambio de producto en el detalle #' . $detalle->id,
-                    ]);
-                }
-            });
-        } catch (\InvalidArgumentException | \RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $detalle->update([
+            'id_producto' => $producto->id,
+            'cantidad' => $cantidadNueva,
+            'lote' => isset($data['lote']) ? $data['lote'] : null,
+            'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
+            'precio_unitario' => $precioUnitario,
+            'subtotal' => $subtotal,
+            'UrevUsuario' => $usuario,
+            'UrevFechaHora' => now(),
+        ]);
 
         $montoCabecera = $this->recalcularMontoCabecera($detalle->id_transaccion);
 
@@ -352,51 +261,22 @@ class TransaccionesDetalleController extends Controller
     {
         $detalle = TransaccionesDetalle::findOrFail($id);
         $idTransaccion = $detalle->id_transaccion;
-        $idProducto = $detalle->id_producto;
-        $cantidad = (float) $detalle->cantidad;
 
         $transaccion = Transacciones::findOrFail($idTransaccion);
 
-        // Al eliminar, revertir el stock: si era venta → devolver (entrada), si era compra → quitar (salida)
-        $direccionInversa = $transaccion->direccionStockInversa();
-
-        // El movimiento original que se está revirtiendo (para dejar el enlace en el kardex).
-        $origenId = InventarioService::buscarMovimientoOrigen($detalle->id, $idProducto);
-
-        try {
-            $resultado = DB::transaction(function () use (
-                $detalle,
-                $transaccion,
-                $idTransaccion,
-                $idProducto,
-                $cantidad,
-                $direccionInversa,
-                $origenId
-            ) {
-                // Se revierte el stock ANTES de borrar: si el kardex rechaza el
-                // movimiento (stock insuficiente), el detalle no se elimina.
-                $movimiento = InventarioService::registrarDocumento($transaccion, $idProducto, $cantidad, $direccionInversa, [
-                    'id_transaccion_detalle' => $detalle->id,
-                    'motivo' => 'Eliminación del detalle #' . $detalle->id,
-                    'id_movimiento_origen' => $origenId,
-                ]);
-
-                $detalle->delete();
-
-                $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
-
-                return [$movimiento, $montoCabecera];
-            });
-        } catch (\InvalidArgumentException | \RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+        // Un documento ya posteado es inmutable: su stock ya fue aplicado.
+        if ($transaccion->estaPosteada()) {
+            return response()->json(['message' => 'No se pueden modificar los detalles de una transacción finalizada.'], 422);
         }
 
-        [$movimiento, $montoCabecera] = $resultado;
+        // Borrador: el detalle nunca movió stock, así que se borra sin tocar el kardex.
+        $detalle->delete();
+
+        $montoCabecera = $this->recalcularMontoCabecera($idTransaccion);
 
         return response()->json([
-            'message' => 'Transacción eliminada correctamente.',
+            'message' => 'Detalle eliminado correctamente.',
             'monto_cabecera' => $montoCabecera,
-            'stock_actual' => (float) $movimiento->stock_nuevo,
         ], 200);
     }
 }

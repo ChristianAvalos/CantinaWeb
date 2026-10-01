@@ -140,7 +140,7 @@ class TransaccionesController extends Controller
             'lote' => $data['lote'] ?? null,
             'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
             'id_persona' => $data['id_persona'] ?? null,
-            'id_TipoEstado' => $data['id_TipoEstado'],
+            'id_TipoEstado' => Transacciones::ESTADO_ACTIVO, // nace "parqueada": sin efecto en stock
             'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
             'nro_comprobante' => $data['nro_comprobante'] ?? null,
             'id_TipoPago' => $data['id_TipoPago'],
@@ -303,6 +303,53 @@ class TransaccionesController extends Controller
     }
 
     /**
+     * "Posteo" del documento: aplica al kardex todos los detalles de una
+     * transacción parqueada. Es el único punto (junto a la venta POS) que mueve
+     * stock por un documento.
+     *
+     * Idempotente: si el documento ya está posteado no hace nada, y bloquea la
+     * cabecera para que dos finalizaciones simultáneas no muevan stock dos veces.
+     *
+     * @throws \InvalidArgumentException|\RuntimeException
+     */
+    private function aplicarKardex(Transacciones $transaccion): void
+    {
+        // Bloqueo de la cabecera: serializa posteos concurrentes del mismo documento.
+        $transaccion = Transacciones::whereKey($transaccion->id)->lockForUpdate()->first();
+
+        if (! $transaccion) {
+            return;
+        }
+
+        // Idempotencia: si el documento YA tiene movimientos en el kardex, no se
+        // vuelve a aplicar (cubre finalizados previos y datos heredados del modelo
+        // anterior, que movían stock al cargar el detalle).
+        // OJO: acá NO se puede usar estaPosteada(): este método se invoca DESPUÉS de
+        // persistir el estado final, por lo que el estado ya es "posteado". El guard
+        // de "no editar posteadas" vive en el caller.
+        if ($transaccion->movimientosHistorial()->exists()) {
+            return;
+        }
+
+        $direccion = $transaccion->direccionStock();
+        $detalles = TransaccionesDetalle::where('id_transaccion', $transaccion->id)->get();
+
+        foreach ($detalles as $detalle) {
+            InventarioService::registrarDocumento(
+                $transaccion,
+                $detalle->id_producto,
+                (float) $detalle->cantidad,
+                $direccion,
+                [
+                    'id_transaccion_detalle' => $detalle->id,
+                    'costo_unitario' => $detalle->precio_unitario,
+                    'fecha' => $transaccion->fecha,
+                ]
+            );
+        }
+    }
+
+    /**
      * Construye el snapshot estructurado del comprobante de una transacción.
      * Centraliza los datos tal cual se imprimen (empresa, cliente, ítems, montos).
      */
@@ -407,14 +454,14 @@ class TransaccionesController extends Controller
         $data = $request->validated();
         $transaccion = Transacciones::findOrFail($id);
 
-        // No permitir editar una transacción ya finalizada o anulada.
+        // No permitir editar una transacción ya posteada ni anulada.
         // Las correcciones de cabecera se hacen con /corregir y las reversiones con /anular.
-        $estadoActual = (int) $transaccion->id_TipoEstado;
-        if ($estadoActual === 3 || $estadoActual === 7) {
+        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
+            return response()->json(['message' => 'No se puede editar una transacción anulada.'], 422);
+        }
+        if ($transaccion->estaPosteada()) {
             return response()->json([
-                'message' => $estadoActual === 7
-                    ? 'No se puede editar una transacción anulada.'
-                    : 'No se puede editar una transacción finalizada. Usá "Corregir datos" para la cabecera o "Anular" para revertirla.'
+                'message' => 'No se puede editar una transacción finalizada. Usá "Corregir datos" para la cabecera o "Anular" para revertirla.'
             ], 422);
         }
 
@@ -423,15 +470,32 @@ class TransaccionesController extends Controller
         $montoDetalles = (float) $detalleQuery->sum('subtotal');
         $montoNormalizado = $tieneDetalles ? $montoDetalles : (float) ($data['monto'] ?? 0);
 
-        // Al cerrar (submit final) una compra/venta manual, se fuerza el estado Finalizado (3).
         $idTipoMovimiento = (int) ($data['id_TipoMovimiento'] ?? $transaccion->id_TipoMovimiento);
         $finalizar = (bool) $request->input('finalizar', false);
-        $idTipoEstado = ($finalizar && in_array($idTipoMovimiento, [1, 2], true))
-            ? 3
-            : $data['id_TipoEstado'];
+
+        // Finalizar = "postear": el documento deja de ser borrador y recién ahí se
+        // aplica el kardex. El estado final depende del tipo de documento:
+        //   - Compra/Venta → Finalizado (3)
+        //   - Ajuste       → Positivo (5, entrada) o Negativo (6, salida)
+        if ($finalizar) {
+            if ($idTipoMovimiento === 3) {
+                $idTipoEstado = ((int) ($data['id_TipoEstado'] ?? 0) === Transacciones::ESTADO_NEGATIVO)
+                    ? Transacciones::ESTADO_NEGATIVO
+                    : Transacciones::ESTADO_POSITIVO;
+            } else {
+                $idTipoEstado = Transacciones::ESTADO_FINALIZADO;
+            }
+
+            // No se puede postear un documento sin ítems.
+            if (! $tieneDetalles) {
+                return response()->json(['message' => 'No se puede finalizar una transacción sin detalles.'], 422);
+            }
+        } else {
+            $idTipoEstado = $data['id_TipoEstado'];
+        }
 
         try {
-            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $request) {
+            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $request, $finalizar) {
                 $transaccion->update([
                     'nombre' => $data['nombre'],
                     'descripcion' => $data['descripcion'] ?? null,
@@ -459,8 +523,16 @@ class TransaccionesController extends Controller
 
                 // Sincronizar cuotas si la transacción se paga a crédito/cuotas
                 $this->sincronizarCuotas($transaccion, $request);
+
+                // Posteo: recién acá se mueve stock. Se refresca la cabecera para que
+                // direccionStock() lea el estado final ya persistido (en ajustes el
+                // estado define la dirección: Positivo = entrada, Negativo = salida).
+                if ($finalizar) {
+                    $transaccion->refresh();
+                    $this->aplicarKardex($transaccion);
+                }
             });
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -545,7 +617,9 @@ class TransaccionesController extends Controller
 
     /**
      * Anula una transacción (estilo SAP):
-     * revierte el stock de sus detalles y la marca con el estado 'Anulada'.
+     * si el documento ya fue posteado (Finalizado/Positivo/Negativo) revierte el
+     * stock de sus detalles; si todavía era un borrador (Activo) solo lo marca
+     * como Anulada, ya que nunca movió inventario.
      * No se borra físicamente el registro para conservar la trazabilidad.
      */
     public function AnularTransaccion($id)
@@ -553,9 +627,13 @@ class TransaccionesController extends Controller
         $transaccion = Transacciones::findOrFail($id);
 
         // Evitar anular dos veces la misma transacción
-        if ((int) $transaccion->id_TipoEstado === 7) {
+        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
             return response()->json(['message' => 'La transacción ya está anulada.'], 422);
         }
+
+        // Si nunca se posteó (sigue siendo borrador), no movió stock: no hay nada
+        // que revertir, solo se marca como Anulada.
+        $fuePosteada = $transaccion->estaPosteada();
 
         // 1) Validar stock disponible antes de revertir
         $detalles = TransaccionesDetalle::with('producto')->where('id_transaccion', $transaccion->id)->get();
@@ -563,7 +641,7 @@ class TransaccionesController extends Controller
 
         // Si la reversión va a QUITAR stock (compra o ajuste positivo),
         // verificar que el stock actual alcance (que no se haya vendido/consumido ya).
-        if ($operacionInversa === TipoMovimientos::DIRECCION_SALIDA) {
+        if ($fuePosteada && $operacionInversa === TipoMovimientos::DIRECCION_SALIDA) {
             $sinStock = [];
             foreach ($detalles as $detalle) {
                 $stockActual = (float) ($detalle->producto->stock_actual ?? 0);
@@ -586,28 +664,31 @@ class TransaccionesController extends Controller
             }
         }
 
-        // 2) Revertir el stock de cada detalle (operación inversa a la original).
-        //    Cada reversa queda enlazada en el kardex con el movimiento que revierte.
+        // 2) Revertir el stock de cada detalle, solo si el documento fue posteado
+        //    (un borrador nunca movió stock). Cada reversa queda enlazada en el
+        //    kardex con el movimiento que revierte.
         try {
-            DB::transaction(function () use ($transaccion, $detalles, $operacionInversa) {
-                foreach ($detalles as $detalle) {
-                    InventarioService::registrarDocumento(
-                        $transaccion,
-                        $detalle->id_producto,
-                        (float) $detalle->cantidad,
-                        $operacionInversa,
-                        [
-                            'id_transaccion_detalle' => $detalle->id,
-                            'costo_unitario' => $detalle->precio_unitario,
-                            'motivo' => 'Anulación de la transacción #' . $transaccion->id,
-                            'id_movimiento_origen' => InventarioService::buscarMovimientoOrigen($detalle->id, $detalle->id_producto),
-                        ]
-                    );
+            DB::transaction(function () use ($transaccion, $detalles, $operacionInversa, $fuePosteada) {
+                if ($fuePosteada) {
+                    foreach ($detalles as $detalle) {
+                        InventarioService::registrarDocumento(
+                            $transaccion,
+                            $detalle->id_producto,
+                            (float) $detalle->cantidad,
+                            $operacionInversa,
+                            [
+                                'id_transaccion_detalle' => $detalle->id,
+                                'costo_unitario' => $detalle->precio_unitario,
+                                'motivo' => 'Anulación de la transacción #' . $transaccion->id,
+                                'id_movimiento_origen' => InventarioService::buscarMovimientoOrigen($detalle->id, $detalle->id_producto),
+                            ]
+                        );
+                    }
                 }
 
                 // 3) Marcar como Anulada
                 $transaccion->update([
-                    'id_TipoEstado' => 7,
+                    'id_TipoEstado' => Transacciones::ESTADO_ANULADA,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
@@ -617,7 +698,9 @@ class TransaccionesController extends Controller
         }
 
         return response()->json([
-            'message' => 'Transacción anulada correctamente. Stock revertido.',
+            'message' => $fuePosteada
+                ? 'Transacción anulada correctamente. Stock revertido.'
+                : 'Transacción anulada correctamente.',
             'transaccion' => $transaccion->load('tipoEstado'),
         ], 200);
     }
@@ -633,7 +716,7 @@ class TransaccionesController extends Controller
         $transaccion = Transacciones::findOrFail($id);
 
         // No corregir transacciones ya anuladas
-        if ((int) $transaccion->id_TipoEstado === 7) {
+        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
             return response()->json(['message' => 'No se puede corregir una transacción anulada.'], 422);
         }
 

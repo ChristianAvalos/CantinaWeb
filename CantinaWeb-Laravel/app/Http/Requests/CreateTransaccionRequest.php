@@ -24,9 +24,12 @@ class CreateTransaccionRequest extends FormRequest
     public function rules(): array
     {
         $esVenta = (int) $this->input('id_TipoMovimiento') === 2;
+        $esCompra = (int) $this->input('id_TipoMovimiento') === 1;
 
-        // En compras el tipo de comprobante debe ser SIEMPRE Factura.
-        // En ventas se permiten Factura, Ticket, Nota de Crédito y Nota de Débito (no Boleta).
+        // Comprobante:
+        //  - Compra → siempre Factura (obligatoria).
+        //  - Venta  → Factura, Ticket, Nota de Crédito o Nota de Débito (no Boleta).
+        //  - Ajuste → opcional, cualquier tipo (no es un documento fiscal).
         $reglasTipoComprobante = $esVenta
             ? ['nullable', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
                 if ($value === null) {
@@ -38,12 +41,14 @@ class CreateTransaccionRequest extends FormRequest
                     $fail('El tipo de comprobante seleccionado no es válido para ventas.');
                 }
             }]
-            : ['required', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
-                $tipo = \App\Models\TipoComprobante::find($value);
-                if ($tipo && strtolower(trim($tipo->nombre)) !== 'factura') {
-                    $fail('En compras, el tipo de comprobante debe ser Factura.');
-                }
-            }];
+            : ($esCompra
+                ? ['required', 'exists:tipo_comprobantes,id', function ($attribute, $value, $fail) {
+                    $tipo = \App\Models\TipoComprobante::find($value);
+                    if ($tipo && strtolower(trim($tipo->nombre)) !== 'factura') {
+                        $fail('En compras, el tipo de comprobante debe ser Factura.');
+                    }
+                }]
+                : ['nullable', 'exists:tipo_comprobantes,id']);
 
         $rules = [
             'nombre' => 'required|string|max:255',
@@ -63,8 +68,8 @@ class CreateTransaccionRequest extends FormRequest
                 'required',
                 Rule::exists('tipo_movimientos', 'id')->where('ambito', TipoMovimientos::AMBITO_DOCUMENTO),
             ],
-            'nro_comprobante' => $esVenta ? 'nullable|string|max:100' : 'required|string|max:100',
-            'id_persona' => $esVenta ? 'nullable|exists:personas,id' : 'required|exists:personas,id',
+            'nro_comprobante' => $esCompra ? 'required|string|max:100' : 'nullable|string|max:100',
+            'id_persona' => $esCompra ? 'required|exists:personas,id' : 'nullable|exists:personas,id',
             'id_TipoPago' => 'required|exists:tipo_pagos,id',
             'id_FormaPago' => 'required|exists:forma_pagos,id',
             'descripcion' => 'nullable|string'

@@ -29,6 +29,9 @@ function formatearNroFactura(valor) {
     return partes.join('-');
 }
 
+// Normaliza un texto para comparar descripciones de catálogo (estados, etc.).
+const normalizarTexto = (valor) => String(valor || '').trim().toLowerCase();
+
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
     const tipoPersonaFiltro = tipoTransaccion === 'compra'
         ? 'Proveedor'
@@ -97,6 +100,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     // formatear el número de comprobante con guiones (001-002-0000001).
     const tipoComprobanteSeleccionado = tipoComprobante.find(tc => String(tc.id) === String(form.id_TipoComprobante));
     const esFactura = ['factura'].includes(String(tipoComprobanteSeleccionado?.nombre || '').trim().toLowerCase());
+
+    // Ajustes: la dirección del stock se define por el estado (Positivo = entrada,
+    // Negativo = salida). Se resuelven por descripción contra el catálogo cargado.
+    const esAjuste = tipoTransaccion === 'ajuste';
+    const idEstadoPositivo = tipoEstado.find(e => normalizarTexto(e.descripcion) === 'positivo')?.id;
+    const idEstadoNegativo = tipoEstado.find(e => normalizarTexto(e.descripcion) === 'negativo')?.id;
 
     //para personas
     const [personas, setPersonas] = useState([]);
@@ -173,20 +182,22 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             if (incluirCuotas && cuotas.length > 0) {
                 formData.append('cuotas', JSON.stringify(cuotas));
             }
-            let idTransaccion = transaccion.id;
-            let response;
-            // for (let pair of formData.entries()) {
-            //     console.log(pair[0] + ': ' + pair[1]);
-            // }
-            if (modo === 'crear' && !transaccion.id) {
-                response = await clienteAxios.post('api/creartransaccion', formData, {
+            let idTransaccion = transaccion.id || null;
+            // Alta inicial: el documento nace "parqueado" (estado Activo) y el kardex
+            // NO se mueve todavía. El stock se aplica recién al finalizar (posteo).
+            const esAlta = modo === 'crear' && !idTransaccion;
+            if (esAlta) {
+                const creada = await clienteAxios.post('api/creartransaccion', formData, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                if (response.data && response.data.id) {
-                    idTransaccion = response.data.id;
+                if (creada.data && creada.data.id) {
+                    idTransaccion = creada.data.id;
                     transaccion.id = idTransaccion;
                 }
-            } else if (idTransaccion) {
+            }
+            // Actualización / posteo. Si se pidió finalizar hay que asegurar el update
+            // incluso cuando la transacción se acaba de crear (sin detalles previos).
+            if (idTransaccion && (!esAlta || finalizar)) {
                 await clienteAxios.post(`api/update_transaccion/${idTransaccion}`, formData, {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -561,7 +572,16 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 }
                 setTipoComprobante(tiposComprobante);
 
-                if (teRes.data?.length && !form.id_TipoEstado) {
+                if (esAjuste) {
+                    // El ajuste nace borrador (Activo); la dirección real (Positivo/
+                    // Negativo) se elige en el combo y se aplica al finalizar.
+                    const activo = teRes.data?.find(e => normalizarTexto(e.descripcion) === 'activo');
+                    const positivo = teRes.data?.find(e => normalizarTexto(e.descripcion) === 'positivo');
+                    const actual = String(form.id_TipoEstado || '');
+                    if (positivo && (!actual || actual === String(activo?.id))) {
+                        setForm(prev => ({ ...prev, id_TipoEstado: String(positivo.id) }));
+                    }
+                } else if (teRes.data?.length && !form.id_TipoEstado) {
                     setForm(prev => ({ ...prev, id_TipoEstado: String(teRes.data[0].id) }));
                 }
             } catch (error) {
@@ -653,7 +673,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             }
 
             const result = await guardarTransaccion(modo, {
-                finalizar: tipoTransaccion === 'compra' || tipoTransaccion === 'venta',
+                finalizar: ['compra', 'venta', 'ajuste'].includes(tipoTransaccion),
                 incluirCuotas: esCreditoOCuotas,
             });
             if (result.success) {
@@ -712,8 +732,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             setTipoAlertaModal('confirmacion');
             setMensajeAlertaModal(
                 totalRegistros > 0
-                    ? 'La transacción tiene detalles cargados. ¿Anularla? Se revertirá el stock y quedará como Anulada.'
-                    : '¿Anular la transacción? Se marcará como Anulada para que no quede en estado Activo.'
+                    ? 'La transacción todavía no fue finalizada. ¿Descartarla? Quedará como Anulada y no afectará el stock.'
+                    : '¿Descartar la transacción? Quedará como Anulada y no afectará el stock.'
             );
             setMostrarAlertaModal(true);
             return;
@@ -899,6 +919,31 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 </select>
                                 {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
                             </div> */}
+
+                            {/* Dirección del ajuste: define la entrada/salida de stock al
+                                finalizar. Positivo = entrada, Negativo = salida. */}
+                            {esAjuste && (
+                                <div className="col-span-2">
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de ajuste</label>
+                                    {esBloqueado ? (
+                                        <div className="w-full rounded-md border border-transparent px-3 py-2 text-sm text-gray-900">
+                                            {String(form.id_TipoEstado) === String(idEstadoNegativo) ? 'Salida (Negativo)' : 'Entrada (Positivo)'}
+                                        </div>
+                                    ) : (
+                                        <select
+                                            className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                            value={String(form.id_TipoEstado) === String(idEstadoNegativo) ? String(idEstadoNegativo) : String(idEstadoPositivo ?? '')}
+                                            onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
+                                        >
+                                            {idEstadoPositivo && <option value={idEstadoPositivo}>Entrada (Positivo)</option>}
+                                            {idEstadoNegativo && <option value={idEstadoNegativo}>Salida (Negativo)</option>}
+                                        </select>
+                                    )}
+                                    {!esBloqueado && (
+                                        <p className="mt-1 text-xs text-gray-500">El stock se mueve al finalizar el ajuste.</p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Organización: 2 columnas para cerrar la fila de pagos sin dejar huecos */}
                             <div className="col-span-2">
@@ -1405,7 +1450,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 disabled={isSaving}
                                 className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {isSaving ? 'Guardando...' : (transaccion.id ? 'Guardar Cambios' : 'Crear Transaccion')}
+                                {isSaving ? 'Guardando...' : (['compra', 'venta', 'ajuste'].includes(tipoTransaccion) ? (transaccion.id ? 'Finalizar' : 'Crear y Finalizar') : (transaccion.id ? 'Guardar Cambios' : 'Crear Transaccion'))}
                             </button>
                         </div>
                     )}
