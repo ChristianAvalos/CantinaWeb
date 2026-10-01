@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use App\Enums\EstadoTransaccion;
 use App\Models\Producto;
 use App\Models\Transacciones;
 use Illuminate\Database\Eloquent\Model;
@@ -46,7 +47,7 @@ class   TransaccionesDetalle extends Model
         return (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
                 $query->where('id_TipoMovimiento', 2) // ventas
-                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
+                      ->where('id_TipoEstado', '!=', EstadoTransaccion::ANULADA->value);
             })
             ->sum('cantidad');
     }
@@ -63,14 +64,14 @@ class   TransaccionesDetalle extends Model
         $totalComprado = (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
                 $query->where('id_TipoMovimiento', 1) // compras
-                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
+                      ->where('id_TipoEstado', '!=', EstadoTransaccion::ANULADA->value);
             })
             ->sum('cantidad');
 
         $totalVendido = (float) self::where('id_producto', $this->id_producto)
             ->whereHas('transaccion', function ($query) {
                 $query->where('id_TipoMovimiento', 2) // ventas
-                      ->where('id_TipoEstado', '!=', 7); // excluye anuladas
+                      ->where('id_TipoEstado', '!=', EstadoTransaccion::ANULADA->value);
             })
             ->sum('cantidad');
 

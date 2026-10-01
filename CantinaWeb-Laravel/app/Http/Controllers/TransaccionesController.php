@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use DateTime;
 use Illuminate\Http\Request;
+use App\Enums\EstadoTransaccion;
 use App\Models\Transacciones;
 use App\Models\TransaccionesDetalle;
 use Illuminate\Support\Facades\DB;
@@ -140,7 +141,7 @@ class TransaccionesController extends Controller
             'lote' => $data['lote'] ?? null,
             'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
             'id_persona' => $data['id_persona'] ?? null,
-            'id_TipoEstado' => Transacciones::ESTADO_ACTIVO, // nace "parqueada": sin efecto en stock
+            'id_TipoEstado' => EstadoTransaccion::ACTIVO, // nace "parqueada": sin efecto en stock
             'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
             'nro_comprobante' => $data['nro_comprobante'] ?? null,
             'id_TipoPago' => $data['id_TipoPago'],
@@ -201,7 +202,7 @@ class TransaccionesController extends Controller
                     'fecha' => $data['fecha'],
                     'id_organizacion' => $data['id_organizacion'],
                     'id_persona' => $data['id_persona'] ?? null,
-                    'id_TipoEstado' => 3,            // Finalizado
+                    'id_TipoEstado' => EstadoTransaccion::FINALIZADO,
                     'id_TipoMovimiento' => 2,        // Venta
                     'id_TipoPago' => $data['id_TipoPago'],
                     'id_FormaPago' => $data['id_FormaPago'],
@@ -456,7 +457,7 @@ class TransaccionesController extends Controller
 
         // No permitir editar una transacción ya posteada ni anulada.
         // Las correcciones de cabecera se hacen con /corregir y las reversiones con /anular.
-        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
+        if ($transaccion->esAnulada()) {
             return response()->json(['message' => 'No se puede editar una transacción anulada.'], 422);
         }
         if ($transaccion->estaPosteada()) {
@@ -479,11 +480,11 @@ class TransaccionesController extends Controller
         //   - Ajuste       → Positivo (5, entrada) o Negativo (6, salida)
         if ($finalizar) {
             if ($idTipoMovimiento === 3) {
-                $idTipoEstado = ((int) ($data['id_TipoEstado'] ?? 0) === Transacciones::ESTADO_NEGATIVO)
-                    ? Transacciones::ESTADO_NEGATIVO
-                    : Transacciones::ESTADO_POSITIVO;
+                $idTipoEstado = ((int) ($data['id_TipoEstado'] ?? 0) === EstadoTransaccion::NEGATIVO->value)
+                    ? EstadoTransaccion::NEGATIVO
+                    : EstadoTransaccion::POSITIVO;
             } else {
-                $idTipoEstado = Transacciones::ESTADO_FINALIZADO;
+                $idTipoEstado = EstadoTransaccion::FINALIZADO;
             }
 
             // No se puede postear un documento sin ítems.
@@ -491,7 +492,7 @@ class TransaccionesController extends Controller
                 return response()->json(['message' => 'No se puede finalizar una transacción sin detalles.'], 422);
             }
         } else {
-            $idTipoEstado = $data['id_TipoEstado'];
+            $idTipoEstado = (int) $data['id_TipoEstado'];
         }
 
         try {
@@ -627,7 +628,7 @@ class TransaccionesController extends Controller
         $transaccion = Transacciones::findOrFail($id);
 
         // Evitar anular dos veces la misma transacción
-        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
+        if ($transaccion->esAnulada()) {
             return response()->json(['message' => 'La transacción ya está anulada.'], 422);
         }
 
@@ -688,7 +689,7 @@ class TransaccionesController extends Controller
 
                 // 3) Marcar como Anulada
                 $transaccion->update([
-                    'id_TipoEstado' => Transacciones::ESTADO_ANULADA,
+                    'id_TipoEstado' => EstadoTransaccion::ANULADA,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
@@ -716,7 +717,7 @@ class TransaccionesController extends Controller
         $transaccion = Transacciones::findOrFail($id);
 
         // No corregir transacciones ya anuladas
-        if ((int) $transaccion->id_TipoEstado === Transacciones::ESTADO_ANULADA) {
+        if ($transaccion->esAnulada()) {
             return response()->json(['message' => 'No se puede corregir una transacción anulada.'], 422);
         }
 
