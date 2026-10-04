@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/transacciones/grafico', [TransaccionesController::class, 'grafico']);
     Route::post('/transacciones/{id}/anular', [TransaccionesController::class, 'AnularTransaccion']);
     Route::post('/transacciones/{id}/corregir', [TransaccionesController::class, 'corregirTransaccion']);
+    Route::delete('/transacciones/{id}', [TransaccionesController::class, 'destroyTransaccion']);
     Route::post('/ventas/pos', [TransaccionesController::class, 'crearVentaPos']);
     Route::get('/ventas/{id}/comprobante', [TransaccionesController::class, 'obtenerComprobante']);
 

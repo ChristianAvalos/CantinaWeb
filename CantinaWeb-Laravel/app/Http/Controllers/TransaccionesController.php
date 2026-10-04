@@ -756,6 +756,51 @@ class TransaccionesController extends Controller
     }
 
     /**
+     * Elimina FÍSICAMENTE una transacción. Solo un administrador (rol 1) puede
+     * hacerlo y únicamente si el registro NO está enlazado a nada que ya haya
+     * tenido efecto: sin kardex, sin cuotas y sin comprobante emitido.
+     *
+     * Es la excepción controlada a la regla SAP de "no borrar, anular": sirve
+     * para limpiar borradores cargados por error.
+     */
+    public function destroyTransaccion($id)
+    {
+        $user = Auth::user();
+
+        if (! $user || (int) $user->rol_id !== 1) {
+            return response()->json(['message' => 'Solo un administrador puede eliminar transacciones.'], 403);
+        }
+
+        $transaccion = Transacciones::findOrFail($id);
+
+        // Candados: no se borra nada que ya haya impactado o esté enlazado.
+        if ($transaccion->estaPosteada()) {
+            return response()->json(['message' => 'La transacción está finalizada: anulala en vez de eliminarla.'], 422);
+        }
+        if ($transaccion->esAnulada()) {
+            return response()->json(['message' => 'La transacción ya está anulada.'], 422);
+        }
+        if ($transaccion->movimientosHistorial()->exists()) {
+            return response()->json(['message' => 'La transacción tiene movimientos de stock (kardex): no se puede eliminar.'], 422);
+        }
+        if ($transaccion->cuotas()->exists()) {
+            return response()->json(['message' => 'La transacción tiene cuotas asociadas: no se puede eliminar.'], 422);
+        }
+        if ($transaccion->comprobante()->exists()) {
+            return response()->json(['message' => 'La transacción tiene un comprobante emitido: no se puede eliminar.'], 422);
+        }
+
+        DB::transaction(function () use ($transaccion) {
+            // La FK de transacciones_detalles es ON DELETE CASCADE, pero se borra
+            // explícito para no depender de la config del motor.
+            $transaccion->transacionDetalles()->delete();
+            $transaccion->delete();
+        });
+
+        return response()->json(['message' => 'Transacción eliminada definitivamente.']);
+    }
+
+    /**
      * Indica si la transacción (compra o venta) se paga a crédito o en cuotas.
      */
     private function esCreditoCuotas(Transacciones $transaccion): bool

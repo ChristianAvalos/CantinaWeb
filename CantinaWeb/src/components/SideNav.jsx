@@ -16,7 +16,7 @@ const buildExpandedSections = (pathname) =>
   );
 
 export default function SideNav() {
-  const { hasPermission, loading } = useAuthPermisos();
+  const { hasPermission, isAdmin, loading } = useAuthPermisos();
   const { theme } = useTheme();
   const location = useLocation();
 
@@ -263,7 +263,7 @@ export default function SideNav() {
                     </li>
                   )}
 
-                  {hasPermission('Transacciones') && (
+                  {isAdmin && hasPermission('Transacciones') && (
                     <li>
                       <Link to="/transacciones" className={getItemLinkClasses('/transacciones')}>
                         <img src="/img/Icon/sort.png" alt="Transacciones" className="h-5 w-5 shrink-0" />

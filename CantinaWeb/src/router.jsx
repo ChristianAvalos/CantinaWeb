@@ -148,7 +148,7 @@ const router = createBrowserRouter ([
             {
                 path:'/transacciones',
                 element: withSuspense(
-                <ProtectedRoute permission="Transacciones">
+                <ProtectedRoute permission="Transacciones" adminOnly>
                     <Transacciones/>
                 </ProtectedRoute>
                 )

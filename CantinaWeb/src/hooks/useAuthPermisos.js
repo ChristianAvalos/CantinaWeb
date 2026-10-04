@@ -7,6 +7,7 @@ const CONNECTION_TOAST_ID = 'backend-connection-error';
 
 const useAuthPermisos = () => {
     const [permissions, setPermissions] = useState([]);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
     const [authError, setAuthError] = useState(false);
     const [connectionError, setConnectionError] = useState(false);
@@ -16,6 +17,7 @@ const useAuthPermisos = () => {
             const token = localStorage.getItem('AUTH_TOKEN');
             if (!token) {
                 setPermissions([]);
+                setIsAdmin(false);
                 setAuthError(false);
                 setConnectionError(false);
                 setLoading(false);
@@ -32,7 +34,9 @@ const useAuthPermisos = () => {
                 });
 
 
-                if (data && data.role.permissions) {
+                setIsAdmin(Number(data?.rol_id) === 1);
+
+                if (data?.role?.permissions) {
                     const permissionNames = data.role.permissions.map(permission => permission.name);
                     setPermissions(permissionNames);
                 }
@@ -42,6 +46,7 @@ const useAuthPermisos = () => {
                     localStorage.removeItem('AUTH_USER_ID');
                     setAuthError(true);
                     setPermissions([]);
+                    setIsAdmin(false);
                 } else if (isConnectionError(error)) {
                     setConnectionError(true);
                     toast.error('Sin conexion con el servidor. Intenta nuevamente.', { toastId: CONNECTION_TOAST_ID });
@@ -60,7 +65,7 @@ const useAuthPermisos = () => {
         return permissions.includes(permissionName);
     };
 
-    return { permissions, hasPermission,loading, authError, connectionError };
+    return { permissions, hasPermission, isAdmin, loading, authError, connectionError };
 };
 
 export default useAuthPermisos;

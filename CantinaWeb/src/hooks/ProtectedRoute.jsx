@@ -3,7 +3,7 @@ import { Navigate } from 'react-router';
 import useAuthPermisos from "./useAuthPermisos";
 import clienteAxios from "../config/axios";
 
-const ProtectedRoute = ({ permission, children }) => {
+const ProtectedRoute = ({ permission, adminOnly = false, children }) => {
     const token = localStorage.getItem('AUTH_TOKEN');
     const [userRole, setUserRole] = useState(null);
     const [roleLoaded, setRoleLoaded] = useState(false);
@@ -35,7 +35,7 @@ const ProtectedRoute = ({ permission, children }) => {
         return <Navigate to="/auth/login" replace />;
     }
 
-    const { hasPermission, loading, authError, connectionError } = useAuthPermisos();
+    const { hasPermission, isAdmin, loading, authError, connectionError } = useAuthPermisos();
 
     if (authError) {
         return <Navigate to="/auth/login" replace />;
@@ -62,6 +62,15 @@ const ProtectedRoute = ({ permission, children }) => {
     if (!hasPermission(permission)) {
         // Si el usuario está autenticado pero no es admin (rol_id !== 1),
         // redirigir a /iniciousuarios en lugar de /error
+        if (userRole !== null && userRole !== 1) {
+            return <Navigate to="/iniciousuarios" replace />;
+        }
+
+        return <Navigate to="/error" replace />;
+    }
+
+    // Ruta exclusiva de administrador (rol_id = 1).
+    if (adminOnly && !isAdmin) {
         if (userRole !== null && userRole !== 1) {
             return <Navigate to="/iniciousuarios" replace />;
         }
