@@ -1,9 +1,11 @@
 import { useEffect, useState,useRef } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
+import { calcularDigitoVerificadorRuc, formatearRuc } from '../helpers/HelpersNumeros';
 export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion, organizacion = {} }) {
     const [RazonSocial, setRazonSocial] = useState(organizacion.RazonSocial || '');
-    const [Ruc, setRuc] = useState(organizacion.RUC || '');
+    // El estado guarda SOLO la base del RUC (sin el dígito verificador).
+    const [Ruc, setRuc] = useState((organizacion.RUC || '').toString().split('-')[0].replace(/\D/g, '').slice(0, 8));
     const [Direccion, setDireccion] = useState(organizacion.Direccion || '');
     const [CiudadSeleccionado, setCiudadSeleccionado] = useState(organizacion.Ciudad_id || '');
     const [paisSeleccionado, setPaisSeleccionado] = useState(organizacion.Pais_id || '');
@@ -25,6 +27,18 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     const nombreRef = useRef(null);
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
+
+    // El RUC se compone de la base (lo que se escribe) + el dígito verificador
+    // calculado (módulo 11), igual que en Personas.
+    const baseRuc = (Ruc || '').toString().split('-')[0].replace(/\D/g, '');
+    const digitoVerificadorRuc = calcularDigitoVerificadorRuc(baseRuc);
+
+    // El input solo guarda la base (máx. 8 dígitos); si pegan un RUC completo se ignora el DV.
+    const handleRucChange = (e) => {
+        const valor = e.target.value;
+        const parteBase = valor.includes('-') ? valor.split('-')[0] : valor;
+        setRuc(parteBase.replace(/\D/g, '').slice(0, 8));
+    };
 
     // Enfocar el campo de razón social al abrir el modal
     useEffect(() => {
@@ -66,7 +80,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
     useEffect(() => {
         if (modo === 'editar') {
             setRazonSocial(organizacion.RazonSocial || '');
-            setRuc(organizacion.RUC || '');
+            setRuc((organizacion.RUC || '').toString().split('-')[0].replace(/\D/g, '').slice(0, 8));
             setDireccion(organizacion.Direccion || '');
             setCiudadSeleccionado(organizacion.Ciudad_id || '');
             setPaisSeleccionado(organizacion.Pais_id || '');
@@ -87,7 +101,7 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
 
         const formData = new FormData();
         formData.append("name", RazonSocial);
-        formData.append("ruc", Ruc);
+        formData.append("ruc", formatearRuc(Ruc));
         formData.append("direccion", Direccion);
         formData.append("email", Email);
         formData.append("pais_id", paisSeleccionado);
@@ -223,16 +237,23 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
                                 />
                                 {errores.name && <p className="text-red-500 text-sm">{errores.name[0]}</p>}
                             </div>
-                            {/* RUC */}
+                            {/* RUC: base + dígito verificador calculado (igual que en Personas) */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">RUC</label>
-                                <input
-                                    type="text"
-                                    className={`w-full px-3 py-2 border ${errores.ruc ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    placeholder="RUC"
-                                    value={Ruc}
-                                    onChange={(e) => setRuc(e.target.value)}
-                                />
+                                <div className="flex">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={8}
+                                        className={`w-full px-3 py-2 border ${errores.ruc ? 'border-red-500' : 'border-gray-300'} border-r-0 rounded-l-md rounded-r-none shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        placeholder="Nro. de RUC"
+                                        value={baseRuc}
+                                        onChange={handleRucChange}
+                                    />
+                                    <span className="inline-flex items-center px-3 rounded-r-md border border-gray-300 bg-gray-100 text-gray-700 font-medium tabular-nums">
+                                        - {digitoVerificadorRuc ?? '–'}
+                                    </span>
+                                </div>
                                 {errores.ruc && <p className="text-red-500 text-sm">{errores.ruc[0]}</p>}
                             </div>
 
