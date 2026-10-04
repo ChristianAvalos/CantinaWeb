@@ -29,7 +29,6 @@ class Transacciones extends Model
     protected $table = 'transacciones';
     protected $fillable = [
         'id_organizacion',
-        'nombre',
         'id_TipoMovimiento',
         'id_TipoEstado',
         'id_TipoComprobante',

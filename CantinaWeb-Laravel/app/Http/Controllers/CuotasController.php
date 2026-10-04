@@ -55,7 +55,7 @@ class CuotasController extends Controller
         $cuotas->when($search, function ($q) use ($search) {
             $q->where(function ($s) use ($search) {
                 $s->whereHas('transaccion', function ($q2) use ($search) {
-                    $q2->where('nombre', 'ilike', '%' . $search . '%')
+                    $q2->where('descripcion', 'ilike', '%' . $search . '%')
                         ->orWhereHas('persona', function ($q3) use ($search) {
                             $q3->where('nombre', 'ilike', '%' . $search . '%');
                         });

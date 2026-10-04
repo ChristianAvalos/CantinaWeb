@@ -15,7 +15,6 @@ return new class extends Migration
         Schema::create('transacciones', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_organizacion');
-            $table->string('nombre');
             $table->unsignedBigInteger('id_TipoMovimiento');
             $table->unsignedBigInteger('id_TipoEstado');
             $table->decimal('monto',19,4)->default(0);

@@ -191,7 +191,6 @@ export default function Ajustes() {
                                             <th>Nro. Comprobante</th>
                                             <th>Tipo</th>
                                             <th>Estado</th>
-                                            <th>Nombre</th>
                                             <th>Descripcción</th>
                                             <th>Proveedor</th>
                                             <th>Monto</th>
@@ -201,7 +200,7 @@ export default function Ajustes() {
                                     </thead>
                                     <tbody>
                                         {ajustes.length === 0 ? (
-                                            <NoExistenDatos colSpan={17} mensaje="No existen ajustes." />
+                                            <NoExistenDatos colSpan={16} mensaje="No existen ajustes." />
                                         ) : (
 
                                             ajustes.map((ajuste) => (
@@ -214,7 +213,6 @@ export default function Ajustes() {
                                                     <td className={Number(ajuste.id_TipoEstado) === 7 ? 'text-red-600 font-semibold' : ''}>
                                                         {ajuste.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
-                                                    <td>{ajuste.nombre}</td>
                                                     <td>{ajuste.descripcion}</td>
                                                     <td>{ajuste.persona ? ajuste.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(ajuste.monto)}</td>

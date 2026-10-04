@@ -48,7 +48,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
     //area de las transacciones
     const [form, setForm] = useState({
-        nombre: transaccion.nombre || '',
         descripcion: transaccion.descripcion || '',
         id_organizacion: transaccion.id_organizacion || '',
         monto: transaccion.monto ?? 0,
@@ -155,16 +154,16 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
     const [transaccionAEliminar, setTransaccionAEliminar] = useState(null);
 
-    const nombreRef = useRef(null);
+    const fechaRef = useRef(null);
     // Snapshot del id original al abrir el modal: si no existía, es una transacción NUEVA.
     // Sirve para saber que, al cancelar, la cabecera auto-guardada (necesaria para cargar
     // detalles) debe anularse y no quedar en estado 'Activo' sin forma de cambiarla.
     const idOriginalRef = useRef(transaccion.id || null);
     const esTransaccionNueva = !idOriginalRef.current;
-    // Enfocar el campo de nombre al abrir el modal
+    // Enfocar el campo de fecha al abrir el modal
     useEffect(() => {
-        if (nombreRef.current) {
-            nombreRef.current.focus();
+        if (fechaRef.current) {
+            fechaRef.current.focus();
         }
     }, []);
 
@@ -502,7 +501,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     useEffect(() => {
         if (modo === 'editar') {
             setForm({
-                nombre: transaccion.nombre || '',
                 id_organizacion: transaccion.id_organizacion || '',
                 descripcion: transaccion.descripcion || '',
                 monto: transaccion.monto ?? 0,
@@ -620,7 +618,6 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         setErrores({});
         try {
             const response = await clienteAxios.post(`api/transacciones/${transaccion.id}/corregir`, {
-                nombre: form.nombre,
                 descripcion: form.descripcion || null,
                 fecha: form.fecha,
                 nro_comprobante: form.nro_comprobante || null,
@@ -792,27 +789,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
                         {/* Campos del formulario */}
                         <div className="col-span-2 sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                            {/* Campo para Nombre */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Nombre</label>
-                                <input
-                                    type="text"
-                                    name='nombre'
-                                    ref={nombreRef}
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    placeholder="Introduce el nombre"
-                                    value={form.nombre}
-                                    onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                                />
-                                {errores.nombre && <p className="text-red-500 text-sm">{errores.nombre[0]}</p>}
-                            </div>
-
                             {/* Campo para fecha */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Fecha</label>
                                 <input
                                     type="date"
+                                    name="fecha"
+                                    ref={fechaRef}
                                     disabled={esSoloLectura}
                                     className={`w-full px-3 py-2 border ${errores.fecha ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
                                     placeholder="Introduce la fecha"

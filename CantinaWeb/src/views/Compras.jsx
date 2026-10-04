@@ -14,7 +14,7 @@ const FILTROS_COMPRAS = [
         key: 'search',
         label: 'Buscar compra',
         type: 'text',
-        placeholder: 'Buscar compra (nombre,descripción,proveedor,monto...)',
+        placeholder: 'Buscar compra (descripción,proveedor,monto...)',
     },
     {
         key: 'nro_comprobante',
@@ -202,7 +202,6 @@ export default function Compras() {
                                             <th>ID</th>
                                             <th>Organización</th>
                                             <th>Nro. Comprobante</th>
-                                            <th>Nombre</th>
                                             <th>Descripción</th>
                                             <th>Proveedor</th>
                                             <th className="text-right">Monto</th>
@@ -213,7 +212,7 @@ export default function Compras() {
                                     </thead>
                                     <tbody>
                                         {compras.length === 0 ? (
-                                            <NoExistenDatos colSpan={10} mensaje="No existen compras." />
+                                            <NoExistenDatos colSpan={9} mensaje="No existen compras." />
                                         ) : (
 
                                             compras.map((compra) => (
@@ -221,7 +220,6 @@ export default function Compras() {
                                                     <td className="text-center tabular-nums">{compra.id}</td>
                                                     <td>{compra.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center tabular-nums">{compra.nro_comprobante}</td>
-                                                    <td className="font-medium text-slate-800">{compra.nombre}</td>
                                                     <td className="text-slate-600">{compra.descripcion}</td>
                                                     <td>{compra.persona ? compra.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right font-semibold tabular-nums">{formatearGuarani(compra.monto)}</td>

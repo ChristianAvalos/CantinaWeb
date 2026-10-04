@@ -158,7 +158,6 @@ export default function Transacciones() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
                                             <th>Fecha/Hora</th>
-                                            <th>Nombre</th>
                                             <th>Categoria</th>
                                             <th>Tipo de movimiento</th>
                                             <th>Monto</th>
@@ -167,14 +166,13 @@ export default function Transacciones() {
                                     </thead>
                                     <tbody>
                                         {transacciones.length === 0 ? (
-                                            <NoExistenDatos colSpan={7} mensaje="No existen transacciones." />
+                                            <NoExistenDatos colSpan={6} mensaje="No existen transacciones." />
                                         ) : (
 
                                             transacciones.map((transaccion) => (
                                                 <tr key={transaccion.id}>
                                                     <td>{transaccion.id}</td>
                                                     <td className="text-center">{formatDateToInput(transaccion.UrevFechaHora)}</td>
-                                                    <td>{transaccion.nombre}</td>
                                                     <td className="text-center">{transaccion.categoria ? transaccion.categoria.nombre : 'Sin categoria'}</td>
                                                     <td className="text-center">{transaccion.tipo_movimiento ? transaccion.tipo_movimiento.nombre : 'Sin movimiento'}</td>
                                                     <td className="text-end">{formatearGuarani(transaccion.monto)}</td>

@@ -74,8 +74,7 @@ class TransaccionesController extends Controller
 
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
                 $q->where(function ($s) use ($search, $searchFecha) {
-                    $s->where('nombre', 'ilike', '%' . $search . '%')
-                        ->orWhere('descripcion', 'ilike', '%' . $search . '%')
+                    $s->where('descripcion', 'ilike', '%' . $search . '%')
                         ->orWhere('monto', 'ilike', '%' . $search . '%')
                         ->orWhereHas('persona', function ($q2) use ($search) {
                             $q2->where('nombre', 'ilike', '%' . $search . '%');
@@ -135,7 +134,6 @@ class TransaccionesController extends Controller
         $data = $request->validated();
 
         $transaccion = Transacciones::create([
-            'nombre' => $data['nombre'],
             'descripcion' => $data['descripcion'] ?? null,
             'fecha' => $data['fecha'],
             'lote' => $data['lote'] ?? null,
@@ -171,7 +169,6 @@ class TransaccionesController extends Controller
     public function crearVentaPos(Request $request)
     {
         $data = $request->validate([
-            'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string|max:1000',
             'fecha' => 'required|date',
             'id_organizacion' => 'required|exists:organizacion,id',
@@ -197,7 +194,6 @@ class TransaccionesController extends Controller
             $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
                 $cabecera = Transacciones::create([
-                    'nombre' => $data['nombre'],
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'id_organizacion' => $data['id_organizacion'],
@@ -498,7 +494,6 @@ class TransaccionesController extends Controller
         try {
             DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $request, $finalizar) {
                 $transaccion->update([
-                    'nombre' => $data['nombre'],
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'lote' => $data['lote'] ?? null,
@@ -708,7 +703,7 @@ class TransaccionesController extends Controller
 
     /**
      * Corrige solo los datos de cabecera NO contables de una transacción
-     * (nombre, descripción, fecha, nro_comprobante, tipo de comprobante y persona).
+     * (descripción, fecha, nro_comprobante, tipo de comprobante y persona).
      * No modifica estado, movimiento, montos ni stock: permite arreglar un
      * error de tipeo (ej. número de factura) sin anular la operación.
      */
@@ -722,7 +717,6 @@ class TransaccionesController extends Controller
         }
 
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],
             'fecha' => ['required', 'date'],
             'nro_comprobante' => ['nullable', 'string', 'max:50'],
@@ -731,7 +725,6 @@ class TransaccionesController extends Controller
         ]);
 
         $transaccion->update([
-            'nombre' => $data['nombre'],
             'descripcion' => $data['descripcion'] ?? null,
             'fecha' => $data['fecha'],
             'nro_comprobante' => $data['nro_comprobante'] ?? null,

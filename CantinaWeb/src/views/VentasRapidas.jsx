@@ -430,7 +430,6 @@ export default function VentasRapidas() {
             // llamada. El backend valida el stock y revierte todo si falla algo.
             const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const transactionPayload = {
-                nombre: `Venta POS - ${new Date().toLocaleString('es-PY')}`,
                 descripcion: `Venta rápida - ${cart.length} producto(s)`,
                 fecha: fechaActual,
                 id_organizacion: user?.id_organizacion || '',

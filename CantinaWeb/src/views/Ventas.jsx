@@ -225,7 +225,6 @@ export default function Ventas() {
                                             <th>ID</th>
                                             <th>Organización</th>
                                             <th>Nro. Comprobante</th>
-                                            <th>Nombre</th>
                                             <th>Descripción</th>
                                             <th>Cliente</th>
                                             <th className="text-right">Monto</th>
@@ -238,7 +237,7 @@ export default function Ventas() {
                                     </thead>
                                     <tbody>
                                         {ventas.length === 0 ? (
-                                            <NoExistenDatos colSpan={12} mensaje="No existen ventas." />
+                                            <NoExistenDatos colSpan={11} mensaje="No existen ventas." />
                                         ) : (
 
                                             ventas.map((venta) => (
@@ -246,7 +245,6 @@ export default function Ventas() {
                                                     <td className="text-center tabular-nums">{venta.id}</td>
                                                     <td>{venta.organizacion?.RazonSocial || 'Sin organización'}</td>
                                                     <td className="text-center tabular-nums">{venta.nro_comprobante}</td>
-                                                    <td className="font-medium text-slate-800">{venta.nombre}</td>
                                                     <td className="text-slate-600">{venta.descripcion}</td>
                                                     <td>{venta.persona ? venta.persona.nombre : 'Sin cliente'}</td>
                                                     <td className="text-right font-semibold tabular-nums">{formatearGuarani(venta.monto)}</td>

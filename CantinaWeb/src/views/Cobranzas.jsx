@@ -185,7 +185,7 @@ export default function Cobranzas() {
                                             cuotas.map((cuota) => (
                                                 <tr key={cuota.id}>
                                                     <td className="text-center">{cuota.numero}</td>
-                                                    <td>{cuota.transaccion?.nombre || `Venta #${cuota.id_transaccion}`}</td>
+                                                    <td>{cuota.transaccion?.descripcion || `Venta #${cuota.id_transaccion}`}</td>
                                                     <td>{cuota.transaccion?.persona?.nombre || 'Consumidor Final'}</td>
                                                     <td className="text-center">{formatearFechaVista(cuota.fecha_vencimiento)}</td>
                                                     <td className="text-end">{formatearGuarani(cuota.monto)}</td>
