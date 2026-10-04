@@ -8,6 +8,7 @@ use Database\Seeders\PaisSeeder;
 use Database\Seeders\RolesSeeder;
 use Database\Seeders\BancosSeeder;
 use Database\Seeders\TipoPagoSeeder;
+use Database\Seeders\MotivoAjusteSeeder;
 use Database\Seeders\FormaPagoSeeder;
 use Database\Seeders\TipoEstadoSeeder;
 use Database\Seeders\TipoMonedaSeeder;
@@ -45,6 +46,7 @@ class DatabaseSeeder extends Seeder
         $this->call(BancosSeeder::class);
         $this->call(TipoMonedaSeeder::class);
         $this->call(TipoPagoSeeder::class);
+        $this->call(MotivoAjusteSeeder::class);
         $this->call(FormaPagoSeeder::class);
         $this->call(TipoComprobanteSeeder::class);
     }

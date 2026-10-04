@@ -25,6 +25,7 @@ class UpdateTransaccionRequest extends FormRequest
     {
         $esVenta = (int) $this->input('id_TipoMovimiento') === 2;
         $esCompra = (int) $this->input('id_TipoMovimiento') === 1;
+        $esAjuste = (int) $this->input('id_TipoMovimiento') === 3;
 
         // Comprobante:
         //  - Compra → siempre Factura (obligatoria).
@@ -59,7 +60,9 @@ class UpdateTransaccionRequest extends FormRequest
             'monto_recibido' => 'nullable|numeric',
             'vuelto' => 'nullable|numeric',
             'iva' => 'nullable|numeric',
-            'id_TipoEstado' => 'required|exists:tipo_estados,id',
+            'id_TipoEstado' => $esAjuste ? 'nullable|exists:tipo_estados,id' : 'required|exists:tipo_estados,id',
+            'id_MotivoAjuste' => $esAjuste ? 'required|exists:motivo_ajustes,id' : 'nullable|exists:motivo_ajustes,id',
+            'direccion' => $esAjuste ? 'required|in:entrada,salida' : 'nullable|in:entrada,salida',
             'id_TipoComprobante' => $reglasTipoComprobante,
             // Solo tipos de DOCUMENTO (Compra/Venta/Ajuste). Nunca un movimiento
             // de inventario del kardex (101, 201...), que vive en la misma tabla.
@@ -69,8 +72,8 @@ class UpdateTransaccionRequest extends FormRequest
             ],
             'nro_comprobante' => $esCompra ? 'required|string|max:100' : 'nullable|string|max:100',
             'id_persona' => $esCompra ? 'required|exists:personas,id' : 'nullable|exists:personas,id',
-            'id_TipoPago' => 'required|exists:tipo_pagos,id',
-            'id_FormaPago' => 'required|exists:forma_pagos,id',
+            'id_TipoPago' => $esAjuste ? 'nullable|exists:tipo_pagos,id' : 'required|exists:tipo_pagos,id',
+            'id_FormaPago' => $esAjuste ? 'nullable|exists:forma_pagos,id' : 'required|exists:forma_pagos,id',
             'descripcion' => 'nullable|string'
         ];
         return $rules;
@@ -94,6 +97,12 @@ class UpdateTransaccionRequest extends FormRequest
 
             'id_TipoEstado.required' => 'Debe seleccionar un tipo de estado.',
             'id_TipoEstado.exists' => 'El tipo de estado seleccionado no existe.',
+
+            'id_MotivoAjuste.required' => 'Debe seleccionar el motivo del ajuste.',
+            'id_MotivoAjuste.exists' => 'El motivo del ajuste seleccionado no existe.',
+
+            'direccion.required' => 'Debe seleccionar la dirección del ajuste.',
+            'direccion.in' => 'La dirección del ajuste debe ser entrada o salida.',
 
             'id_TipoComprobante.exists' => 'El tipo de comprobante seleccionado no existe.',
 

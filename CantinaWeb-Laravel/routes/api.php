@@ -6,6 +6,7 @@ use App\Http\Controllers\CiudadController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FormaPagoController;
 use App\Http\Controllers\MovimientoHistorialController;
+use App\Http\Controllers\MotivoAjusteController;
 use App\Http\Controllers\OrganizacionController;
 use App\Http\Controllers\PaisController;
 use App\Http\Controllers\PermissionController;
@@ -149,6 +150,9 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //tipo de pago 
     Route::get('/tipo_pago',[TipoPagoController::class,'index']);
+
+    //motivo de ajuste de inventario
+    Route::get('/motivo_ajustes',[MotivoAjusteController::class,'index']);
 
     //forma de pago 
     Route::get('/forma_pago',[FormaPagoController::class,'index']);

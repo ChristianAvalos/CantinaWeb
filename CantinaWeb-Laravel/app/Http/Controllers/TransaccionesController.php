@@ -57,6 +57,7 @@ class TransaccionesController extends Controller
             'tipoMovimiento',
             'persona',
             'tipoEstado',
+            'motivoAjuste',
             'tipoPago',
             'tipoComprobante',
             'tipoMoneda',
@@ -81,6 +82,9 @@ class TransaccionesController extends Controller
                         })
                         ->orWhereHas('tipoMovimiento', function ($q3) use ($search) {
                             $q3->where('nombre', 'ilike', '%' . $search . '%');
+                        })
+                        ->orWhereHas('motivoAjuste', function ($q4) use ($search) {
+                            $q4->where('nombre', 'ilike', '%' . $search . '%');
                         });
 
                     // Si el search es una fecha válida, buscar por fecha exacta
@@ -140,10 +144,12 @@ class TransaccionesController extends Controller
             'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
             'id_persona' => $data['id_persona'] ?? null,
             'id_TipoEstado' => EstadoTransaccion::ACTIVO, // nace "parqueada": sin efecto en stock
+            'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
+            'direccion' => ((int) $data['id_TipoMovimiento'] === 3) ? ($data['direccion'] ?? null) : null,
             'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
             'nro_comprobante' => $data['nro_comprobante'] ?? null,
-            'id_TipoPago' => $data['id_TipoPago'],
-            'id_FormaPago' => $data['id_FormaPago'],
+            'id_TipoPago' => $data['id_TipoPago'] ?? null,
+            'id_FormaPago' => $data['id_FormaPago'] ?? null,
             'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
             'id_TipoMovimiento' => $data['id_TipoMovimiento'],
             'monto' => $data['monto'] ?? 0,
@@ -329,6 +335,8 @@ class TransaccionesController extends Controller
         }
 
         $direccion = $transaccion->direccionStock();
+        // Motivo (solo ajustes): explica el movimiento en el kardex. En compras/ventas es null.
+        $motivo = $transaccion->motivoAjuste?->nombre;
         $detalles = TransaccionesDetalle::where('id_transaccion', $transaccion->id)->get();
 
         foreach ($detalles as $detalle) {
@@ -341,6 +349,7 @@ class TransaccionesController extends Controller
                     'id_transaccion_detalle' => $detalle->id,
                     'costo_unitario' => $detalle->precio_unitario,
                     'fecha' => $transaccion->fecha,
+                    'motivo' => $motivo,
                 ]
             );
         }
@@ -476,7 +485,7 @@ class TransaccionesController extends Controller
         //   - Ajuste       → Positivo (5, entrada) o Negativo (6, salida)
         if ($finalizar) {
             if ($idTipoMovimiento === 3) {
-                $idTipoEstado = ((int) ($data['id_TipoEstado'] ?? 0) === EstadoTransaccion::NEGATIVO->value)
+                $idTipoEstado = ($data['direccion'] ?? null) === TipoMovimientos::DIRECCION_SALIDA
                     ? EstadoTransaccion::NEGATIVO
                     : EstadoTransaccion::POSITIVO;
             } else {
@@ -488,21 +497,27 @@ class TransaccionesController extends Controller
                 return response()->json(['message' => 'No se puede finalizar una transacción sin detalles.'], 422);
             }
         } else {
-            $idTipoEstado = (int) $data['id_TipoEstado'];
+            // Sin finalizar NO se cambia el estado: un borrador sigue siendo borrador.
+            // OJO con ajustes: el "Tipo de ajuste" (Positivo=5 / Negativo=6) solo define
+            // la DIRECCIÓN y se aplica recién al finalizar. Si se persistiera ahora, el
+            // documento quedaría marcado como posteado (5/6) y bloquearía el detalle.
+            $idTipoEstado = $transaccion->id_TipoEstado?->value ?? $transaccion->id_TipoEstado;
         }
 
         try {
-            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $request, $finalizar) {
+            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $idTipoMovimiento, $request, $finalizar) {
                 $transaccion->update([
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'lote' => $data['lote'] ?? null,
                     'id_persona' => $data['id_persona'],
                     'id_TipoEstado' => $idTipoEstado,
+                    'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
+                    'direccion' => ($idTipoMovimiento === 3) ? ($data['direccion'] ?? null) : null,
                     'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
                     'nro_comprobante' => $data['nro_comprobante'] ?? null,
-                    'id_TipoPago' => $data['id_TipoPago'],
-                    'id_FormaPago' => $data['id_FormaPago'],
+                    'id_TipoPago' => $data['id_TipoPago'] ?? null,
+                    'id_FormaPago' => $data['id_FormaPago'] ?? null,
                     'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
                     'id_Caja' => $data['id_Caja'] ?? null,
                     'id_Banco' => $data['id_Banco'] ?? null,
@@ -521,8 +536,8 @@ class TransaccionesController extends Controller
                 $this->sincronizarCuotas($transaccion, $request);
 
                 // Posteo: recién acá se mueve stock. Se refresca la cabecera para que
-                // direccionStock() lea el estado final ya persistido (en ajustes el
-                // estado define la dirección: Positivo = entrada, Negativo = salida).
+                // direccionStock() lea la dirección ya persistida (ajustes: columna
+                // `direccion`; compras/ventas: tipo de movimiento).
                 if ($finalizar) {
                     $transaccion->refresh();
                     $this->aplicarKardex($transaccion);

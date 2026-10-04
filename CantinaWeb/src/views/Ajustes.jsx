@@ -192,6 +192,7 @@ export default function Ajustes() {
                                             <th>Tipo</th>
                                             <th>Estado</th>
                                             <th>Descripcción</th>
+                                            <th>Motivo</th>
                                             <th>Proveedor</th>
                                             <th>Monto</th>
                                             <th>Urev</th>
@@ -200,7 +201,7 @@ export default function Ajustes() {
                                     </thead>
                                     <tbody>
                                         {ajustes.length === 0 ? (
-                                            <NoExistenDatos colSpan={16} mensaje="No existen ajustes." />
+                                            <NoExistenDatos colSpan={12} mensaje="No existen ajustes." />
                                         ) : (
 
                                             ajustes.map((ajuste) => (
@@ -214,6 +215,7 @@ export default function Ajustes() {
                                                         {ajuste.tipo_estado?.descripcion || 'Sin estado'}
                                                     </td>
                                                     <td>{ajuste.descripcion}</td>
+                                                    <td>{ajuste.motivo_ajuste?.nombre || '—'}</td>
                                                     <td>{ajuste.persona ? ajuste.persona.nombre : 'Sin proveedor'}</td>
                                                     <td className="text-right">{formatearGuarani(ajuste.monto)}</td>
                                                     <td className="text-center">{ajuste.UrevCalc}</td>

@@ -29,9 +29,6 @@ function formatearNroFactura(valor) {
     return partes.join('-');
 }
 
-// Normaliza un texto para comparar descripciones de catálogo (estados, etc.).
-const normalizarTexto = (valor) => String(valor || '').trim().toLowerCase();
-
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
     const tipoPersonaFiltro = tipoTransaccion === 'compra'
         ? 'Proveedor'
@@ -59,6 +56,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         id_TipoPago: transaccion.id_TipoPago || '',
         id_FormaPago: transaccion.id_FormaPago || '',
         id_TipoEstado: transaccion.id_TipoEstado || '',
+        id_MotivoAjuste: transaccion.id_MotivoAjuste || '',
+        direccion: transaccion.direccion || 'entrada',
         id_TipoComprobante: transaccion.id_TipoComprobante || '',
         id_TipoMovimiento: tipoTransaccion === 'compra' ? 1 : tipoTransaccion === 'venta' ? 2 : 3,
         id_persona: transaccion.id_persona || '',
@@ -71,6 +70,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [tipoEstado, setTipoEstado] = useState([]);
     const [formaPago, setFormaPago] = useState([]);
     const [tipoComprobante, setTipoComprobante] = useState([]);
+    // Catálogo de motivos de ajuste (solo se usa en ajustes)
+    const [motivosAjuste, setMotivosAjuste] = useState([]);
 
     // Cuotas para ventas a crédito/cuotas
     const [cuotasConfig, setCuotasConfig] = useState({
@@ -100,11 +101,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const tipoComprobanteSeleccionado = tipoComprobante.find(tc => String(tc.id) === String(form.id_TipoComprobante));
     const esFactura = ['factura'].includes(String(tipoComprobanteSeleccionado?.nombre || '').trim().toLowerCase());
 
-    // Ajustes: la dirección del stock se define por el estado (Positivo = entrada,
-    // Negativo = salida). Se resuelven por descripción contra el catálogo cargado.
+    // Ajustes: la dirección del stock se guarda en `form.direccion` (entrada|salida)
+    // y se persiste en `transacciones.direccion`.
     const esAjuste = tipoTransaccion === 'ajuste';
-    const idEstadoPositivo = tipoEstado.find(e => normalizarTexto(e.descripcion) === 'positivo')?.id;
-    const idEstadoNegativo = tipoEstado.find(e => normalizarTexto(e.descripcion) === 'negativo')?.id;
 
     //para personas
     const [personas, setPersonas] = useState([]);
@@ -508,6 +507,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 vuelto:transaccion.vuelto ?? 0,
                 iva: transaccion.iva ?? 0,
                 id_TipoEstado: transaccion.id_TipoEstado || '',
+                id_MotivoAjuste: transaccion.id_MotivoAjuste || '',
+                direccion: transaccion.direccion || 'entrada',
                 id_TipoPago: transaccion.id_TipoPago || '',
                 id_FormaPago: transaccion.id_FormaPago || '',
                 id_TipoComprobante: transaccion.id_TipoComprobante || '',
@@ -535,17 +536,19 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         ? 'api/tipo_estado?filtro=venta' // venta: Activo/Inactivo/Finalizado
                         : 'api/tipo_estado';              // ajuste: todos los estados
 
-                const [tpRes, fpRes, teRes, tcRes, orgRes] = await Promise.all([
+                const [tpRes, fpRes, teRes, tcRes, orgRes, maRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get(tipoEstadoUrl, { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/tipo_comprobante', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/motivo_ajustes', { headers: { Authorization: `Bearer ${token}` } }),
                 ]);
                 setTipoPago(tpRes.data);
                 setFormaPago(fpRes.data);
                 setTipoEstado(teRes.data);
                 setOrganizacion(orgRes.data);
+                setMotivosAjuste(maRes.data);
 
                 // En compras el tipo de comprobante es SIEMPRE Factura: se filtra
                 // la lista a solo Factura y queda predefinida (y bloqueada) en el combo.
@@ -570,16 +573,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 }
                 setTipoComprobante(tiposComprobante);
 
-                if (esAjuste) {
-                    // El ajuste nace borrador (Activo); la dirección real (Positivo/
-                    // Negativo) se elige en el combo y se aplica al finalizar.
-                    const activo = teRes.data?.find(e => normalizarTexto(e.descripcion) === 'activo');
-                    const positivo = teRes.data?.find(e => normalizarTexto(e.descripcion) === 'positivo');
-                    const actual = String(form.id_TipoEstado || '');
-                    if (positivo && (!actual || actual === String(activo?.id))) {
-                        setForm(prev => ({ ...prev, id_TipoEstado: String(positivo.id) }));
-                    }
-                } else if (teRes.data?.length && !form.id_TipoEstado) {
+                // El ajuste usa `direccion` (no el estado) para la entrada/salida, así
+                // que el borrador queda en Activo(1) y no necesita estado inicial.
+                if (!esAjuste && teRes.data?.length && !form.id_TipoEstado) {
                     setForm(prev => ({ ...prev, id_TipoEstado: String(teRes.data[0].id) }));
                 }
             } catch (error) {
@@ -846,43 +842,46 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.nro_comprobante && <p className="text-red-500 text-sm">{errores.nro_comprobante[0]}</p>}
                             </div>
 
-                            {/* Forma de pago */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Forma de pago</label>
-                                <select
-                                    disabled={esBloqueado}
-                                    className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    value={form.id_FormaPago}
-                                    onChange={(e) => setForm({ ...form, id_FormaPago: e.target.value })}
-                                >
-                                    <option value="">Seleccione la forma de pago</option>
-                                    {formaPago.map((formaPago) => (
-                                        <option key={formaPago.id} value={formaPago.id}>
-                                            {formaPago.nombre}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errores.id_FormaPago && <p className="text-red-500 text-sm">{errores.id_FormaPago[0]}</p>}
-                            </div>
+                            {/* Forma de pago y Tipo de pago: no aplican a ajustes (no son documentos de pago) */}
+                            {!esAjuste && (
+                                <>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Forma de pago</label>
+                                        <select
+                                            disabled={esBloqueado}
+                                            className={`w-full px-3 py-2 border ${errores.id_FormaPago ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                            value={form.id_FormaPago}
+                                            onChange={(e) => setForm({ ...form, id_FormaPago: e.target.value })}
+                                        >
+                                            <option value="">Seleccione la forma de pago</option>
+                                            {formaPago.map((formaPago) => (
+                                                <option key={formaPago.id} value={formaPago.id}>
+                                                    {formaPago.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errores.id_FormaPago && <p className="text-red-500 text-sm">{errores.id_FormaPago[0]}</p>}
+                                    </div>
 
-                            {/* Tipo de pago */}
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de pago</label>
-                                <select
-                                    disabled={esBloqueado}
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    value={form.id_TipoPago}
-                                    onChange={(e) => setForm({ ...form, id_TipoPago: e.target.value })}
-                                >
-                                    <option value="">Seleccione el tipo de pago</option>
-                                    {tipoPago.map((tipoPago) => (
-                                        <option key={tipoPago.id} value={tipoPago.id}>
-                                            {tipoPago.nombre}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errores.id_TipoPago && <p className="text-red-500 text-sm">{errores.id_TipoPago[0]}</p>}
-                            </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de pago</label>
+                                        <select
+                                            disabled={esBloqueado}
+                                            className={`w-full px-3 py-2 border ${errores.id_TipoPago ? 'border-red-500' : 'border-gray-300'} bg-white  rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                            value={form.id_TipoPago}
+                                            onChange={(e) => setForm({ ...form, id_TipoPago: e.target.value })}
+                                        >
+                                            <option value="">Seleccione el tipo de pago</option>
+                                            {tipoPago.map((tipoPago) => (
+                                                <option key={tipoPago.id} value={tipoPago.id}>
+                                                    {tipoPago.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errores.id_TipoPago && <p className="text-red-500 text-sm">{errores.id_TipoPago[0]}</p>}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Tipo de estado */}
                             {/* <div>
@@ -903,28 +902,51 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.id_TipoEstado && <p className="text-red-500 text-sm">{errores.id_TipoEstado[0]}</p>}
                             </div> */}
 
-                            {/* Dirección del ajuste: define la entrada/salida de stock al
-                                finalizar. Positivo = entrada, Negativo = salida. */}
+                            {/* Dirección del ajuste: define la entrada/salida de stock.
+                                Se guarda en `direccion` (no en el estado) para que el
+                                borrador no quede marcado como finalizado. */}
                             {esAjuste && (
                                 <div className="col-span-2">
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de ajuste</label>
                                     {esBloqueado ? (
                                         <div className="w-full rounded-md border border-transparent px-3 py-2 text-sm text-gray-900">
-                                            {String(form.id_TipoEstado) === String(idEstadoNegativo) ? 'Salida (Negativo)' : 'Entrada (Positivo)'}
+                                            {form.direccion === 'salida' ? 'Salida (Negativo)' : 'Entrada (Positivo)'}
                                         </div>
                                     ) : (
                                         <select
-                                            className={`w-full px-3 py-2 border ${errores.id_TipoEstado ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                            value={String(form.id_TipoEstado) === String(idEstadoNegativo) ? String(idEstadoNegativo) : String(idEstadoPositivo ?? '')}
-                                            onChange={(e) => setForm({ ...form, id_TipoEstado: e.target.value })}
+                                            className={`w-full px-3 py-2 border ${errores.direccion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                            value={form.direccion}
+                                            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
                                         >
-                                            {idEstadoPositivo && <option value={idEstadoPositivo}>Entrada (Positivo)</option>}
-                                            {idEstadoNegativo && <option value={idEstadoNegativo}>Salida (Negativo)</option>}
+                                            <option value="entrada">Entrada (Positivo)</option>
+                                            <option value="salida">Salida (Negativo)</option>
                                         </select>
                                     )}
                                     {!esBloqueado && (
                                         <p className="mt-1 text-xs text-gray-500">El stock se mueve al finalizar el ajuste.</p>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Motivo del ajuste: justifica el movimiento en el kardex
+                                (pérdida, robo, merma, etc.). Obligatorio en ajustes. */}
+                            {esAjuste && (
+                                <div className="col-span-2">
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Motivo</label>
+                                    <select
+                                        disabled={esBloqueado}
+                                        className={`w-full px-3 py-2 border ${errores.id_MotivoAjuste ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                        value={form.id_MotivoAjuste}
+                                        onChange={(e) => setForm({ ...form, id_MotivoAjuste: e.target.value })}
+                                    >
+                                        <option value="">Seleccione el motivo</option>
+                                        {motivosAjuste.map((motivo) => (
+                                            <option key={motivo.id} value={motivo.id}>
+                                                {motivo.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errores.id_MotivoAjuste && <p className="text-red-500 text-sm">{errores.id_MotivoAjuste[0]}</p>}
                                 </div>
                             )}
 

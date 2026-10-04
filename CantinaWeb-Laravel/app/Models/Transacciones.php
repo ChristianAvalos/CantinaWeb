@@ -31,6 +31,8 @@ class Transacciones extends Model
         'id_organizacion',
         'id_TipoMovimiento',
         'id_TipoEstado',
+        'id_MotivoAjuste',
+        'direccion',
         'id_TipoComprobante',
         'id_TipoPago',
         'id_FormaPago',
@@ -107,6 +109,12 @@ class Transacciones extends Model
     {
         return $this->belongsTo(TipoEstado::class, 'id_TipoEstado');
     }
+
+    //relacion con el motivo de ajuste (solo ajustes de inventario)
+    public function motivoAjuste()
+    {
+        return $this->belongsTo(MotivoAjuste::class, 'id_MotivoAjuste');
+    }
     //relacion con organizacion
     public function organizacion()
     {
@@ -163,7 +171,7 @@ class Transacciones extends Model
      * Dirección del movimiento de stock que produce esta transacción.
      * - Compra (1): entrada
      * - Venta  (2): salida
-     * - Ajuste (3): según el estado (6 = Negativo → salida)
+     * - Ajuste (3): según la columna `direccion` (fallback: estado Negativo → salida)
      *
      * Única fuente de verdad: se deriva de los atributos ya cargados,
      * NO consulta la base. Antes esto estaba duplicado en dos controladores.
@@ -172,7 +180,8 @@ class Transacciones extends Model
     {
         return match ((int) $this->id_TipoMovimiento) {
             2 => TipoMovimientos::DIRECCION_SALIDA,
-            3 => $this->id_TipoEstado === EstadoTransaccion::NEGATIVO
+            3 => ($this->direccion === TipoMovimientos::DIRECCION_SALIDA
+                    || ($this->direccion === null && $this->id_TipoEstado === EstadoTransaccion::NEGATIVO))
                 ? TipoMovimientos::DIRECCION_SALIDA
                 : TipoMovimientos::DIRECCION_ENTRADA,
             default => TipoMovimientos::DIRECCION_ENTRADA,
