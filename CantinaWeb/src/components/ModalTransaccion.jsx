@@ -47,6 +47,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [form, setForm] = useState({
         descripcion: transaccion.descripcion || '',
         id_organizacion: transaccion.id_organizacion || '',
+        id_sucursal: transaccion.id_sucursal || '',
         monto: transaccion.monto ?? 0,
         monto_recibido: transaccion.monto_recibido ?? 0,
         vuelto:transaccion.vuelto ?? 0,
@@ -72,6 +73,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [tipoComprobante, setTipoComprobante] = useState([]);
     // Catálogo de motivos de ajuste (solo se usa en ajustes)
     const [motivosAjuste, setMotivosAjuste] = useState([]);
+    // Sucursales de la organización (solo se despliega el combo si hay >1)
+    const [sucursales, setSucursales] = useState([]);
 
     // Cuotas para ventas a crédito/cuotas
     const [cuotasConfig, setCuotasConfig] = useState({
@@ -501,6 +504,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         if (modo === 'editar') {
             setForm({
                 id_organizacion: transaccion.id_organizacion || '',
+                id_sucursal: transaccion.id_sucursal || '',
                 descripcion: transaccion.descripcion || '',
                 monto: transaccion.monto ?? 0,
                 monto_recibido: transaccion.monto_recibido ?? 0,
@@ -536,19 +540,34 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         ? 'api/tipo_estado?filtro=venta' // venta: Activo/Inactivo/Finalizado
                         : 'api/tipo_estado';              // ajuste: todos los estados
 
-                const [tpRes, fpRes, teRes, tcRes, orgRes, maRes] = await Promise.all([
+                const [tpRes, fpRes, teRes, tcRes, orgRes, maRes, suRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get(tipoEstadoUrl, { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/tipo_comprobante', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/motivo_ajustes', { headers: { Authorization: `Bearer ${token}` } }),
+                    clienteAxios.get('api/sucursales', { headers: { Authorization: `Bearer ${token}` } }),
                 ]);
                 setTipoPago(tpRes.data);
                 setFormaPago(fpRes.data);
                 setTipoEstado(teRes.data);
                 setOrganizacion(orgRes.data);
                 setMotivosAjuste(maRes.data);
+
+                // Sucursal: si la organización tiene una sola, se usa automáticamente;
+                // si tiene varias, se elige (por defecto la principal).
+                const listaSucursales = Array.isArray(suRes.data) ? suRes.data : [];
+                setSucursales(listaSucursales);
+                if (listaSucursales.length === 1) {
+                    setForm(prev => ({ ...prev, id_sucursal: String(listaSucursales[0].id) }));
+                } else if (listaSucursales.length > 1) {
+                    setForm(prev => {
+                        if (prev.id_sucursal) return prev;
+                        const principal = listaSucursales.find(s => s.es_principal) ?? listaSucursales[0];
+                        return { ...prev, id_sucursal: String(principal.id) };
+                    });
+                }
 
                 // En compras el tipo de comprobante es SIEMPRE Factura: se filtra
                 // la lista a solo Factura y queda predefinida (y bloqueada) en el combo.
@@ -972,6 +991,28 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 </select>
                                 {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
                             </div>
+
+                            {/* Sucursal: solo se despliega si la organización tiene más de una.
+                                Con una sola, se usa automáticamente (principal). */}
+                            {sucursales.length > 1 && (
+                                <div className="col-span-2">
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Sucursal</label>
+                                    <select
+                                        disabled={esBloqueado}
+                                        className={`w-full px-3 py-2 border ${errores.id_sucursal ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                        value={form.id_sucursal}
+                                        onChange={(e) => setForm({ ...form, id_sucursal: e.target.value })}
+                                    >
+                                        <option value="">Seleccione la sucursal</option>
+                                        {sucursales.map((sucursal) => (
+                                            <option key={sucursal.id} value={sucursal.id}>
+                                                {sucursal.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errores.id_sucursal && <p className="text-red-500 text-sm">{errores.id_sucursal[0]}</p>}
+                                </div>
+                            )}
 
 
                             {/* Campo para Persona (Proveedor/Cliente) */}

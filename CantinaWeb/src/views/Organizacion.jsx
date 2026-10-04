@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal";
 import ModalOrganizacion from "./ModalOrganizacion";
+import ModalSucursales from "./ModalSucursales";
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
 
@@ -24,6 +25,8 @@ export default function Organizacion() {
     //grilla de organizacion
     const [organizacion, setOrganizacion,] = useState([]);
     const [organizacionSeleccionado, setorganizacionSeleccionado] = useState(null);
+    // organización cuyas sucursales se están administrando (null = modal cerrado)
+    const [organizacionSucursales, setOrganizacionSucursales] = useState(null);
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -31,6 +34,8 @@ export default function Organizacion() {
     const [mensajeAlertaModal, setMensajeAlertaModal] = useState('');
     const [accionConfirmadaModal, setAccionConfirmadaModal] = useState(null);
     const [organizacionAEliminar, setOrganizacionAEliminar] = useState(null);
+    // organización cuyo estado se está cambiando
+    const [organizacionEstado, setOrganizacionEstado] = useState(null);
 
 
     //paginacion
@@ -111,9 +116,41 @@ export default function Organizacion() {
     const handleDelete = async (id) => {
 
         setOrganizacionAEliminar(id);
+        setAccionConfirmadaModal('delete');
         setTipoAlertaModal('confirmacion');
-        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar este usuario?');
+        setMensajeAlertaModal('¿Estás seguro de que deseas eliminar esta organización?');
         setMostrarAlertaModal(true);
+    };
+
+    //para activar/desactivar organización (si queda inactiva, sus usuarios no acceden)
+    const handleEstado = (organizacion) => {
+        const activa = Number(organizacion.id_tipoestado) === 1;
+        setOrganizacionEstado(organizacion);
+        setAccionConfirmadaModal('estado');
+        setTipoAlertaModal('confirmacion');
+        setMensajeAlertaModal(
+            `¿Estás seguro de que deseas ${activa ? 'desactivar' : 'activar'} la organización "${organizacion.RazonSocial}"?`
+            + (activa ? ' Sus usuarios no podrán acceder.' : '')
+        );
+        setMostrarAlertaModal(true);
+    };
+
+    const confirmarEstado = async () => {
+        const org = organizacionEstado;
+        setOrganizacionEstado(null);
+        if (!org) return;
+        try {
+            const nuevoEstado = Number(org.id_tipoestado) === 1 ? 2 : 1;
+            await clienteAxios.post(`api/organizacion_estado/${org.id}`, { id_tipoestado: nuevoEstado }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(`Organización ${nuevoEstado === 1 ? 'activada' : 'desactivada'} correctamente.`);
+            fetchOrganizacion();
+        } catch (error) {
+            setTipoAlertaModal('informativo');
+            setMensajeAlertaModal(error.response?.data?.message || 'No se pudo cambiar el estado.');
+            setMostrarAlertaModal(true);
+        }
     };
 
     const confirmarEliminacion = async () => {
@@ -140,11 +177,16 @@ export default function Organizacion() {
     const handleClose = () => {
         setMostrarAlertaModal(false);
         setAccionConfirmadaModal(null);
+        setOrganizacionEstado(null);
     };
 
     const handleConfirm = () => {
         setMostrarAlertaModal(false);
-        confirmarEliminacion();
+        if (accionConfirmadaModal === 'estado') {
+            confirmarEstado();
+        } else {
+            confirmarEliminacion();
+        }
     };
 
 
@@ -184,12 +226,13 @@ export default function Organizacion() {
                                             <th>Email</th>
                                             <th>Sigla</th>
                                             <th>Sitio web</th>
+                                            <th>Estado</th>
                                             <th>Utilidades</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {organizacion.length === 0 ? (
-                                            <NoExistenDatos colSpan={12} mensaje="No existen organizaciones registradas." />    
+                                            <NoExistenDatos colSpan={13} mensaje="No existen organizaciones registradas." />    
                                         ) : (
                                         organizacion.map((organizacion) => (
                                             <tr key={organizacion.id}>
@@ -204,13 +247,28 @@ export default function Organizacion() {
                                                 <td>{organizacion.Email}</td>
                                                 <td>{organizacion.Sigla}</td>
                                                 <td>{organizacion.SitioWeb}</td>
+                                                <td className="text-center">
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${Number(organizacion.id_tipoestado) === 1 ? 'bg-green-100 text-green-700 ring-green-200' : 'bg-red-100 text-red-700 ring-red-200'}`}>
+                                                        {organizacion.tipo_estado?.descripcion || (Number(organizacion.id_tipoestado) === 1 ? 'Activo' : 'Inactivo')}
+                                                    </span>
+                                                </td>
                                                 <td>
                                                     <div className="flex space-x-2">
+                                                        <button onClick={() => setOrganizacionSucursales(organizacion)} title="Sucursales" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
+                                                            <img src="/img/Icon/organogram.png" alt="Sucursales" />
+                                                        </button>
                                                         <button onClick={() => openModal('editar', organizacion)} className="flex items-center focus:outline-none">
                                                             <img src="/img/Icon/edit.png" alt="Edit Rol" />
                                                         </button>
                                                         <button onClick={() => handleDelete(organizacion.id)} className="flex items-center focus:outline-none">
                                                             <img src="/img/Icon/trash_bin-remove.png" alt="Delete Rol" />
+                                                        </button>
+                                                        <button onClick={() => handleEstado(organizacion)} title={Number(organizacion.id_tipoestado) === 1 ? 'Desactivar' : 'Activar'} className="flex items-center focus:outline-none">
+                                                            {Number(organizacion.id_tipoestado) === 1 ? (
+                                                                <img src="/img/Icon/toggle-on.png" alt="Activo" className="w-5 h-5" />
+                                                            ) : (
+                                                                <img src="/img/Icon/toggle-off.png" alt="Inactivo" className="w-5 h-5" />
+                                                            )}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -281,6 +339,14 @@ export default function Organizacion() {
                     refrescarOrganizacion={fetchOrganizacion}
                     modo={modalMode}
                     onClose={closeModal}
+                />
+            )}
+
+            {/* Administrar sucursales de una organización */}
+            {organizacionSucursales && (
+                <ModalSucursales
+                    organizacion={organizacionSucursales}
+                    onClose={() => setOrganizacionSucursales(null)}
                 />
             )}
 

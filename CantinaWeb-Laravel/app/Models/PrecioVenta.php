@@ -12,6 +12,7 @@ class PrecioVenta extends Model
     protected $table = 'precio_venta';
     protected $fillable = [
         'id_organizacion',
+        'id_sucursal',
         'id_producto',
         'id_tipoestado',
         'id_tipo_moneda',
@@ -36,6 +37,12 @@ class PrecioVenta extends Model
     public function organizacion()
     {
         return $this->belongsTo(Organizacion::class, 'id_organizacion');
+    }
+
+    // Relación con Sucursal (clave del precio)
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'id_sucursal');
     }
 
     // Relación con Producto

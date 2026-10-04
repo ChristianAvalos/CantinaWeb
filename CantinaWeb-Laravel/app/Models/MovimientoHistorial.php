@@ -23,6 +23,7 @@ class MovimientoHistorial extends Model
 
     protected $fillable = [
         'id_organizacion',
+        'id_sucursal',
         'id_producto',
         'producto_codigo',
         'producto_nombre',
@@ -90,6 +91,11 @@ class MovimientoHistorial extends Model
     public function transaccionDetalle()
     {
         return $this->belongsTo(TransaccionesDetalle::class, 'id_transaccion_detalle');
+    }
+
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'id_sucursal');
     }
 
     /** El movimiento que este revierte (si es una reversa). */

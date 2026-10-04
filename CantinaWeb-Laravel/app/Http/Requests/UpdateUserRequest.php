@@ -27,7 +27,8 @@ class UpdateUserRequest extends FormRequest
             'nameUser' => ['required','string'],
             'email' => ['required', 'email', 'unique:users,email,' . $userId],
             'rol_id' => ['required', 'exists:roles,id'],
-            'id_organizacion' => ['required', 'exists:organizacion,id']
+            'id_organizacion' => ['required', 'exists:organizacion,id'],
+            'id_sucursal' => ['nullable', 'exists:sucursales,id']
         ];
     }
     public function messages()
@@ -42,6 +43,7 @@ class UpdateUserRequest extends FormRequest
             'rol_id.required' => 'El rol seleccionado no es válido',
             'rol_id.exists' => 'El rol seleccionado no es válido',
             'id_organizacion.required' => 'La organizacion es obligatoria',
+            'id_sucursal.exists' => 'La sucursal seleccionada no es válida',
         ];
     }
 }

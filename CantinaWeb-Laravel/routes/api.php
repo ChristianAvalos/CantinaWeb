@@ -15,6 +15,7 @@ use App\Http\Controllers\PrecioVentaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\TipoComprobanteController;
 use App\Http\Controllers\TipoDocumentoController;
 use App\Http\Controllers\TipoEstadoController;
@@ -43,7 +44,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function() {
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+
+        // Bloquear el acceso si él, su organización o su sucursal están inactivos.
+        if ($user && $user->motivoBloqueo() !== null) {
+            return response()->json(['message' => 'Acceso bloqueado.'], 401);
+        }
+
+        return $user;
     });
 
     // Endpoint único para dashboard contadores
@@ -64,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::delete('/organizacion/{id}', [OrganizacionController::class, 'DeleteOrganizacion']);
     Route::post('/crear_organizacion',[OrganizacionController::class,'createOrganizacion']);
     Route::put('/update_organizacion/{id}',[OrganizacionController::class,'updateOrganizacion']);
+    Route::post('/organizacion_estado/{id}',[OrganizacionController::class,'estadoOrganizacion']);
 
     //Roles
     Route::get('/roles',[RoleController::class,'index']);
@@ -154,6 +163,12 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //motivo de ajuste de inventario
     Route::get('/motivo_ajustes',[MotivoAjusteController::class,'index']);
+
+    //sucursales
+    Route::get('/sucursales',[SucursalController::class,'index']);
+    Route::post('/crear_sucursal',[SucursalController::class,'store']);
+    Route::put('/update_sucursal/{id}',[SucursalController::class,'update']);
+    Route::delete('/sucursal/{id}',[SucursalController::class,'destroy']);
 
     //forma de pago 
     Route::get('/forma_pago',[FormaPagoController::class,'index']);

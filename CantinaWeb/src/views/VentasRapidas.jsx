@@ -199,7 +199,7 @@ export default function VentasRapidas() {
                 if (barcodeData?.producto) {
                     // Validar stock antes de agregar
                     const prod = barcodeData.producto;
-                    const stock = Number(prod.stock_actual) ?? Number(prod.cantidad_unidad) ?? 0;
+                    const stock = Number(prod.stock_sucursal ?? prod.stock_actual) ?? Number(prod.cantidad_unidad) ?? 0;
                     if (stock <= 0) {
                         toast.warning(`${prod.nombre} no tiene stock disponible`, { autoClose: 1500 });
                         setSearchTerm('');
@@ -226,7 +226,7 @@ export default function VentasRapidas() {
 
                 const results = searchData?.productos?.data || [];
                 const activos = Array.isArray(results)
-                    ? results.filter(p => Number(p.id_TipoEstado) === 1 && Number(p.stock_actual ?? p.cantidad_unidad ?? 0) > 0)
+                    ? results.filter(p => Number(p.id_TipoEstado) === 1 && Number(p.stock_sucursal ?? p.stock_actual ?? p.cantidad_unidad ?? 0) > 0)
                     : [];
                 setSearchResults(activos);
                 setShowDropdown(activos.length > 0);
@@ -277,7 +277,7 @@ export default function VentasRapidas() {
     // ─── Añadir producto al carrito ──
     const addProductoToCart = useCallback((producto) => {
         const precioVenta = Number(producto.precio_venta) || Number(producto.precio_compra) || 0;
-        const stockDisponible = Number(producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
+        const stockDisponible = Number(producto.stock_sucursal ?? producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
 
         setCart(prev => {
             const existingIdx = prev.findIndex(item => item.id_producto === producto.id);
@@ -511,7 +511,7 @@ export default function VentasRapidas() {
     };
 
     const selectProduct = (producto) => {
-        const stock = Number(producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
+        const stock = Number(producto.stock_sucursal ?? producto.stock_actual) ?? Number(producto.cantidad_unidad) ?? 0;
         if (stock <= 0) {
             toast.warning(`${producto.nombre} no tiene stock disponible`, { autoClose: 1500 });
             return;
@@ -592,7 +592,7 @@ export default function VentasRapidas() {
                                         <div className="flex-1 min-w-0">
                                             <div className="font-semibold text-slate-800 truncate">{prod.nombre}</div>
                                             <div className="text-xs text-slate-500">
-                                                Código: {prod.codigo_barras || '—'} | Stock: {formatearDecimalSinCeros(prod.stock_actual ?? prod.cantidad_unidad ?? 'N/D')}
+                                                Código: {prod.codigo_barras || '—'} | Stock: {formatearDecimalSinCeros(prod.stock_sucursal ?? prod.stock_actual ?? prod.cantidad_unidad ?? 'N/D')}
                                             </div>
                                         </div>
                                         <div className="ml-3 text-right flex-shrink-0">

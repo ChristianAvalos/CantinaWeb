@@ -244,12 +244,13 @@ export default function Usuarios() {
                                             <th>Correo</th>
                                             <th>Rol</th>
                                             <th>Organización</th>
+                                            <th>Sucursal</th>
                                             <th>Utilidades</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {usuarios.length === 0 ? (
-                                            <NoExistenDatos colSpan={6} mensaje="No existen usuarios registrados." />
+                                            <NoExistenDatos colSpan={8} mensaje="No existen usuarios registrados." />
                                         ) : (
                                         usuarios.map((usuario) => (
                                             <tr key={usuario.id} className="odd:bg-white even:bg-gray-50 hover:bg-gray-100">
@@ -273,6 +274,11 @@ export default function Usuarios() {
                                                 <td>
                                                     <span className="block max-w-[260px] truncate" title={usuario.organizacion?.RazonSocial || ''}>
                                                         {usuario.organizacion ? usuario.organizacion.RazonSocial : 'Sin organización'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className="block max-w-[220px] truncate" title={usuario.sucursal?.nombre || ''}>
+                                                        {usuario.sucursal ? usuario.sucursal.nombre : 'Sin sucursal'}
                                                     </span>
                                                 </td>
                                                 <td>

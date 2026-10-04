@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'rol_id',
         'id_organizacion',
+        'id_sucursal',
         'id_tipoestado',
         'UrevUsuario',
         'UrevFechaHora'
@@ -67,6 +68,38 @@ class User extends Authenticatable
     public function organizacion()
     {
         return $this->belongsTo(Organizacion::class, 'id_organizacion');
+    }
+
+    /**
+     * Relación con la sucursal asignada.
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'id_sucursal');
+    }
+
+    /**
+     * Devuelve el motivo por el cual el usuario NO puede acceder, o null si
+     * puede. Se bloquea si el usuario, su organización o su sucursal están
+     * inactivos (estado != 1).
+     */
+    public function motivoBloqueo(): ?string
+    {
+        if ($this->id_tipoestado !== null && (int) $this->id_tipoestado !== 1) {
+            return 'Tu usuario está inactivo.';
+        }
+
+        if ($this->organizacion && $this->organizacion->id_tipoestado !== null
+            && (int) $this->organizacion->id_tipoestado !== 1) {
+            return 'La organización está inactiva. Contactá al administrador.';
+        }
+
+        if ($this->sucursal && $this->sucursal->id_tipo_estado !== null
+            && (int) $this->sucursal->id_tipo_estado !== 1) {
+            return 'La sucursal está inactiva. Contactá al administrador.';
+        }
+
+        return null;
     }
 
     /**

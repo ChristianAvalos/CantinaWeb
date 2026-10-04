@@ -29,6 +29,7 @@ class Transacciones extends Model
     protected $table = 'transacciones';
     protected $fillable = [
         'id_organizacion',
+        'id_sucursal',
         'id_TipoMovimiento',
         'id_TipoEstado',
         'id_MotivoAjuste',
@@ -165,6 +166,12 @@ class Transacciones extends Model
     public function banco()
     {
         return $this->belongsTo(Bancos::class, 'id_Banco');
+    }
+
+    //relacion con la sucursal donde se registró
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'id_sucursal');
     }
 
     /**

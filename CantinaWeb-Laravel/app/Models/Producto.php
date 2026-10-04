@@ -56,6 +56,12 @@ class Producto extends Model
         return $this->belongsTo(Organizacion::class, 'id_organizacion');
     }
 
+    //stock por sucursal (la fuente de verdad por sede)
+    public function stocks()
+    {
+        return $this->hasMany(StockSucursal::class, 'id_producto');
+    }
+
     //relacion con categoria
     public function categoria()
     {

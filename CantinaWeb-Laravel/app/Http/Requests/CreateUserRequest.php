@@ -26,7 +26,8 @@ class CreateUserRequest extends FormRequest
             'nameUser' => ['required','string'],
             'email' => ['required','email','unique:users,email'],
             'rol_id' => ['required', 'exists:roles,id'],
-            'id_organizacion' => ['required', 'exists:organizacion,id']
+            'id_organizacion' => ['required', 'exists:organizacion,id'],
+            'id_sucursal' => ['nullable', 'exists:sucursales,id']
         ];
     }
     public function messages()
@@ -41,6 +42,7 @@ class CreateUserRequest extends FormRequest
             'rol_id.required' => 'El rol seleccionado no es válido',
             'rol_id.exists' => 'El rol seleccionado no es válido',
             'id_organizacion.required' => 'La organizacion seleccionada es no válida',
+            'id_sucursal.exists' => 'La sucursal seleccionada no es válida',
         ];
     }
 }

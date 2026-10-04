@@ -77,7 +77,9 @@ class ProductoController extends Controller
         // por nombre muestre el MISMO precio que al escanear por código de barras.
         if ($request->boolean('precio_org')) {
             $productos->getCollection()->transform(function ($producto) {
-                return $this->aplicarPrecioPersonalizado($producto);
+                $producto = $this->aplicarPrecioPersonalizado($producto);
+
+                return $this->aplicarStockSucursal($producto);
             });
         }
 
@@ -293,11 +295,28 @@ class ProductoController extends Controller
         if ($producto) {
             // Aplicar el precio de venta personalizado de la organización
             $this->aplicarPrecioPersonalizado($producto);
+            // Exponer el stock de la sucursal del usuario (el POS valida con esto).
+            $this->aplicarStockSucursal($producto);
 
             return response()->json(['producto' => $producto], 200);
         } else {
             return response()->json(['producto' => null], 200);
         }
+    }
+
+    /**
+     * Agrega `stock_sucursal` con el stock del producto en la sucursal del
+     * usuario (si tiene). Si no tiene sucursal, deja el total del producto.
+     */
+    private function aplicarStockSucursal(Producto $producto): Producto
+    {
+        $idSucursal = Auth::user()?->id_sucursal;
+
+        $producto->stock_sucursal = $idSucursal
+            ? \App\Services\InventarioService::stockEnSucursal($producto->id, $idSucursal)
+            : (float) $producto->stock_actual;
+
+        return $producto;
     }
 
     /**
@@ -309,19 +328,28 @@ class ProductoController extends Controller
      */
     private function aplicarPrecioPersonalizado(Producto $producto): Producto
     {
-        $idOrganizacion = Auth::user()->id_organizacion;
+        $idOrganizacion = Auth::user()?->id_organizacion;
+        $idSucursal = Auth::user()?->id_sucursal;
 
-        // Si el usuario tiene organización, buscar precio de venta personalizado
-        if ($idOrganizacion) {
-            $precioOrg = \App\Models\PrecioVenta::where('id_producto', $producto->id)
-                ->where('id_organizacion', $idOrganizacion)
+        // Prioridad: precio de la SUCURSAL del usuario; si no hay, el de la organización.
+        $precio = null;
+
+        if ($idSucursal) {
+            $precio = \App\Models\PrecioVenta::where('id_producto', $producto->id)
+                ->where('id_sucursal', $idSucursal)
                 ->where('id_tipoestado', 1) // solo precios activos
                 ->first();
+        }
 
-            if ($precioOrg) {
-                // Sobrescribir el precio_venta con el precio personalizado de la organización
-                $producto->precio_venta = $precioOrg->precio;
-            }
+        if (! $precio && $idOrganizacion) {
+            $precio = \App\Models\PrecioVenta::where('id_producto', $producto->id)
+                ->where('id_organizacion', $idOrganizacion)
+                ->where('id_tipoestado', 1)
+                ->first();
+        }
+
+        if ($precio) {
+            $producto->precio_venta = $precio->precio;
         }
 
         return $producto;

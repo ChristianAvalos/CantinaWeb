@@ -55,6 +55,7 @@ class UpdateTransaccionRequest extends FormRequest
             'fecha' => 'required|date',
             'lote' => 'nullable',
             'id_organizacion' => 'required|exists:organizacion,id',
+            'id_sucursal' => 'nullable|exists:sucursales,id',
             'descripcion' => 'nullable|string|max:1000',
             'monto' => 'nullable|numeric',
             'monto_recibido' => 'nullable|numeric',

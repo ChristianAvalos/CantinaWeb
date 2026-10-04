@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Log;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,7 @@ class AuthController extends Controller
         $search = $request->input('search');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
-        $usuarios = User::with('role', 'organizacion');
+        $usuarios = User::with('role', 'organizacion', 'sucursal');
 
         if ($search) {
             $usuarios->where(function ($query) use ($search) {
@@ -89,6 +90,7 @@ class AuthController extends Controller
                 'password' => Hash::make('123456'),
                 'rol_id' => $data['rol_id'],
                 'id_organizacion' => $data['id_organizacion'],
+                'id_sucursal' => $data['id_sucursal'] ?? Sucursal::principalDeOCrear((int) $data['id_organizacion'])->id,
                 'id_tipoestado' => 1, //por defecto se crea con estado Activo
                 'UrevUsuario' => 'Creado - ' . Auth::user()->name,
                 'UrevFechaHora' => Carbon::now()
@@ -118,6 +120,7 @@ class AuthController extends Controller
         $usuario->email = $data['email'];
         $usuario->rol_id = $data['rol_id'];
         $usuario->id_organizacion = $data['id_organizacion'];
+        $usuario->id_sucursal = $data['id_sucursal'] ?? $usuario->id_sucursal;
         $usuario->UrevUsuario = 'Actualizado - ' . Auth::user()->name;
         $usuario->UrevFechaHora = Carbon::now();
 
@@ -146,6 +149,14 @@ class AuthController extends Controller
 
         //Autenticar al usuario
         $user = Auth::user();
+
+        // El usuario no accede si él, su organización o su sucursal están inactivos.
+        $motivo = $user->motivoBloqueo();
+        if ($motivo) {
+            Auth::logout();
+            return response(['errors' => [$motivo]], 422);
+        }
+
         //retorna una respuesta
         return [
             'token' => $user->createToken('token')->plainTextToken,

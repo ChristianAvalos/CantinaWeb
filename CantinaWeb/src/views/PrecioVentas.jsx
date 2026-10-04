@@ -240,6 +240,7 @@ export default function PrecioVenta() {
                                             <th>Codigo</th>
                                             <th>Nombre</th>
                                             <th>Organización</th>
+                                            <th>Sucursal</th>
                                             <th>Tipo de moneda</th>
                                             <th>Precio</th>
                                             <th>Utilidades</th>
@@ -247,7 +248,7 @@ export default function PrecioVenta() {
                                     </thead>
                                     <tbody>
                                         {preciosVenta.length === 0 ? (
-                                            <NoExistenDatos colSpan={6} mensaje="No existen precios de venta." />
+                                            <NoExistenDatos colSpan={8} mensaje="No existen precios de venta." />
                                         ) : (
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
@@ -255,6 +256,7 @@ export default function PrecioVenta() {
                                                 <td>{precioVenta.codigo_barras}</td>
                                                 <td>{precioVenta.nombre}</td>
                                                 <td>{precioVenta.organizacion}</td>
+                                                <td>{precioVenta.sucursal || '—'}</td>
                                                 <td>{precioVenta.tipoMoneda}</td>
                                                 <td>{formatearGuarani(precioVenta.precio)}</td>
                                                 <td>

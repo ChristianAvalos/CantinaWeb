@@ -26,7 +26,7 @@ class PrecioVentaController extends Controller
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         if ($request->query('all')) {
-            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado']);
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
@@ -38,7 +38,7 @@ class PrecioVentaController extends Controller
             return response()->json(['data' => $precio_ventas]);
         }
 
-        $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'tipoEstado']);
+        $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado']);
 
         if ($search) {
             $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
@@ -77,7 +77,7 @@ class PrecioVentaController extends Controller
             if ($e->getCode() == 23505 || $e->getCode() == 1062) {
                 return response()->json([
                     'errors' => [
-                        'id_producto' => ['Ya existe un precio de venta para este producto en la organización seleccionada.']
+                        'id_producto' => ['Ya existe un precio de venta para este producto en la sucursal seleccionada.']
                     ]
                 ], 422);
             }
@@ -125,7 +125,7 @@ class PrecioVentaController extends Controller
             if ($e->getCode() == 23505 || $e->getCode() == 1062) {
                 return response()->json([
                     'errors' => [
-                        'id_producto' => ['Ya existe un precio de venta para este producto en la organización seleccionada.']
+                        'id_producto' => ['Ya existe un precio de venta para este producto en la sucursal seleccionada.']
                     ]
                 ], 422);
             }

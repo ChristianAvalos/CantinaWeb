@@ -29,6 +29,7 @@ class Organizacion extends Model
             'Sigla',
             'SitioWeb',
             'Imagen',
+            'id_tipoestado',
             'UrevUsuario',
             'UrevFechaHora',
     ];
@@ -76,6 +77,18 @@ class Organizacion extends Model
     public function users()
     {
         return $this->hasMany(User::class, 'id_organizacion');
+    }
+
+    //relacion con sucursales
+    public function sucursales()
+    {
+        return $this->hasMany(Sucursal::class, 'id_organizacion');
+    }
+
+    //relacion con el estado (Activo/Inactivo)
+    public function tipoEstado()
+    {
+        return $this->belongsTo(TipoEstado::class, 'id_tipoestado');
     }
 
     //relacion con productos

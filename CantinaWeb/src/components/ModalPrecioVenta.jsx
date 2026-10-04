@@ -30,6 +30,10 @@ export default function ModalPrecioVenta({
         precioVenta.id_organizacion ? String(precioVenta.id_organizacion) : "",
     );
     const [organizaciones, setOrganizaciones] = useState([]);
+    const [sucursalSeleccionada, setSucursalSeleccionada] = useState(
+        precioVenta.id_sucursal ? String(precioVenta.id_sucursal) : "",
+    );
+    const [sucursales, setSucursales] = useState([]);
     const [errores, setErrores] = useState({});
     const codigoBarrasRef = useRef(null);
 
@@ -61,6 +65,7 @@ export default function ModalPrecioVenta({
                 id_tipo_moneda: tipoMonedaSeleccionada,
                 precio: Math.round(Number(limpiarFormato(precio))),
                 id_organizacion: organizacionSeleccionada,
+                id_sucursal: sucursalSeleccionada,
             };
 
             if (modo === "crear") {
@@ -129,6 +134,33 @@ export default function ModalPrecioVenta({
 
         fetchInitialData();
     }, []);
+
+    // Cargar las sucursales de la organización elegida. Si tiene una sola, se
+    // asigna automáticamente (el precio queda para esa sucursal).
+    useEffect(() => {
+        const fetchSucursales = async () => {
+            if (!organizacionSeleccionada) {
+                setSucursales([]);
+                return;
+            }
+            try {
+                const { data } = await clienteAxios.get(`api/sucursales?id_organizacion=${organizacionSeleccionada}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const lista = Array.isArray(data) ? data : [];
+                setSucursales(lista);
+                if (lista.length === 1) {
+                    setSucursalSeleccionada(String(lista[0].id));
+                } else if (lista.length > 1) {
+                    setSucursalSeleccionada((prev) => prev || String(lista.find((s) => s.es_principal)?.id ?? lista[0].id));
+                }
+            } catch (error) {
+                console.error('Error al cargar sucursales', error);
+                setSucursales([]);
+            }
+        };
+        fetchSucursales();
+    }, [organizacionSeleccionada, token]);
 
     // Buscar producto por código de barras y autocompletar nombre
     useEffect(() => {
@@ -244,6 +276,32 @@ export default function ModalPrecioVenta({
                             </p>
                         )}
                     </div>
+
+                    {/* Campo para Sucursal (solo si la organización tiene más de una) */}
+                    {sucursales.length > 1 && (
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Sucursal
+                            </label>
+                            <select
+                                className={`w-full px-3 py-2 border ${errores.id_sucursal ? "border-red-500" : "border-gray-300"} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                value={sucursalSeleccionada}
+                                onChange={(e) => setSucursalSeleccionada(e.target.value)}
+                            >
+                                <option value="">Seleccione una sucursal</option>
+                                {sucursales.map((sucursal) => (
+                                    <option key={sucursal.id} value={sucursal.id}>
+                                        {sucursal.nombre}
+                                    </option>
+                                ))}
+                            </select>
+                            {errores.id_sucursal && (
+                                <p className="text-red-500 text-sm">
+                                    {errores.id_sucursal[0]}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Campo para Tipos de monedas */}
                     <div className="mb-4">

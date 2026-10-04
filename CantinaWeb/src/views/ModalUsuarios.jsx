@@ -10,6 +10,8 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
     const [roles, setRoles] = useState([]);
     const [organizacionSeleccionada, setorganizacionSeleccionada] = useState(usuario.id_organizacion || '');
     const [organizaciones, setOrganizacion] = useState([]);
+    const [sucursalSeleccionada, setSucursalSeleccionada] = useState(usuario.id_sucursal || '');
+    const [sucursales, setSucursales] = useState([]);
     const [errores, setErrores] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     // Obtener el token de autenticación
@@ -50,8 +52,35 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
             setCorreo(usuario.email || '');
             setRolSeleccionado(usuario.rol_id || '');
             setorganizacionSeleccionada(usuario.id_organizacion || '');
+            setSucursalSeleccionada(usuario.id_sucursal || '');
         }
     }, [usuario, modo]); // Dependencia en 'usuario' y 'modo'
+
+    // Cargar las sucursales de la organización elegida. Si tiene una sola, se
+    // asigna automáticamente (equivale a la organización principal).
+    useEffect(() => {
+        const fetchSucursales = async () => {
+            if (!organizacionSeleccionada) {
+                setSucursales([]);
+                setSucursalSeleccionada('');
+                return;
+            }
+            try {
+                const { data } = await clienteAxios.get(`api/sucursales?id_organizacion=${organizacionSeleccionada}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const lista = Array.isArray(data) ? data : [];
+                setSucursales(lista);
+                if (lista.length === 1) {
+                    setSucursalSeleccionada(String(lista[0].id));
+                }
+            } catch (error) {
+                console.error('Error al cargar sucursales', error);
+                setSucursales([]);
+            }
+        };
+        fetchSucursales();
+    }, [organizacionSeleccionada, token]);
 
     // Función para manejar la creación o edición del usuario
     const handleSubmit = async (e) => {
@@ -67,7 +96,8 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                 nameUser: nombreUsuario,
                 email: correo,
                 rol_id: rolSeleccionado,
-                id_organizacion: organizacionSeleccionada
+                id_organizacion: organizacionSeleccionada,
+                id_sucursal: sucursalSeleccionada || null
             };
 
             if (modo === 'crear') {
@@ -237,6 +267,27 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                                 </select>
                                 {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
                             </div>
+
+                            {/* Sucursal: solo se despliega si la organización tiene más de una.
+                                Con una sola, se usa automáticamente (principal). */}
+                            {sucursales.length > 1 && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+                                    <select
+                                        className={`w-full px-3 py-2 border ${errores.id_sucursal ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        value={sucursalSeleccionada}
+                                        onChange={(e) => setSucursalSeleccionada(e.target.value)}
+                                    >
+                                        <option value="">Seleccione una sucursal</option>
+                                        {sucursales.map((sucursal) => (
+                                            <option key={sucursal.id} value={sucursal.id}>
+                                                {sucursal.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errores.id_sucursal && <p className="text-red-500 text-sm">{errores.id_sucursal[0]}</p>}
+                                </div>
+                            )}
 
                         </>
                     )}

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MovimientoHistorial;
 use App\Models\Producto;
+use App\Models\StockSucursal;
 use App\Models\TipoMovimientos;
 use App\Models\Transacciones;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +32,7 @@ class InventarioService
      * @param  int   $idTipoMovimiento  Fila de `tipo_movimientos` con ambito = inventario.
      * @param  array{
      *     id_organizacion?: int|null,
+     *     id_sucursal?: int|null,
      *     id_transaccion?: int|null,
      *     id_transaccion_detalle?: int|null,
      *     id_movimiento_origen?: int|null,
@@ -48,7 +50,13 @@ class InventarioService
             throw new \InvalidArgumentException('La cantidad del movimiento debe ser mayor a cero.');
         }
 
-        return DB::transaction(function () use ($idProducto, $cantidad, $idTipoMovimiento, $opciones) {
+        $idSucursal = $opciones['id_sucursal'] ?? null;
+
+        if (! $idSucursal) {
+            throw new \InvalidArgumentException('El movimiento de inventario requiere una sucursal (id_sucursal).');
+        }
+
+        return DB::transaction(function () use ($idProducto, $cantidad, $idTipoMovimiento, $opciones, $idSucursal) {
             $tipo = TipoMovimientos::where('ambito', TipoMovimientos::AMBITO_INVENTARIO)
                 ->find($idTipoMovimiento);
 
@@ -58,15 +66,21 @@ class InventarioService
                 );
             }
 
-            // Bloqueo pesimista: dos operaciones simultáneas sobre el mismo producto
-            // se serializan acá en vez de pisarse el stock.
+            // Bloqueo pesimista del producto (serializa movimientos concurrentes).
             $producto = Producto::whereKey($idProducto)->lockForUpdate()->first();
 
             if (! $producto) {
                 throw new \RuntimeException("Producto #{$idProducto} no encontrado.");
             }
 
-            $stockAnterior = (float) $producto->stock_actual;
+            // El stock vive por SUCURSAL: se bloquea la fila de esa sucursal.
+            $stock = StockSucursal::firstOrCreate(
+                ['id_producto' => $producto->id, 'id_sucursal' => $idSucursal],
+                ['stock_actual' => 0]
+            );
+            $stock = StockSucursal::whereKey($stock->id)->lockForUpdate()->first();
+
+            $stockAnterior = (float) $stock->stock_actual;
             $stockNuevo = $tipo->esEntrada()
                 ? $stockAnterior + $cantidad
                 : $stockAnterior - $cantidad;
@@ -84,6 +98,7 @@ class InventarioService
 
             $movimiento = MovimientoHistorial::create([
                 'id_organizacion'        => $opciones['id_organizacion'] ?? $producto->id_organizacion,
+                'id_sucursal'            => $idSucursal,
                 'id_producto'            => $producto->id,
                 'producto_codigo'        => $producto->codigo_barras ?? $producto->codigo_interno,
                 'producto_nombre'        => $producto->nombre,
@@ -104,8 +119,15 @@ class InventarioService
                 'UrevFechaHora'          => now(),
             ]);
 
-            $producto->update([
+            $stock->update([
                 'stock_actual'  => $stockNuevo,
+                'UrevUsuario'   => $usuario?->name,
+                'UrevFechaHora' => now(),
+            ]);
+
+            // `productos.stock_actual` pasa a ser el TOTAL (suma de todas las sucursales).
+            $producto->update([
+                'stock_actual'  => (float) StockSucursal::where('id_producto', $producto->id)->sum('stock_actual'),
                 'UrevUsuario'   => $usuario?->name,
                 'UrevFechaHora' => now(),
             ]);
@@ -144,6 +166,7 @@ class InventarioService
 
         return self::registrar($idProducto, $cantidad, $tipo->id, array_merge([
             'id_organizacion' => $documento->id_organizacion,
+            'id_sucursal'     => $documento->id_sucursal,
             'id_transaccion'  => $documento->id,
         ], $opciones));
     }
@@ -168,19 +191,38 @@ class InventarioService
 
     /**
      * Stock de un producto calculado desde el kardex.
-     * Debe coincidir con `productos.stock_actual`: sirve para verificar el cuadre.
+     * Debe coincidir con `stock_sucursal.stock_actual`: sirve para verificar el cuadre.
      */
-    public static function stockSegunKardex(int $idProducto): float
+    public static function stockSegunKardex(int $idProducto, ?int $idSucursal = null): float
     {
-        $total = MovimientoHistorial::query()
-            ->where('id_producto', $idProducto)
-            ->selectRaw(
+        $query = MovimientoHistorial::query()->where('id_producto', $idProducto);
+
+        if ($idSucursal) {
+            $query->where('id_sucursal', $idSucursal);
+        }
+
+        $total = $query->selectRaw(
                 'SUM(CASE WHEN direccion = ? THEN cantidad ELSE -cantidad END) AS total',
                 [TipoMovimientos::DIRECCION_ENTRADA]
             )
             ->value('total');
 
         return (float) ($total ?? 0);
+    }
+
+    /**
+     * Stock disponible de un producto en una sucursal concreta.
+     * Si no se pasa sucursal, devuelve el TOTAL del producto.
+     */
+    public static function stockEnSucursal(int $idProducto, ?int $idSucursal): float
+    {
+        if (! $idSucursal) {
+            return (float) Producto::whereKey($idProducto)->value('stock_actual');
+        }
+
+        return (float) (StockSucursal::where('id_producto', $idProducto)
+            ->where('id_sucursal', $idSucursal)
+            ->value('stock_actual') ?? 0);
     }
 
     /** Formatea una cantidad sin ceros decimales sobrantes (13,0000 → 13). */

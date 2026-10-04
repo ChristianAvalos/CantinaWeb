@@ -143,7 +143,7 @@ class TransaccionesDetalleController extends Controller
         // finalizar (postear) la transacción. Igual validamos temprano para avisar
         // si no alcanza el stock (validación "suave", sin bloquear el borrador).
         if ($transaccion->direccionStock() === TipoMovimientos::DIRECCION_SALIDA) {
-            $stockActual = (float) ($producto->stock_actual ?? 0);
+            $stockActual = \App\Services\InventarioService::stockEnSucursal($producto->id, $transaccion->id_sucursal);
             if ($stockActual < $cantidad) {
                 return response()->json([
                     'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidad}).",
@@ -226,7 +226,7 @@ class TransaccionesDetalleController extends Controller
         // El stock NO se mueve acá (se aplica al finalizar). Validación "suave"
         // para avisar temprano si una salida no tiene stock suficiente.
         if ($transaccion->direccionStock() === TipoMovimientos::DIRECCION_SALIDA) {
-            $stockActual = (float) ($producto->stock_actual ?? 0);
+            $stockActual = \App\Services\InventarioService::stockEnSucursal($producto->id, $transaccion->id_sucursal);
             if ($stockActual < $cantidadNueva) {
                 return response()->json([
                     'message' => "Stock insuficiente para {$producto->nombre} (disponible: {$stockActual}, requerido: {$cantidadNueva})."

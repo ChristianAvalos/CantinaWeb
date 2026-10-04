@@ -25,13 +25,14 @@ class CreatePrecioVentaRequest extends FormRequest
     {
         return [
             'id_organizacion' => 'required|exists:organizacion,id',
+            'id_sucursal' => 'required|exists:sucursales,id',
             'id_tipo_moneda' => 'required|exists:tipo_monedas,id',
             'codigo_barras' => 'required|string|max:255',
             'id_producto' => [
                 'required',
                 'exists:productos,id',
                 Rule::unique('precio_venta')->where(function ($query) {
-                    return $query->where('id_organizacion', $this->id_organizacion);
+                    return $query->where('id_sucursal', $this->id_sucursal);
                 }),
             ],
             'nombre' => 'required|string|max:255',
@@ -43,6 +44,8 @@ class CreatePrecioVentaRequest extends FormRequest
         return [
             'id_organizacion.required' => 'El campo organizacion es obligatorio.',
             'id_organizacion.exists' => 'La organizacion proporcionada no existe.',
+            'id_sucursal.required' => 'El campo sucursal es obligatorio.',
+            'id_sucursal.exists' => 'La sucursal proporcionada no existe.',
             'id_tipo_moneda.required' => 'El campo tipo de moneda es obligatorio.',
             'id_tipo_moneda.exists' => 'El tipo de moneda proporcionado no existe.',
             'codigo_barras.required' => 'El campo codigo de barras es obligatorio.',

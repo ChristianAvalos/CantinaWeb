@@ -14,6 +14,7 @@ use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
 use App\Services\InventarioService;
 use App\Models\Producto;
+use App\Models\Sucursal;
 use App\Models\TipoMovimientos;
 use App\Models\TipoPago;
 use App\Models\TipoComprobante;
@@ -64,13 +65,19 @@ class TransaccionesController extends Controller
             'banco',
             'formaPago',
             'organizacion',
+            'sucursal',
             'comprobante:id,id_transaccion',
             'cuotas',
             'caja'
         ]);
-        // Si NO es admin, limitar por la organización del usuario
+        // Si NO es admin, limitar por la organización del usuario y, si tiene
+        // sucursal asignada, también por su sucursal.
         if (! $isAdmin) {
             $transacciones->where('id_organizacion', $user->id_organizacion);
+
+            if (! empty($user->id_sucursal)) {
+                $transacciones->where('id_sucursal', $user->id_sucursal);
+            }
         }
 
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
@@ -137,11 +144,17 @@ class TransaccionesController extends Controller
     {
         $data = $request->validated();
 
+        $idOrganizacion = $data['id_organizacion'] ?? Auth::user()->id_organizacion;
+        $idSucursal = $data['id_sucursal']
+            ?? Auth::user()?->id_sucursal
+            ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
+
         $transaccion = Transacciones::create([
             'descripcion' => $data['descripcion'] ?? null,
             'fecha' => $data['fecha'],
             'lote' => $data['lote'] ?? null,
-            'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
+            'id_organizacion' => $idOrganizacion,
+            'id_sucursal' => $idSucursal,
             'id_persona' => $data['id_persona'] ?? null,
             'id_TipoEstado' => EstadoTransaccion::ACTIVO, // nace "parqueada": sin efecto en stock
             'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
@@ -197,12 +210,18 @@ class TransaccionesController extends Controller
             $tipoTicket = TipoComprobante::whereRaw('LOWER(nombre) = ?', ['ticket'])->first();
             $ticketTipoComprobanteId = $tipoTicket ? $tipoTicket->id : null;
 
-            $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId) {
+            // La venta POS se registra en la sucursal del usuario (o en la principal
+            // de la organización si aún no tiene sucursal asignada).
+            $idSucursal = Auth::user()?->id_sucursal
+                ?? Sucursal::principalDeOCrear((int) $data['id_organizacion'])->id;
+
+            $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId, $idSucursal) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
                 $cabecera = Transacciones::create([
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'id_organizacion' => $data['id_organizacion'],
+                    'id_sucursal' => $idSucursal,
                     'id_persona' => $data['id_persona'] ?? null,
                     'id_TipoEstado' => EstadoTransaccion::FINALIZADO,
                     'id_TipoMovimiento' => 2,        // Venta
@@ -229,7 +248,7 @@ class TransaccionesController extends Controller
                     $cantidad = (float) $detalle['cantidad'];
                     $precioUnitario = (float) $detalle['precio_unitario'];
                     $subtotal = $cantidad * $precioUnitario;
-                    $stockActual = (float) ($producto->stock_actual ?? 0);
+                    $stockActual = InventarioService::stockEnSucursal($producto->id, $idSucursal);
 
                     // Validar stock (venta = salida)
                     if ($stockActual < $cantidad) {
@@ -512,6 +531,7 @@ class TransaccionesController extends Controller
                     'lote' => $data['lote'] ?? null,
                     'id_persona' => $data['id_persona'],
                     'id_TipoEstado' => $idTipoEstado,
+                    'id_sucursal' => $data['id_sucursal'] ?? $transaccion->id_sucursal,
                     'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
                     'direccion' => ($idTipoMovimiento === 3) ? ($data['direccion'] ?? null) : null,
                     'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
@@ -655,7 +675,7 @@ class TransaccionesController extends Controller
         if ($fuePosteada && $operacionInversa === TipoMovimientos::DIRECCION_SALIDA) {
             $sinStock = [];
             foreach ($detalles as $detalle) {
-                $stockActual = (float) ($detalle->producto->stock_actual ?? 0);
+                $stockActual = InventarioService::stockEnSucursal($detalle->id_producto, $transaccion->id_sucursal);
                 $cantidad = (float) $detalle->cantidad;
                 if ($stockActual < $cantidad) {
                     $sinStock[] = sprintf(

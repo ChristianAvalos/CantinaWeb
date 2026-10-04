@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Organizacion;
+use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\OrganizacionRequest;
@@ -22,13 +23,13 @@ class OrganizacionController extends Controller
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         if ($request->query('all')) {
-            $organizacionesQuery = Organizacion::with(['ciudad', 'pais']);
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado']);
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($organizacionesQuery, $filtros, ['search', 'all']);
             }
             $organizaciones = $organizacionesQuery->get();
         } else {
-            $organizacionesQuery = Organizacion::with(['ciudad', 'pais']);
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado']);
 
             if ($search) {
                 $organizacionesQuery->where('RazonSocial', 'ilike', '%' . $search . '%');
@@ -117,11 +118,15 @@ class OrganizacionController extends Controller
                         'Sigla' => $data['sigla'],
                         'SitioWeb'=> $data['sitioWeb'],
                         'Imagen' => $data['imagen'],
+                        'id_tipoestado' => 1, // nace Activa
                         'UrevUsuario' => 'Creado - ' . Auth::user()->name,
                         'UrevFechaHora' => Carbon::now()
                     ]
                     );
-        
+
+                // Toda organización nace con su sucursal principal.
+                Sucursal::principalDeOCrear($organizacion->id, $organizacion->RazonSocial);
+
             // Retornar respuesta exitosa
             return response()->json([
                 'message' => 'Organizacion creada exitosamente'
@@ -227,6 +232,20 @@ class OrganizacionController extends Controller
             return response()->json([
                 'message' => 'Organizacion actualizado exitosamente'
             ], 200);
+    }
+
+    /**
+     * Activa o desactiva una organización.
+     */
+    public function estadoOrganizacion($id, Request $request)
+    {
+        $organizacion = Organizacion::findOrFail($id);
+        $organizacion->id_tipoestado = $request->id_tipoestado;
+        $organizacion->UrevUsuario = 'Actualizado - ' . Auth::user()->name;
+        $organizacion->UrevFechaHora = Carbon::now();
+        $organizacion->save();
+
+        return response()->json(['message' => 'Estado de la organización actualizado correctamente.'], 200);
     }
 
     /**
