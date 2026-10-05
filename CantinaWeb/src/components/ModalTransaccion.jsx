@@ -169,9 +169,23 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }
     }, []);
 
+    // Cuando la organización elegida tiene más de una sucursal, es obligatorio
+    // seleccionar una. Si se deja vacío el backend caía a la sucursal del usuario,
+    // que puede pertenecer a otra organización.
+    const validarSucursal = () => {
+        if (organizacionSeleccionada && sucursales.length > 1 && !form.id_sucursal) {
+            setErrores(prev => ({ ...prev, id_sucursal: ['Debe seleccionar una sucursal.'] }));
+            return false;
+        }
+        return true;
+    };
+
     // Función única para crear/actualizar transacción
     const guardarTransaccion = async (modo, opciones = {}) => {
         const { finalizar = false, incluirCuotas = false } = opciones;
+        if (!validarSucursal()) {
+            return { success: false, message: 'Debe seleccionar una sucursal.' };
+        }
         try {
             const formData = new FormData();
             Object.entries(form).forEach(([key, value]) => {
@@ -540,34 +554,19 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                         ? 'api/tipo_estado?filtro=venta' // venta: Activo/Inactivo/Finalizado
                         : 'api/tipo_estado';              // ajuste: todos los estados
 
-                const [tpRes, fpRes, teRes, tcRes, orgRes, maRes, suRes] = await Promise.all([
+                const [tpRes, fpRes, teRes, tcRes, orgRes, maRes] = await Promise.all([
                     clienteAxios.get('api/tipo_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/forma_pago', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get(tipoEstadoUrl, { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/tipo_comprobante', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } }),
                     clienteAxios.get('api/motivo_ajustes', { headers: { Authorization: `Bearer ${token}` } }),
-                    clienteAxios.get('api/sucursales', { headers: { Authorization: `Bearer ${token}` } }),
                 ]);
                 setTipoPago(tpRes.data);
                 setFormaPago(fpRes.data);
                 setTipoEstado(teRes.data);
                 setOrganizacion(orgRes.data);
                 setMotivosAjuste(maRes.data);
-
-                // Sucursal: si la organización tiene una sola, se usa automáticamente;
-                // si tiene varias, se elige (por defecto la principal).
-                const listaSucursales = Array.isArray(suRes.data) ? suRes.data : [];
-                setSucursales(listaSucursales);
-                if (listaSucursales.length === 1) {
-                    setForm(prev => ({ ...prev, id_sucursal: String(listaSucursales[0].id) }));
-                } else if (listaSucursales.length > 1) {
-                    setForm(prev => {
-                        if (prev.id_sucursal) return prev;
-                        const principal = listaSucursales.find(s => s.es_principal) ?? listaSucursales[0];
-                        return { ...prev, id_sucursal: String(principal.id) };
-                    });
-                }
 
                 // En compras el tipo de comprobante es SIEMPRE Factura: se filtra
                 // la lista a solo Factura y queda predefinida (y bloqueada) en el combo.
@@ -604,6 +603,56 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
         fetchInitialData();
     }, []);
+
+
+    // Sucursales: se recargan según la organización elegida en el combo.
+    // Antes se pedían una sola vez al abrir el modal (sin id_organizacion, el
+    // backend devolvía las del usuario logueado) y quedaban fijas aunque se
+    // cambiara de organización.
+    useEffect(() => {
+        let cancelado = false;
+
+        const cargarSucursales = async () => {
+            if (!organizacionSeleccionada) {
+                setSucursales([]);
+                setForm(prev => (prev.id_sucursal ? { ...prev, id_sucursal: '' } : prev));
+                return;
+            }
+
+            try {
+                const { data } = await clienteAxios.get('api/sucursales', {
+                    params: { id_organizacion: organizacionSeleccionada },
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (cancelado) return;
+
+                const listaSucursales = Array.isArray(data) ? data : [];
+                setSucursales(listaSucursales);
+
+                setForm(prev => {
+                    // Se conserva la sucursal si pertenece a la organización elegida.
+                    if (prev.id_sucursal && listaSucursales.some(s => String(s.id) === String(prev.id_sucursal))) {
+                        return prev;
+                    }
+                    if (listaSucursales.length === 0) {
+                        return { ...prev, id_sucursal: '' };
+                    }
+                    // Con una sola sucursal se usa automáticamente; con varias,
+                    // se elige por defecto la principal.
+                    const principal = listaSucursales.find(s => s.es_principal) ?? listaSucursales[0];
+                    return { ...prev, id_sucursal: String(principal.id) };
+                });
+            } catch (error) {
+                if (cancelado) return;
+                console.error('Error al cargar las sucursales', error);
+                setSucursales([]);
+            }
+        };
+
+        cargarSucursales();
+
+        return () => { cancelado = true; };
+    }, [organizacionSeleccionada, token]);
 
 
     // Validación: el monto recibido (y el vuelto) solo aplica cuando la venta se paga en EFECTIVO.

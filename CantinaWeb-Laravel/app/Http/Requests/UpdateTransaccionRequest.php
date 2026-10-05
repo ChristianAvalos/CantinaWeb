@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Sucursal;
 use App\Models\TipoMovimientos;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -55,7 +56,22 @@ class UpdateTransaccionRequest extends FormRequest
             'fecha' => 'required|date',
             'lote' => 'nullable',
             'id_organizacion' => 'required|exists:organizacion,id',
-            'id_sucursal' => 'nullable|exists:sucursales,id',
+            // Con más de una sucursal en la organización, elegir una es obligatorio.
+            // Además, la sucursal debe pertenecer a la organización seleccionada.
+            'id_sucursal' => [
+                Rule::requiredIf(fn () => Sucursal::where('id_organizacion', $this->input('id_organizacion'))->count() > 1),
+                'nullable',
+                'exists:sucursales,id',
+                function ($attribute, $value, $fail) {
+                    if ($value === null) {
+                        return;
+                    }
+                    $idOrganizacion = $this->input('id_organizacion');
+                    if ($idOrganizacion && ! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacion)->exists()) {
+                        $fail('La sucursal seleccionada no pertenece a la organización.');
+                    }
+                },
+            ],
             'descripcion' => 'nullable|string|max:1000',
             'monto' => 'nullable|numeric',
             'monto_recibido' => 'nullable|numeric',
@@ -85,6 +101,8 @@ class UpdateTransaccionRequest extends FormRequest
         return [
             'id_organizacion.required' => 'Debe seleccionar una organización.',
             'id_organizacion.exists' => 'La organización seleccionada no existe.',
+
+            'id_sucursal.required' => 'Debe seleccionar una sucursal.',
 
             'descripcion.max' => 'La descripción no debe exceder los 1000 caracteres.',
 

@@ -145,8 +145,11 @@ class TransaccionesController extends Controller
         $data = $request->validated();
 
         $idOrganizacion = $data['id_organizacion'] ?? Auth::user()->id_organizacion;
+        // Sin sucursal explícita se usa la de la organización seleccionada
+        // (preferentemente la principal) y, si no tiene ninguna, se crea la principal.
+        // No se usa la sucursal del usuario: puede pertenecer a otra organización.
         $idSucursal = $data['id_sucursal']
-            ?? Auth::user()?->id_sucursal
+            ?? Sucursal::where('id_organizacion', $idOrganizacion)->orderByDesc('es_principal')->value('id')
             ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
         $transaccion = Transacciones::create([

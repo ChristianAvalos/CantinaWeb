@@ -26,10 +26,20 @@ class TipoEstadoSeeder extends Seeder
 
         $now = Carbon::now();
 
-        // updateOrInsert por (organizacion, descripcion): re-ejecutar no duplica.
+        // Catálogo global: id_organizacion = null para que lo vean todas las
+        // organizaciones (TipoEstadoController filtra whereNull(id_organizacion)
+        // OR id_organizacion = <org del usuario>).
+        // Normaliza filas heredadas de versiones previas, que quedaron ligadas
+        // a la organización 1, para reutilizarlas en vez de duplicarlas.
+        DB::table('tipo_estados')
+            ->where('id_organizacion', 1)
+            ->whereIn('descripcion', $registros)
+            ->update(['id_organizacion' => null, 'updated_at' => $now]);
+
+        // updateOrInsert por descripcion: re-ejecutar no duplica.
         foreach ($registros as $nombre) {
             DB::table('tipo_estados')->updateOrInsert(
-                ['id_organizacion' => 1, 'descripcion' => $nombre],
+                ['id_organizacion' => null, 'descripcion' => $nombre],
                 [
                     'UrevUsuario' => 'Admin',
                     'UrevFechaHora' => $now,

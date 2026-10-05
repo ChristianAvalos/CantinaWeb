@@ -33,8 +33,8 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesSeeder::class);
         $this->call(PaisSeeder::class);
         $this->call(CiudadesYdepartamentos::class);
-        $this->call(OrganizacionSeeder::class);
         $this->call(TipoEstadoSeeder::class);
+        $this->call(OrganizacionSeeder::class);
         $this->call(UserAdministrador::class);
         $this->call(PermissionsTableSeeder::class);
         $this->call(RolePermissionSeeder::class);
