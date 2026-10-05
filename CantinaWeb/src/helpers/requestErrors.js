@@ -39,3 +39,12 @@ export const getErrorMessages = (error, fallbackMessage) => {
 
     return [fallbackMessage];
 };
+
+/**
+ * Mensaje único y legible para mostrar en un toast.
+ *
+ * Laravel resume los 422 como "<primer error> (and N more errors)" (en inglés),
+ * así que se priorizan los mensajes reales de validación (en español).
+ */
+export const getErrorMessage = (error, fallbackMessage) =>
+    getErrorMessages(error, fallbackMessage).filter(Boolean).join(' ');
