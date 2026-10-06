@@ -9,6 +9,7 @@ use App\Models\Transacciones;
 use App\Models\TransaccionesDetalle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Requests\CreateTransaccionRequest;
 use App\Http\Requests\UpdateTransaccionRequest;
@@ -69,15 +70,14 @@ class TransaccionesController extends Controller
             'cuotas',
             'caja'
         ]);
-        // Aislamiento por organización: TODOS los usuarios (incluido el rol
-        // Administrador, que no es un admin global) ven solo los documentos de
-        // su propia organización y, si tienen sucursal asignada, solo los de esa
-        // sucursal.
-        $transacciones->where('id_organizacion', $this->organizacionDelUsuario());
+        // Aislamiento por organización; el Administrador de Sistema ve todos.
+        $transacciones->when(! $this->esAdminSistema(), function ($q) {
+            $q->where('id_organizacion', $this->organizacionDelUsuario());
 
-        if ($sucursal = $this->sucursalDelUsuario()) {
-            $transacciones->where('id_sucursal', $sucursal);
-        }
+            if ($sucursal = $this->sucursalDelUsuario()) {
+                $q->where('id_sucursal', $sucursal);
+            }
+        });
 
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
                 $q->where(function ($s) use ($search, $searchFecha) {
@@ -143,13 +143,15 @@ class TransaccionesController extends Controller
     {
         $data = $request->validated();
 
-        // La organización y la sucursal se toman SIEMPRE del usuario, nunca del
-        // request: así nadie puede crear un documento en otra organización.
-        $idOrganizacion = $this->organizacionDelUsuario();
-        // Preferencia de sucursal: la del usuario; si no tiene, la elegida
-        // (validada contra su organización); si no, la principal de su organización.
-        $idSucursal = $this->sucursalDelUsuario()
-            ?? $data['id_sucursal']
+        // El Administrador de Sistema puede elegir la organización destino; el
+        // resto siempre crea en la suya.
+        $idOrganizacion = $this->esAdminSistema()
+            ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
+            : $this->organizacionDelUsuario();
+        // Sucursal: la elegida (validada contra la organización destino) o, para
+        // un usuario acotado, la suya; si no, la principal de esa organización.
+        $idSucursal = $data['id_sucursal']
+            ?? (! $this->esAdminSistema() ? $this->sucursalDelUsuario() : null)
             ?? Sucursal::where('id_organizacion', $idOrganizacion)->orderByDesc('es_principal')->value('id')
             ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
@@ -222,11 +224,14 @@ class TransaccionesController extends Controller
             $tipoTicket = TipoComprobante::whereRaw('LOWER(nombre) = ?', ['ticket'])->first();
             $ticketTipoComprobanteId = $tipoTicket ? $tipoTicket->id : null;
 
-            // La venta POS se registra SIEMPRE en la organización del usuario y en
-            // su sucursal (o en la principal de su organización si no tiene una).
-            $idOrganizacion = $this->organizacionDelUsuario();
-            $idSucursal = $this->sucursalDelUsuario()
-                ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
+            // La organización la elige el Administrador de Sistema; el resto usa
+            // la suya, con su sucursal (o la principal de la organización).
+            $idOrganizacion = $this->esAdminSistema()
+                ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
+                : $this->organizacionDelUsuario();
+            $idSucursal = (! $this->esAdminSistema() && $this->sucursalDelUsuario())
+                ? $this->sucursalDelUsuario()
+                : Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
             $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId, $idOrganizacion, $idSucursal) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
@@ -554,7 +559,9 @@ class TransaccionesController extends Controller
                     'lote' => $data['lote'] ?? null,
                     'id_persona' => $data['id_persona'],
                     'id_TipoEstado' => $idTipoEstado,
-                    'id_sucursal' => $this->sucursalDelUsuario() ?? $data['id_sucursal'] ?? $transaccion->id_sucursal,
+                    'id_sucursal' => (! $this->esAdminSistema() && $this->sucursalDelUsuario())
+                        ? $this->sucursalDelUsuario()
+                        : ($data['id_sucursal'] ?? $transaccion->id_sucursal),
                     'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
                     'direccion' => ($idTipoMovimiento === 3) ? ($data['direccion'] ?? null) : null,
                     'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
@@ -592,78 +599,129 @@ class TransaccionesController extends Controller
         return response()->json($transaccion->load('tipoPago'), 200);
     }
 
+    /**
+     * Resumen del panel: totales del mes consultado y serie de los últimos 6
+     * meses comparando ventas contra compras.
+     *
+     * Compra = salida de dinero (egreso) y Venta = entrada (ingreso), por lo
+     * que el saldo del mes es `ventas - compras`.
+     *
+     * Solo se consideran documentos POSTEADOS: los borradores (Activo) y las
+     * anuladas todavía no impactaron la caja ni el inventario.
+     */
     public function Grafico(Request $request)
     {
-        $userId = Auth::user()->id;
-        $idTipoIngreso = 1;
-        $idTipoEgreso = [2, 3];
+        $esAdminSistema = $this->esAdminSistema();
+        $idOrganizacion = $this->organizacionDelUsuario();
+        $idSucursal = $this->sucursalDelUsuario();
+
+        $estadosPosteados = [
+            EstadoTransaccion::FINALIZADO->value,
+            EstadoTransaccion::POSITIVO->value,
+            EstadoTransaccion::NEGATIVO->value,
+        ];
+
+        // Query base ya acotada a la organización (y sucursal) del usuario.
+        $base = function () use ($esAdminSistema, $idOrganizacion, $idSucursal) {
+            $query = Transacciones::query();
+
+            if ($esAdminSistema) {
+                return $query;
+            }
+
+            $query->where('transacciones.id_organizacion', $idOrganizacion);
+
+            if (! empty($idSucursal)) {
+                $query->where('transacciones.id_sucursal', $idSucursal);
+            }
+
+            return $query;
+        };
+
         $mes = $request->input('mes');
-        // Sumar todos los ingresos del usuario en el mes
-        $presupuestoQuery = Transacciones::where('id_usuario', $userId)
-            ->where('id_TipoMovimiento', $idTipoIngreso);
+        $mes = preg_match('/^\d{4}-\d{2}$/', (string) $mes) ? $mes : now()->format('Y-m');
+        [$anio, $mesNumero] = array_map('intval', explode('-', $mes));
 
+        $totalDelMes = function ($idTipoMovimiento) use ($base, $anio, $mesNumero, $estadosPosteados) {
+            return (float) $base()
+                ->whereIn('transacciones.id_TipoEstado', $estadosPosteados)
+                ->where('transacciones.id_TipoMovimiento', $idTipoMovimiento)
+                ->whereYear('transacciones.fecha', $anio)
+                ->whereMonth('transacciones.fecha', $mesNumero)
+                ->sum('transacciones.monto');
+        };
 
+        $ventasMes = $totalDelMes(TipoMovimientos::DOCUMENTO_VENTA);
+        $comprasMes = $totalDelMes(TipoMovimientos::DOCUMENTO_COMPRA);
+        $ajustesMes = $totalDelMes(TipoMovimientos::DOCUMENTO_AJUSTE);
 
-        // Sumar todos los egresos del usuario en el mes
-        $egresoQuery = Transacciones::where('id_usuario', $userId)
-            ->whereIn('id_TipoMovimiento', $idTipoEgreso)
-            ->sum('monto');
+        // Serie de los últimos 6 meses (incluido el consultado) en una consulta.
+        $inicioSerie = Carbon::createFromDate($anio, $mesNumero, 1)->subMonths(5)->startOfMonth();
+        $finSerie = Carbon::createFromDate($anio, $mesNumero, 1)->endOfMonth();
 
-        $acumulado = $presupuestoQuery->sum('monto') - $egresoQuery;
+        $acumulados = $base()
+            ->select(
+                DB::raw("to_char(transacciones.fecha, 'YYYY-MM') as periodo"),
+                'transacciones.id_TipoMovimiento as id_tipo_movimiento',
+                DB::raw('SUM(transacciones.monto) as monto')
+            )
+            ->whereIn('transacciones.id_TipoEstado', $estadosPosteados)
+            ->whereIn('transacciones.id_TipoMovimiento', [
+                TipoMovimientos::DOCUMENTO_COMPRA,
+                TipoMovimientos::DOCUMENTO_VENTA,
+            ])
+            ->whereBetween('transacciones.fecha', [$inicioSerie->toDateString(), $finSerie->toDateString()])
+            ->groupBy('periodo', 'transacciones.id_TipoMovimiento')
+            ->get()
+            ->keyBy(fn ($fila) => $fila->periodo.'-'.(int) $fila->id_tipo_movimiento);
 
-        // Filtro por mes
-        if ($mes) {
-            [$anio, $mesNum] = explode('-', $mes);
-            $presupuestoQuery->whereYear('UrevFechaHora', $anio)
-                ->whereMonth('UrevFechaHora', $mesNum);
-        }
-        $presupuesto = $presupuestoQuery->sum('monto');
+        $serie = [];
+        foreach (range(0, 5) as $indice) {
+            $fechaMes = $inicioSerie->copy()->addMonths($indice);
+            $periodo = $fechaMes->format('Y-m');
 
-        $ingresoMes = $presupuesto;
-
-        // Agrupa los egresos por categoría y suma los montos en el mes
-        $gastosQuery = Transacciones::select('id_Categoria', DB::raw('SUM(monto) as monto'))
-            ->where('id_usuario', $userId)
-            ->whereIn('id_TipoMovimiento', $idTipoEgreso)
-            ->groupBy('id_Categoria')
-            ->with('categoria');
-
-        if ($mes) {
-            [$anio, $mesNum] = explode('-', $mes);
-            $gastosQuery->whereYear('UrevFechaHora', $anio)
-                ->whereMonth('UrevFechaHora', $mesNum);
-        }
-        $gastos = $gastosQuery->get();
-
-        $egresoMesQuery = Transacciones::where('id_usuario', $userId)
-            ->whereIn('id_TipoMovimiento', $idTipoEgreso);
-
-        if ($mes) {
-            [$anio, $mesNum] = explode('-', $mes);
-            $egresoMesQuery->whereYear('UrevFechaHora', $anio)
-                ->whereMonth('UrevFechaHora', $mesNum);
-        }
-        $egresoMes = $egresoMesQuery->sum('monto');
-
-        $colores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
-        $gastosFormateados = [];
-        foreach ($gastos as $idx => $gasto) {
-            $gastosFormateados[] = [
-                'categoria' => $gasto->categoria ? $gasto->categoria->nombre : 'Sin categoría',
-                'monto' => (float) $gasto->monto,
-                'color' => $colores[$idx % count($colores)]
+            $serie[] = [
+                'mes'     => $periodo,
+                'label'   => $fechaMes->translatedFormat('M Y'),
+                'ventas'  => (float) ($acumulados->get($periodo.'-'.TipoMovimientos::DOCUMENTO_VENTA)->monto ?? 0),
+                'compras' => (float) ($acumulados->get($periodo.'-'.TipoMovimientos::DOCUMENTO_COMPRA)->monto ?? 0),
             ];
         }
 
-        $totalGastado = array_sum(array_column($gastosFormateados, 'monto'));
-        $restante = $presupuesto - $totalGastado;
+        // Cuotas pendientes: por cobrar (ventas a crédito) y por pagar (compras
+        // a crédito). Se separan por tipo de documento de la transacción.
+        $idEstadoPendiente = TipoEstado::where('descripcion', 'Pendiente')->value('id');
+
+        $cuotasPendientes = function ($idTipoMovimiento) use ($base, $idEstadoPendiente) {
+            if (! $idEstadoPendiente) {
+                return ['cantidad' => 0, 'monto' => 0.0];
+            }
+
+            $query = $base()
+                ->join('cuotas', 'cuotas.id_transaccion', '=', 'transacciones.id')
+                ->where('cuotas.id_TipoEstado', $idEstadoPendiente)
+                ->where('transacciones.id_TipoMovimiento', $idTipoMovimiento);
+
+            return [
+                'cantidad' => (clone $query)->count(),
+                'monto'    => (float) (clone $query)->sum('cuotas.monto'),
+            ];
+        };
+
+        $cobranzas = $cuotasPendientes(TipoMovimientos::DOCUMENTO_VENTA);
+        $pagos = $cuotasPendientes(TipoMovimientos::DOCUMENTO_COMPRA);
 
         return response()->json([
-            'gastos' => $gastosFormateados,
-            'restante' => $restante,
-            'acumulado' => $acumulado,
-            'ingresoMes' => $ingresoMes,
-            'egresoMes' => $egresoMes,
+            'mes'                      => $mes,
+            'ventasMes'                => $ventasMes,
+            'comprasMes'               => $comprasMes,
+            'ajustesMes'               => $ajustesMes,
+            'saldoMes'                 => $ventasMes - $comprasMes,
+            'cobranzasPendientes'      => $cobranzas['cantidad'],
+            'cobranzasPendientesMonto' => $cobranzas['monto'],
+            'pagosPendientes'          => $pagos['cantidad'],
+            'pagosPendientesMonto'     => $pagos['monto'],
+            'serie'                    => $serie,
         ]);
     }
 

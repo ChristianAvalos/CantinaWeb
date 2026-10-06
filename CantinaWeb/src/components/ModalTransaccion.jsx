@@ -150,6 +150,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [organizacionSeleccionada, setorganizacionSeleccionada] = useState(transaccion.id_organizacion || '');
     const [organizaciones, setOrganizacion] = useState([]);
     const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
 
     // La organización es SIEMPRE la del usuario: no se puede operar en otra.
     // Al crear se autoselecciona para dejar el formulario listo.
@@ -284,6 +285,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                 if (tipoPersonaFiltro !== null) {
                     params.append('tipo_persona', tipoPersonaFiltro);
                 }
+
+                // El Administrador de Sistema acota a la organización elegida.
+                if (esAdminSistema && organizacionSeleccionada) {
+                    params.append('id_organizacion', organizacionSeleccionada);
+                }
                 //en el combo muestro solo los activos, por eso el filtro de estado 1=activo
                 params.append('id_tipoestado', '1');
                 
@@ -307,7 +313,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }, 300); // Debounce de 300ms
 
         return () => clearTimeout(delayDebounceFn);
-    }, [busquedaPersona, mostrarSugerencias, tipoPersonaFiltro, token]);
+    }, [busquedaPersona, mostrarSugerencias, tipoPersonaFiltro, token, esAdminSistema, organizacionSeleccionada]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -1046,7 +1052,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 >
                                     <option value="">Seleccione una organizacion</option>
                                     {organizaciones
-                                        .filter((organizacion) => String(organizacion.id) === String(user?.id_organizacion))
+                                        .filter((organizacion) => esAdminSistema || String(organizacion.id) === String(user?.id_organizacion))
                                         .map((organizacion) => (
                                             <option key={organizacion.id} value={organizacion.id}>
                                                 {organizacion.RazonSocial}

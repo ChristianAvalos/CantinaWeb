@@ -6,6 +6,7 @@ import ModalOrganizacion from "./ModalOrganizacion";
 import ModalSucursales from "./ModalSucursales";
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import useAuthPermisos from "../hooks/useAuthPermisos";
 
 const FILTROS_ORGANIZACION = [
     {
@@ -22,7 +23,8 @@ const FILTROS_ORGANIZACION_INICIALES = {
 
 
 export default function Organizacion() {
-    //grilla de organizacion
+    // Solo el Administrador de Sistema puede crear o eliminar organizaciones.
+    const { isAdmin } = useAuthPermisos();    //grilla de organizacion
     const [organizacion, setOrganizacion,] = useState([]);
     const [organizacionSeleccionado, setorganizacionSeleccionado] = useState(null);
     // organización cuyas sucursales se están administrando (null = modal cerrado)
@@ -205,7 +207,7 @@ export default function Organizacion() {
                         <FiltrosBar
                             title="Organización"
                             buttonLabel="Añadir organización"
-                            onAdd={handleAdd}
+                            onAdd={isAdmin ? handleAdd : undefined}
                             filterDefinitions={FILTROS_ORGANIZACION}
                             initialValues={FILTROS_ORGANIZACION_INICIALES}
                             onApply={handleAplicarFiltros}
@@ -260,16 +262,20 @@ export default function Organizacion() {
                                                         <button onClick={() => openModal('editar', organizacion)} className="flex items-center focus:outline-none">
                                                             <img src="/img/Icon/edit.png" alt="Edit Rol" />
                                                         </button>
-                                                        <button onClick={() => handleDelete(organizacion.id)} className="flex items-center focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete Rol" />
-                                                        </button>
-                                                        <button onClick={() => handleEstado(organizacion)} title={Number(organizacion.id_tipoestado) === 1 ? 'Desactivar' : 'Activar'} className="flex items-center focus:outline-none">
-                                                            {Number(organizacion.id_tipoestado) === 1 ? (
-                                                                <img src="/img/Icon/toggle-on.png" alt="Activo" className="w-5 h-5" />
-                                                            ) : (
-                                                                <img src="/img/Icon/toggle-off.png" alt="Inactivo" className="w-5 h-5" />
-                                                            )}
-                                                        </button>
+                                                        {isAdmin && (
+                                                            <button onClick={() => handleDelete(organizacion.id)} className="flex items-center focus:outline-none">
+                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete Rol" />
+                                                            </button>
+                                                        )}
+                                                        {isAdmin && (
+                                                            <button onClick={() => handleEstado(organizacion)} title={Number(organizacion.id_tipoestado) === 1 ? 'Desactivar' : 'Activar'} className="flex items-center focus:outline-none">
+                                                                {Number(organizacion.id_tipoestado) === 1 ? (
+                                                                    <img src="/img/Icon/toggle-on.png" alt="Activo" className="w-5 h-5" />
+                                                                ) : (
+                                                                    <img src="/img/Icon/toggle-off.png" alt="Inactivo" className="w-5 h-5" />
+                                                                )}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
 

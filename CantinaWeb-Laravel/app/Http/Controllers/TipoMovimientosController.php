@@ -16,7 +16,12 @@ class TipoMovimientosController extends Controller
     public function index()
     {
         $id_organizacion = $this->organizacionDelUsuario();
-        $tipoMovimientos = TipoMovimientos::where('id_organizacion', $id_organizacion)->get();
+
+        // El Administrador de Sistema ve todos los movimientos.
+        $tipoMovimientos = TipoMovimientos::query()
+            ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $id_organizacion))
+            ->get();
+
         return response()->json($tipoMovimientos);
     }
 

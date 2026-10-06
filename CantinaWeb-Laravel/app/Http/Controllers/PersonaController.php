@@ -22,7 +22,11 @@ class PersonaController extends Controller
      */
     public function index(Request $request)
     {
-        $id_organizacion = $this->organizacionDelUsuario();
+        // El Administrador de Sistema ve todas (o puede filtrar con
+        // ?id_organizacion=); el resto, solo la suya.
+        $id_organizacion = $this->esAdminSistema()
+            ? $request->input('id_organizacion')
+            : $this->organizacionDelUsuario();
         $search = $request->input('search');
         $all = $request->boolean('all');
         $idTipoPersona = $request->input('id_tipo_persona');
@@ -37,8 +41,9 @@ class PersonaController extends Controller
 
         $personasQuery = Persona::with('TipoPersona') 
             ->with('tipoDocumento')
-            // Aislamiento estricto: solo las personas de la organización del usuario.
-            ->where('id_organizacion', $id_organizacion)
+            // Aislamiento por organización; el Administrador de Sistema ve todas
+            // (o filtra por ?id_organizacion=).
+            ->when($id_organizacion, fn ($q) => $q->where('id_organizacion', $id_organizacion))
             ->when(is_numeric($idTipoPersona), function ($query) use ($idTipoPersona) {
                 $query->where('id_tipo_persona', (int) $idTipoPersona);
             })
@@ -93,8 +98,10 @@ class PersonaController extends Controller
     public function createPersona(CreatePersonaRequest $request)
     {
         $data = $request->validated();
-        // La persona pertenece SIEMPRE a la organización del usuario.
-        $data['id_organizacion'] = $this->organizacionDelUsuario();
+        // La organización la elige el Administrador de Sistema; el resto, la suya.
+        $data['id_organizacion'] = $this->esAdminSistema()
+            ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
+            : $this->organizacionDelUsuario();
         //Asigno el urev de usuario
         $data['UrevUsuario'] = 'Creado - ' . Auth::user()->name;
         $data['UrevFechaHora'] = Carbon::now();

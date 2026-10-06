@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Producto;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class UpdateProductoRequest extends FormRequest
 {
@@ -15,17 +18,49 @@ class UpdateProductoRequest extends FormRequest
     }
 
     /**
+     * Organización contra la que se valida la unicidad.
+     *
+     * Un producto nunca cambia de organización, así que para el Administrador de
+     * Sistema (rol 1), que puede editar productos de cualquier organización, se
+     * usa la del propio producto; el resto solo edita los suyos.
+     */
+    private function idOrganizacion(): ?int
+    {
+        $user = $this->user();
+
+        if ((int) ($user?->rol_id) === 1) {
+            return Producto::find($this->route('id'))?->id_organizacion
+                ?? $user?->id_organizacion;
+        }
+
+        return $user?->id_organizacion;
+    }
+
+    /**
+     * Unicidad DENTRO de la organización, ignorando el producto que se edita.
+     */
+    private function unicoEnOrganizacion(string $columna): Unique
+    {
+        $idOrganizacion = $this->idOrganizacion();
+
+        return Rule::unique('productos', $columna)
+            ->ignore($this->route('id'))
+            ->where(fn ($query) => $idOrganizacion === null
+                ? $query->whereNull('id_organizacion')
+                : $query->where('id_organizacion', $idOrganizacion));
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        $productoId = $this->route('id');
         return [
-                'nombre' => ['required','string','unique:productos,nombre,'. $productoId],
-                'codigo_interno' => ['nullable','string','unique:productos,codigo_interno,'. $productoId],
-                'codigo_barras' => ['nullable','string','unique:productos,codigo_barras,'. $productoId],
+                'nombre' => ['required','string', $this->unicoEnOrganizacion('nombre')],
+                'codigo_interno' => ['nullable','string', $this->unicoEnOrganizacion('codigo_interno')],
+                'codigo_barras' => ['nullable','string', $this->unicoEnOrganizacion('codigo_barras')],
                 'descripcion' => ['nullable','string'],
                 'id_Categoria' => ['required','integer'],
                 'id_TipoUnidadMedida' => ['required','integer'],
@@ -43,9 +78,9 @@ class UpdateProductoRequest extends FormRequest
         {
             return [
                 'nombre' => 'El nombre es obligatorio',
-                'nombre.unique' => 'Este nombre ya está en uso, debe ser único',
-                'codigo_interno.unique' => 'Este código interno ya está en uso, debe ser único',
-                'codigo_barras.unique' => 'Este código de barras ya está en uso, debe ser único',
+                'nombre.unique' => 'Este nombre ya está en uso en tu organización',
+                'codigo_interno.unique' => 'Este código interno ya está en uso en tu organización',
+                'codigo_barras.unique' => 'Este código de barras ya está en uso en tu organización',
                 'id_Categoria' => 'La categoría es obligatoria',
                 'id_TipoUnidadMedida' => 'La unidad de medida es obligatoria',
                 'cantidad_unidad' => 'La cantidad en medida es obligatoria',

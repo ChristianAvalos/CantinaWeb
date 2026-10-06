@@ -30,7 +30,7 @@ class PrecioVentaController extends Controller
 
         if ($request->query('all')) {
             $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
-                ->where('id_organizacion', $this->organizacionDelUsuario());
+                ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()));
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
@@ -42,9 +42,9 @@ class PrecioVentaController extends Controller
             return response()->json(['data' => $precio_ventas]);
         }
 
-        // Aislamiento estricto: cada organización ve solo sus precios de venta.
+        // Aislamiento por organización; el Administrador de Sistema ve todos.
         $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
-            ->where('id_organizacion', $this->organizacionDelUsuario());
+            ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()));
 
         if ($search) {
             $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
@@ -69,9 +69,10 @@ class PrecioVentaController extends Controller
     {
         $validatedData = $request->validated();
 
-        // La organización SIEMPRE es la del usuario: no se puede crear un precio
-        // para otra organización.
-        $validatedData['id_organizacion'] = $this->organizacionDelUsuario();
+        // La organización la elige el Administrador de Sistema; el resto, la suya.
+        $validatedData['id_organizacion'] = $this->esAdminSistema()
+            ? ($validatedData['id_organizacion'] ?? $this->organizacionDelUsuario())
+            : $this->organizacionDelUsuario();
 
         // Agregar información adicional
         $validatedData['id_tipoestado'] = 1; // Asignar un estado predeterminado (por ejemplo, "Activo")

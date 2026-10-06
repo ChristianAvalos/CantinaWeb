@@ -52,41 +52,47 @@ class UpdateTransaccionRequest extends FormRequest
                 }]
                 : ['nullable', 'exists:tipo_comprobantes,id']);
 
+        $esAdminSistema = (int) ($this->user()?->rol_id) === 1;
         $idOrganizacionUsuario = $this->user()?->id_organizacion;
         $idSucursalUsuario = $this->user()?->id_sucursal;
+        // El Administrador de Sistema elige la organización destino; para el
+        // resto es siempre la suya.
+        $idOrganizacionDestino = $esAdminSistema
+            ? $this->input('id_organizacion')
+            : $idOrganizacionUsuario;
 
         $rules = [
             'fecha' => 'required|date',
             'lote' => 'nullable',
-            // La organización debe ser SIEMPRE la del usuario: no se puede
-            // comprar/vender/ajustar en nombre de otra organización.
+            // La organización debe ser la del usuario, salvo para el
+            // Administrador de Sistema, que puede operar en cualquiera.
             'id_organizacion' => [
                 'required',
                 'exists:organizacion,id',
-                function ($attribute, $value, $fail) use ($idOrganizacionUsuario) {
-                    if ((int) $value !== (int) $idOrganizacionUsuario) {
+                function ($attribute, $value, $fail) use ($esAdminSistema, $idOrganizacionUsuario) {
+                    if (! $esAdminSistema && (int) $value !== (int) $idOrganizacionUsuario) {
                         $fail('Solo podés operar con tu propia organización.');
                     }
                 },
             ],
-            // Con más de una sucursal en la organización del usuario, elegir una
-            // es obligatorio. La sucursal debe pertenecer a su organización y, si
-            // el usuario tiene una asignada, debe ser esa.
+            // Con más de una sucursal en la organización destino, elegir una es
+            // obligatorio. La sucursal debe pertenecer a esa organización y, si el
+            // usuario tiene una asignada (y no es admin de sistema), debe ser esa.
             'id_sucursal' => [
-                Rule::requiredIf(fn () => ! $idSucursalUsuario
-                    && Sucursal::where('id_organizacion', $idOrganizacionUsuario)->count() > 1),
+                Rule::requiredIf(fn () => ! ($esAdminSistema ? null : $idSucursalUsuario)
+                    && Sucursal::where('id_organizacion', $idOrganizacionDestino)->count() > 1),
                 'nullable',
                 'exists:sucursales,id',
-                function ($attribute, $value, $fail) use ($idOrganizacionUsuario, $idSucursalUsuario) {
+                function ($attribute, $value, $fail) use ($esAdminSistema, $idOrganizacionDestino, $idSucursalUsuario) {
                     if ($value === null) {
                         return;
                     }
-                    if ($idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
+                    if (! $esAdminSistema && $idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
                         $fail('La sucursal seleccionada no es la tuya.');
                         return;
                     }
-                    if (! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacionUsuario)->exists()) {
-                        $fail('La sucursal seleccionada no pertenece a tu organización.');
+                    if (! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacionDestino)->exists()) {
+                        $fail('La sucursal seleccionada no pertenece a la organización.');
                     }
                 },
             ],

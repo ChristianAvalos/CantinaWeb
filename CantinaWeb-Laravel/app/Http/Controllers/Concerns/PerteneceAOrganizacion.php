@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Auth;
  * Cada usuario opera ÚNICAMENTE dentro de su organización y, si tiene una
  * sucursal asignada, dentro de esa sucursal.
  *
- * No existe un "administrador global": el rol Administrador también está atado
- * a una organización, por lo que NUNCA se exime del filtro. Si en el futuro se
- * necesita un super-admin, debe modelarse con un rol/bandera explícita y un
- * bypass propio, nunca por el nombre del rol.
+ * La única excepción es el rol Administrador de Sistema (`rol_id` 1), que ve y
+ * opera todas las organizaciones; el "Administrador de Organización" NO está
+ * exento, queda acotado a la suya. El bypass se decide por el rol explícito
+ * (`esAdminSistema`), nunca por el nombre del rol.
  */
 trait PerteneceAOrganizacion
 {
@@ -33,9 +33,20 @@ trait PerteneceAOrganizacion
     }
 
     /**
+     * ¿Es Administrador de Sistema (rol 1)?
+     * Ese rol es el único que ve y opera TODAS las organizaciones; el resto
+     * (incluido el Administrador de Organización) queda acotado a la suya.
+     */
+    protected function esAdminSistema(): bool
+    {
+        return (int) (Auth::user()?->rol_id) === 1;
+    }
+
+    /**
      * ¿El registro pertenece al ámbito del usuario?
-     * Valida siempre la organización y, si `$conSucursal` es true y el usuario
-     * tiene sucursal asignada, también la sucursal.
+     * El Administrador de Sistema siempre pasa. Para el resto valida la
+     * organización y, si `$conSucursal` es true y el usuario tiene sucursal
+     * asignada, también la sucursal.
      *
      * Sirve para cualquier modelo con `id_organizacion` (y, si aplica,
      * `id_sucursal`). Ej.: `$this->enAlcance($producto)` o
@@ -47,6 +58,10 @@ trait PerteneceAOrganizacion
 
         if (! $user || ! $registro) {
             return false;
+        }
+
+        if ($this->esAdminSistema()) {
+            return true;
         }
 
         if ((int) $registro->id_organizacion !== (int) $user->id_organizacion) {

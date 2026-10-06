@@ -18,7 +18,12 @@ class SucursalController extends Controller
      */
     public function index(Request $request)
     {
-        $idOrganizacion = $request->input('id_organizacion') ?? $this->organizacionDelUsuario();
+        // El Administrador de Sistema ve todas; el resto, solo la suya.
+        $idOrganizacion = $request->input('id_organizacion');
+
+        if (! $idOrganizacion && ! $this->esAdminSistema()) {
+            $idOrganizacion = $this->organizacionDelUsuario();
+        }
 
         $query = Sucursal::with('ciudad')
             ->orderByDesc('es_principal')
@@ -40,6 +45,12 @@ class SucursalController extends Controller
             'ciudad_id'       => 'nullable|exists:ciudad,id',
             'telefono'        => 'nullable|string',
         ]);
+
+        // El Administrador de Sistema puede crear en cualquier organización; el
+        // administrador de organización, solo en la suya.
+        if (! $this->esAdminSistema() && (int) $data['id_organizacion'] !== (int) $this->organizacionDelUsuario()) {
+            return response()->json(['message' => 'Solo podés crear sucursales en tu propia organización.'], 403);
+        }
 
         // Si la organización todavía no tiene sucursales, esta pasa a ser la principal.
         $esPrimera = ! Sucursal::where('id_organizacion', $data['id_organizacion'])->exists();
@@ -65,6 +76,10 @@ class SucursalController extends Controller
     public function update(Request $request, $id)
     {
         $sucursal = Sucursal::findOrFail($id);
+
+        if (! $this->enAlcance($sucursal)) {
+            return response()->json(['message' => 'La sucursal no pertenece a tu organización.'], 403);
+        }
 
         $data = $request->validate([
             'nombre'         => 'required|string|max:150',
@@ -93,6 +108,10 @@ class SucursalController extends Controller
     public function destroy($id)
     {
         $sucursal = Sucursal::findOrFail($id);
+
+        if (! $this->enAlcance($sucursal)) {
+            return response()->json(['message' => 'La sucursal no pertenece a tu organización.'], 403);
+        }
 
         if ($sucursal->es_principal) {
             return response()->json(['message' => 'No se puede eliminar la sucursal principal.'], 422);

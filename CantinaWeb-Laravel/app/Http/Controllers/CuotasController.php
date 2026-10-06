@@ -41,15 +41,15 @@ class CuotasController extends Controller
             });
         });
 
-        // Aislamiento por organización: todos (incluido el Administrador, que no
-        // es un admin global) ven solo las cuotas de su organización y, si tienen
-        // sucursal asignada, solo las de esa sucursal.
-        $cuotas->whereHas('transaccion', function ($q) {
-            $q->where('id_organizacion', $this->organizacionDelUsuario());
+        // Aislamiento por organización; el Administrador de Sistema ve todas.
+        $cuotas->when(! $this->esAdminSistema(), function ($q) {
+            $q->whereHas('transaccion', function ($q2) {
+                $q2->where('id_organizacion', $this->organizacionDelUsuario());
 
-            if ($sucursal = $this->sucursalDelUsuario()) {
-                $q->where('id_sucursal', $sucursal);
-            }
+                if ($sucursal = $this->sucursalDelUsuario()) {
+                    $q2->where('id_sucursal', $sucursal);
+                }
+            });
         });
 
         $cuotas->when($estado && $estado !== 'todas', function ($q) use ($estado, $idPendiente, $idFinalizado) {

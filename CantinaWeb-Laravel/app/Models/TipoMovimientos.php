@@ -25,6 +25,11 @@ class TipoMovimientos extends Model
     public const DIRECCION_ENTRADA = 'entrada';
     public const DIRECCION_SALIDA  = 'salida';
 
+    /** Tipos de DOCUMENTO usados en `transacciones.id_TipoMovimiento`. */
+    public const DOCUMENTO_COMPRA = 1;
+    public const DOCUMENTO_VENTA  = 2;
+    public const DOCUMENTO_AJUSTE = 3;
+
     protected $fillable = [
         'id_organizacion',
         'nombre',

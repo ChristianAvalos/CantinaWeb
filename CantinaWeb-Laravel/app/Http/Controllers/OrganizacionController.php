@@ -9,10 +9,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\OrganizacionRequest;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class OrganizacionController extends Controller
 {
     use AplicaFiltrosDinamicos;
+    use PerteneceAOrganizacion;
 
     /**
      * Display a listing of the resource.
@@ -22,14 +24,19 @@ class OrganizacionController extends Controller
         $search = $request->input('search');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
+        // El Administrador de Sistema ve todas; el resto, solo la suya.
+        $filtrarPorOrganizacion = ! $this->esAdminSistema();
+
         if ($request->query('all')) {
-            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado']);
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado'])
+                ->when($filtrarPorOrganizacion, fn ($q) => $q->where('id', $this->organizacionDelUsuario()));
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($organizacionesQuery, $filtros, ['search', 'all']);
             }
             $organizaciones = $organizacionesQuery->get();
         } else {
-            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado']);
+            $organizacionesQuery = Organizacion::with(['ciudad', 'pais', 'tipoEstado'])
+                ->when($filtrarPorOrganizacion, fn ($q) => $q->where('id', $this->organizacionDelUsuario()));
 
             if ($search) {
                 $organizacionesQuery->where('RazonSocial', 'ilike', '%' . $search . '%');
@@ -46,6 +53,12 @@ class OrganizacionController extends Controller
     }
     public function DeleteOrganizacion($id)
     {      
+        // Eliminar una organización es una acción del Administrador de Sistema:
+        // el administrador de organización puede administrar la suya, no borrarla.
+        if (! $this->esAdminSistema()) {
+            return response()->json(['message' => 'Solo el Administrador de Sistema puede eliminar organizaciones.'], 403);
+        }
+
         //Elimino la organizacion 
         $organizacion = Organizacion::findOrFail($id);
         $imagenAEliminar = $organizacion->Imagen;
@@ -69,6 +82,11 @@ class OrganizacionController extends Controller
      */
     public function createOrganizacion(OrganizacionRequest $request)
     {
+                // Crear una organización nueva (otro inquilino) es del Administrador de Sistema.
+                if (! $this->esAdminSistema()) {
+                    return response()->json(['message' => 'Solo el Administrador de Sistema puede crear organizaciones.'], 403);
+                }
+
                 //validar el registro 
 
                 $data = $request->validated();
@@ -169,6 +187,11 @@ class OrganizacionController extends Controller
             // Encontrar la organizacion por su ID
             $organizacion = Organizacion::findOrFail($id);
 
+            // El administrador de organización solo administra la suya.
+            if (! $this->esAdminSistema() && (int) $organizacion->id !== (int) $this->organizacionDelUsuario()) {
+                return response()->json(['message' => 'Solo podés administrar tu propia organización.'], 403);
+            }
+
 
             // Manejo de la imagen
             if ($request->has('eliminar_imagen') && $request->eliminar_imagen) {
@@ -239,7 +262,14 @@ class OrganizacionController extends Controller
      */
     public function estadoOrganizacion($id, Request $request)
     {
+        // Activar/desactivar una organización es exclusivo del Administrador de
+        // Sistema (el admin de organización se dejaría sin acceso).
+        if (! $this->esAdminSistema()) {
+            return response()->json(['message' => 'Solo el Administrador de Sistema puede activar o desactivar organizaciones.'], 403);
+        }
+
         $organizacion = Organizacion::findOrFail($id);
+
         $organizacion->id_tipoestado = $request->id_tipoestado;
         $organizacion->UrevUsuario = 'Actualizado - ' . Auth::user()->name;
         $organizacion->UrevFechaHora = Carbon::now();

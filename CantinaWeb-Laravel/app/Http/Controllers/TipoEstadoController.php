@@ -17,10 +17,14 @@ class TipoEstadoController extends Controller
     {
         $id_organizacion = $this->organizacionDelUsuario();
 
-        $query = TipoEstado::where(function ($query) use ($id_organizacion) {
-            $query->whereNull('id_organizacion')
-                ->orWhere('id_organizacion', $id_organizacion);
-        });
+        // El Administrador de Sistema ve todos los estados.
+        $query = TipoEstado::query()
+            ->when(! $this->esAdminSistema(), function ($query) use ($id_organizacion) {
+                $query->where(function ($q2) use ($id_organizacion) {
+                    $q2->whereNull('id_organizacion')
+                        ->orWhere('id_organizacion', $id_organizacion);
+                });
+            });
 
 
         if ($request->get('filtro') === 'basico') {

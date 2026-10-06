@@ -24,10 +24,14 @@ class CategoriasController extends Controller
         $all = $request->input('all');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
-        $categoriasQuery = Categorias::where(function ($query) use ($id_organizacion) {
-            $query->whereNull('id_organizacion')
-                ->orWhere('id_organizacion', $id_organizacion);
-        })
+        $categoriasQuery = Categorias::query()
+            // Aislamiento por organización; el Administrador de Sistema ve todas.
+            ->when(! $this->esAdminSistema(), function ($query) use ($id_organizacion) {
+                $query->where(function ($q2) use ($id_organizacion) {
+                    $q2->whereNull('id_organizacion')
+                        ->orWhere('id_organizacion', $id_organizacion);
+                });
+            })
             ->when($search, function ($query, $search) {
                 $query->where('nombre', 'like', '%' . $search . '%');
             });
@@ -54,7 +58,9 @@ class CategoriasController extends Controller
 
         $categoria = Categorias::create([
             'nombre' => $data['nombre'],
-            'id_organizacion' => $this->organizacionDelUsuario(),
+            'id_organizacion' => $this->esAdminSistema()
+                ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
+                : $this->organizacionDelUsuario(),
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now()
         ]);

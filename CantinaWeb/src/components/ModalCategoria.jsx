@@ -1,13 +1,34 @@
 import { useEffect, useState, useRef } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
+import { useAuth } from "../hooks/useAuth";
 
 export default function ModalCategoria({ onClose, modo, categoria = {}, refrescarCategorias }) {
     const [nombre, setNombre] = useState(categoria.nombre || '');
     const [errores, setErrores] = useState({});
+    const [organizacionSeleccionada, setOrganizacionSeleccionada] = useState('');
+    const [organizaciones, setOrganizaciones] = useState([]);
     const nombreRef = useRef(null);
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
 
     const token = localStorage.getItem('AUTH_TOKEN');
+
+    // Solo el Administrador de Sistema elige organización al crear.
+    useEffect(() => {
+        if (!esAdminSistema) {
+            return;
+        }
+        clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } })
+            .then(({ data }) => setOrganizaciones(Array.isArray(data) ? data : []))
+            .catch(() => setOrganizaciones([]));
+    }, [esAdminSistema, token]);
+
+    useEffect(() => {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+            setOrganizacionSeleccionada(String(user.id_organizacion));
+        }
+    }, [modo, esAdminSistema, user]);
 
     // Actualizar el estado del formulario cuando cambie la categoria
     useEffect(() => {
@@ -31,6 +52,11 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
             const categoriaData = {
                 nombre: nombre,
             };
+
+            // El Administrador de Sistema puede crear en otra organización.
+            if (modo === 'crear' && esAdminSistema && organizacionSeleccionada) {
+                categoriaData.id_organizacion = organizacionSeleccionada;
+            }
 
             if (modo === 'crear') {
 
@@ -89,6 +115,25 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
                 </h2>
 
                 <form onSubmit={handleSubmit}>
+                    {esAdminSistema && modo === 'crear' && (
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Organización</label>
+                            <select
+                                className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                value={organizacionSeleccionada}
+                                onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
+                            >
+                                <option value="">Seleccione una organización</option>
+                                {organizaciones.map((organizacion) => (
+                                    <option key={organizacion.id} value={organizacion.id}>
+                                        {organizacion.RazonSocial}
+                                    </option>
+                                ))}
+                            </select>
+                            {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
+                        </div>
+                    )}
+
                     {/* Campo para Nombre */}
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>

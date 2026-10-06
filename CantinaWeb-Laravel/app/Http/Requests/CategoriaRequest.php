@@ -22,6 +22,9 @@ class CategoriaRequest extends FormRequest
     public function rules(): array
         {
         $rules = [
+            // Opcional: solo lo usa el Administrador de Sistema para crear en
+            // otra organización. Para el resto se fuerza la suya.
+            'id_organizacion' => 'nullable|integer|exists:organizacion,id',
             'nombre' => 'required|string|max:100',
         ];
 

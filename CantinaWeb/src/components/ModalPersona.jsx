@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
 import { formatearPorFormato, calcularDigitoVerificadorRuc, esFormatoRuc } from '../helpers/HelpersNumeros';
+import { useAuth } from "../hooks/useAuth";
 
 export default function ModalPersona({ onClose, modo, persona = {}, refrescarPersonas }) {
     const [form, setForm] = useState({
@@ -15,13 +16,35 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
         id_tipo_documento: persona.id_tipo_documento || '',
         // El estado no se edita aquí: se activa/desactiva desde el listado.
         // Al crear, por defecto queda Activo (1).
-        id_tipoestado: persona.id_tipoestado || '1'
+        id_tipoestado: persona.id_tipoestado || '1',
+        // Solo lo usa el Administrador de Sistema al crear (elige organización).
+        id_organizacion: persona.id_organizacion ? String(persona.id_organizacion) : ''
     });
 
     const [tipoPersona, setTipoPersona] = useState([]);
     const [tiposDocumento, setTiposDocumento] = useState([]);
     const [errores, setErrores] = useState({});
+    const [organizaciones, setOrganizaciones] = useState([]);
     const id_tipo_personaRef = useRef(null);
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
+    // Solo el Administrador de Sistema elige organización al crear.
+    useEffect(() => {
+        if (!esAdminSistema) {
+            return;
+        }
+        const token = localStorage.getItem('AUTH_TOKEN');
+        clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } })
+            .then(({ data }) => setOrganizaciones(Array.isArray(data) ? data : []))
+            .catch(() => setOrganizaciones([]));
+    }, [esAdminSistema]);
+
+    useEffect(() => {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+            setForm((prev) => ({ ...prev, id_organizacion: String(user.id_organizacion) }));
+        }
+    }, [modo, esAdminSistema, user]);
 
     // Si el tipo de persona es Proveedor, el documento siempre es un RUC
     const tipoPersonaSeleccionada = tipoPersona.find(
@@ -231,6 +254,24 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 max-h-[80vh] overflow-y-auto">
                         {/* Campos del formulario */}
+                        {esAdminSistema && modo === 'crear' && (
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Organización</label>
+                                <select
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    value={form.id_organizacion}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, id_organizacion: e.target.value }))}
+                                >
+                                    <option value="">Seleccione una organización</option>
+                                    {organizaciones.map((organizacion) => (
+                                        <option key={organizacion.id} value={organizacion.id}>
+                                            {organizacion.RazonSocial}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
+                            </div>
+                        )}
                         {/* Tipo de persona */}
                         <div className="sm:col-span-2">
                             <label className="block text-sm font-medium text-gray-700">Tipo de persona</label>

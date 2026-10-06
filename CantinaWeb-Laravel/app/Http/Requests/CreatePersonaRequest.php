@@ -22,6 +22,9 @@ class CreatePersonaRequest extends FormRequest
     public function rules(): array
     {
         return [
+                // Opcional: solo lo usa el Administrador de Sistema para crear en
+                // otra organización. Para el resto se fuerza la suya.
+                'id_organizacion' => ['nullable','integer','exists:organizacion,id'],
                 'nombre' => ['required','string'],
                 'documento' => ['required','string'],
                 'direccion' => ['nullable','string'],

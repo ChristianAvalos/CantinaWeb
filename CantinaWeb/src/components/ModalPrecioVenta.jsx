@@ -32,6 +32,7 @@ export default function ModalPrecioVenta({
     );
     const [organizaciones, setOrganizaciones] = useState([]);
     const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
     const [sucursalSeleccionada, setSucursalSeleccionada] = useState(
         precioVenta.id_sucursal ? String(precioVenta.id_sucursal) : "",
     );
@@ -177,7 +178,7 @@ export default function ModalPrecioVenta({
             if (codigo_barras && codigo_barras.length > 0) {
                 try {
                     const { data } = await clienteAxios.get(
-                        `/api/productos/buscar?codigo_barras=${codigo_barras}`,
+                        `/api/productos/buscar?codigo_barras=${codigo_barras}${esAdminSistema && organizacionSeleccionada ? `&id_organizacion=${organizacionSeleccionada}` : ''}`,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -274,7 +275,7 @@ export default function ModalPrecioVenta({
                         >
                             <option value="">Seleccione una organizacion</option>
                             {organizaciones
-                                .filter((organizacion) => String(organizacion.id) === String(user?.id_organizacion))
+                                .filter((organizacion) => esAdminSistema || String(organizacion.id) === String(user?.id_organizacion))
                                 .map((organizacion) => (
                                     <option key={organizacion.id} value={organizacion.id}>
                                         {organizacion.RazonSocial}

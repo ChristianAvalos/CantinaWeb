@@ -34,7 +34,7 @@ class MovimientoHistorialController extends Controller
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $query = MovimientoHistorial::with(['producto', 'tipoMovimiento', 'transaccion', 'usuario'])
-            ->when($idOrganizacion, function ($q) use ($idOrganizacion) {
+            ->when(! $this->esAdminSistema() && $idOrganizacion, function ($q) use ($idOrganizacion) {
                 $q->where(function ($q2) use ($idOrganizacion) {
                     $q2->whereNull('id_organizacion')
                         ->orWhere('id_organizacion', $idOrganizacion);

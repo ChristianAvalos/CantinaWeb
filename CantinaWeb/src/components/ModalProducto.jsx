@@ -3,6 +3,7 @@ import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
 import { formatearMiles, formatearGuarani, limpiarFormato,formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import { formatDateToInput } from '../helpers/HelpersFechas';
+import { useAuth } from "../hooks/useAuth";
 
 export default function ModalProducto({ onClose, modo, producto = {}, refrescarProductos }) {
     // Estado para los campos del formulario
@@ -19,6 +20,8 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
         stock_minimo: producto.stock_minimo || '',
         id_TipoEstado: producto.id_TipoEstado || '',
         UrevCalc: producto.UrevCalc || '',
+        // Solo lo usa el Administrador de Sistema al crear (elige organización).
+        id_organizacion: producto.id_organizacion ? String(producto.id_organizacion) : '',
         fecha: producto.created_at ? formatDateToInput(producto.created_at) : formatDateToInput(new Date())
     });
 
@@ -37,6 +40,26 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
     const token = localStorage.getItem('AUTH_TOKEN');
     //Para que el cursor inicie en el campo codigo de barras
     const codigoBarrasRef = useRef(null);
+
+    const [organizaciones, setOrganizaciones] = useState([]);
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
+    // Solo el Administrador de Sistema elige organización al crear.
+    useEffect(() => {
+        if (!esAdminSistema) {
+            return;
+        }
+        clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } })
+            .then(({ data }) => setOrganizaciones(Array.isArray(data) ? data : []))
+            .catch(() => setOrganizaciones([]));
+    }, [esAdminSistema, token]);
+
+    useEffect(() => {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+            setForm((prev) => ({ ...prev, id_organizacion: String(user.id_organizacion) }));
+        }
+    }, [modo, esAdminSistema, user]);
 
     useEffect(() => {
         if (codigoBarrasRef.current) {
@@ -198,6 +221,24 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-h-[80vh] overflow-y-auto">
                         {/* Campos del formulario */}
                         <div className="col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {esAdminSistema && modo === 'crear' && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Organización</label>
+                                    <select
+                                        className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        value={form.id_organizacion}
+                                        onChange={(e) => setForm({ ...form, id_organizacion: e.target.value })}
+                                    >
+                                        <option value="">Seleccione una organización</option>
+                                        {organizaciones.map((organizacion) => (
+                                            <option key={organizacion.id} value={organizacion.id}>
+                                                {organizacion.RazonSocial}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
+                                </div>
+                            )}
                             {/* Campo para codigo_barras */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Codigo de barras</label>
@@ -259,7 +300,9 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                     onChange={(e) => setForm({ ...form, id_Categoria: e.target.value })}
                                 >
                                     <option value="">Seleccione una categoria</option>
-                                    {categorias.map((categoria) => (
+                                    {categorias
+                                        .filter((categoria) => !esAdminSistema || !categoria.id_organizacion || String(categoria.id_organizacion) === String(form.id_organizacion))
+                                        .map((categoria) => (
                                         <option key={categoria.id} value={categoria.id}>
                                             {categoria.nombre}
                                         </option>

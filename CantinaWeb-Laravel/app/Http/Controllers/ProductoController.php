@@ -24,7 +24,11 @@ class ProductoController extends Controller
     {
         $search = $request->input('search');
         $mes = $request->input('mes');
-        $id_organizacion = $this->organizacionDelUsuario();
+        // El Administrador de Sistema ve todos (o puede filtrar con
+        // ?id_organizacion=); el resto, solo los suyos.
+        $id_organizacion = $this->esAdminSistema()
+            ? $request->input('id_organizacion')
+            : $this->organizacionDelUsuario();
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         // Si el search es una fecha en formato dd/mm/yyyy, la convertimos a yyyy-mm-dd
@@ -39,9 +43,10 @@ class ProductoController extends Controller
             $searchFecha = null;
         }
 
-        // Aislamiento estricto: cada organización ve solo sus productos.
+        // Aislamiento por organización; el Administrador de Sistema ve todos
+        // (o filtra por ?id_organizacion=).
         $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida'])
-            ->where('id_organizacion', $id_organizacion)
+            ->when($id_organizacion, fn ($q) => $q->where('id_organizacion', $id_organizacion))
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
                     $term = '%' . strtolower($search) . '%';
@@ -130,7 +135,9 @@ class ProductoController extends Controller
 
         // Crear el producto
         $producto = Producto::create([
-            'id_organizacion' => $this->organizacionDelUsuario(),
+            'id_organizacion' => $this->esAdminSistema()
+                ? ($request->input('id_organizacion') ?? $this->organizacionDelUsuario())
+                : $this->organizacionDelUsuario(),
             'codigo_interno' => $data['codigo_interno'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nombre' => $data['nombre'],
@@ -297,9 +304,17 @@ class ProductoController extends Controller
             return response()->json(['message' => 'Código de barras requerido'], 400);
         }
 
+        // El Administrador de Sistema puede buscar en cualquier organización
+        // (?id_organizacion=); si no lo indica, se busca en la suya. El filtro es
+        // necesario porque un mismo código de barras puede existir en varias
+        // organizaciones.
+        $idOrganizacionFiltro = $this->esAdminSistema()
+            ? ($request->input('id_organizacion') ?? $this->organizacionDelUsuario())
+            : $this->organizacionDelUsuario();
+
         $producto = Producto::where('codigo_barras', $codigo_barras)
             ->where('id_TipoEstado', 1)
-            ->where('id_organizacion', $this->organizacionDelUsuario())
+            ->when($idOrganizacionFiltro, fn ($q) => $q->where('id_organizacion', $idOrganizacionFiltro))
             ->first();
 
         if ($producto) {
