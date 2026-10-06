@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\TipoMovimientos;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class TipoMovimientosController extends Controller
 {
+    use PerteneceAOrganizacion;
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $id_organizacion = Auth::user()->id_organizacion;
+        $id_organizacion = $this->organizacionDelUsuario();
         $tipoMovimientos = TipoMovimientos::where('id_organizacion', $id_organizacion)->get();
         return response()->json($tipoMovimientos);
     }

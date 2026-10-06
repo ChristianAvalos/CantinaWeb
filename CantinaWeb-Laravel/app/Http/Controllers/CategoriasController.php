@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CategoriaRequest;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class CategoriasController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     /**
@@ -17,7 +19,7 @@ class CategoriasController extends Controller
      */
     public function index(Request $request)
     {
-        $id_organizacion = Auth::user()->id_organizacion;
+        $id_organizacion = $this->organizacionDelUsuario();
         $search = $request->input('search');
         $all = $request->input('all');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
@@ -52,7 +54,7 @@ class CategoriasController extends Controller
 
         $categoria = Categorias::create([
             'nombre' => $data['nombre'],
-            'id_organizacion' => Auth::user()->id_organizacion,
+            'id_organizacion' => $this->organizacionDelUsuario(),
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now()
         ]);
@@ -91,6 +93,14 @@ class CategoriasController extends Controller
     {
         $categoria = Categorias::findOrFail($id);
 
+        if ($categoria->id_organizacion === null) {
+            return response()->json(['message' => 'Las categorías del sistema no se pueden editar.'], 403);
+        }
+
+        if (! $this->enAlcance($categoria)) {
+            return response()->json(['message' => 'La categoría no pertenece a tu organización.'], 403);
+        }
+
         $data = $request->validated();
 
         $categoria->update([
@@ -109,6 +119,15 @@ class CategoriasController extends Controller
     public function DeleteCategoria($id)
     {
         $categoria = Categorias::findOrFail($id);
+
+        if ($categoria->id_organizacion === null) {
+            return response()->json(['message' => 'Las categorías del sistema no se pueden eliminar.'], 403);
+        }
+
+        if (! $this->enAlcance($categoria)) {
+            return response()->json(['message' => 'La categoría no pertenece a tu organización.'], 403);
+        }
+
         $categoria->delete();
 
         return response()->json(['message' => 'Categoria eliminada correctamente']);

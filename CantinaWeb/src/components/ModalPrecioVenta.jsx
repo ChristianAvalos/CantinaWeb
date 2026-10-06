@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
 import { formatearMiles, formatearGuarani, limpiarFormato } from '../helpers/HelpersNumeros';
+import { useAuth } from "../hooks/useAuth";
 
 export default function ModalPrecioVenta({
     onClose,
@@ -30,6 +31,7 @@ export default function ModalPrecioVenta({
         precioVenta.id_organizacion ? String(precioVenta.id_organizacion) : "",
     );
     const [organizaciones, setOrganizaciones] = useState([]);
+    const { user } = useAuth({ middleware: 'auth' });
     const [sucursalSeleccionada, setSucursalSeleccionada] = useState(
         precioVenta.id_sucursal ? String(precioVenta.id_sucursal) : "",
     );
@@ -134,6 +136,13 @@ export default function ModalPrecioVenta({
 
         fetchInitialData();
     }, []);
+
+    // Al crear, la organización queda fija en la del usuario (no se puede elegir otra).
+    useEffect(() => {
+        if (!precioVenta?.id_organizacion && user?.id_organizacion) {
+            setOrganizacionSeleccionada(String(user.id_organizacion));
+        }
+    }, [user, precioVenta]);
 
     // Cargar las sucursales de la organización elegida. Si tiene una sola, se
     // asigna automáticamente (el precio queda para esa sucursal).
@@ -264,11 +273,13 @@ export default function ModalPrecioVenta({
                             onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
                         >
                             <option value="">Seleccione una organizacion</option>
-                            {organizaciones.map((organizacion) => (
-                                <option key={organizacion.id} value={organizacion.id}>
-                                    {organizacion.RazonSocial}
-                                </option>
-                            ))}
+                            {organizaciones
+                                .filter((organizacion) => String(organizacion.id) === String(user?.id_organizacion))
+                                .map((organizacion) => (
+                                    <option key={organizacion.id} value={organizacion.id}>
+                                        {organizacion.RazonSocial}
+                                    </option>
+                                ))}
                         </select>
                         {errores.id_organizacion && (
                             <p className="text-red-500 text-sm">

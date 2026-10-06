@@ -6,6 +6,7 @@ import { formatearMiles, formatearGuarani, limpiarFormato } from '../helpers/Hel
 import { formatDateToInput } from '../helpers/HelpersFechas';
 import ModalTransaccionDetalle from './ModalTransaccionDetalle';
 import { obtenerTransaccionesDetalle } from '../helpers/HelpersTransacciones';
+import { useAuth } from "../hooks/useAuth";
 
 // Suma días a una fecha 'YYYY-MM-DD' (o a hoy si es null) y devuelve 'YYYY-MM-DD' local
 function sumarDiasLocal(fecha, dias) {
@@ -148,6 +149,18 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     //organizacion seleccionada
     const [organizacionSeleccionada, setorganizacionSeleccionada] = useState(transaccion.id_organizacion || '');
     const [organizaciones, setOrganizacion] = useState([]);
+    const { user } = useAuth({ middleware: 'auth' });
+
+    // La organización es SIEMPRE la del usuario: no se puede operar en otra.
+    // Al crear se autoselecciona para dejar el formulario listo.
+    useEffect(() => {
+        const idOrg = user?.id_organizacion ? String(user.id_organizacion) : '';
+
+        if (!transaccion?.id_organizacion && idOrg && organizacionSeleccionada !== idOrg) {
+            setorganizacionSeleccionada(idOrg);
+            setForm(prev => ({ ...prev, id_organizacion: idOrg }));
+        }
+    }, [user, transaccion, organizacionSeleccionada]);
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -1032,11 +1045,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                     }}
                                 >
                                     <option value="">Seleccione una organizacion</option>
-                                    {organizaciones.map((organizacion) => (
-                                        <option key={organizacion.id} value={organizacion.id}>
-                                            {organizacion.RazonSocial}
-                                        </option>
-                                    ))}
+                                    {organizaciones
+                                        .filter((organizacion) => String(organizacion.id) === String(user?.id_organizacion))
+                                        .map((organizacion) => (
+                                            <option key={organizacion.id} value={organizacion.id}>
+                                                {organizacion.RazonSocial}
+                                            </option>
+                                        ))}
                                 </select>
                                 {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
                             </div>

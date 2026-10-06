@@ -7,15 +7,18 @@ use App\Models\Transacciones;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class SucursalController extends Controller
 {
+    use PerteneceAOrganizacion;
+
     /**
      * Lista las sucursales de una organización (por defecto, la del usuario).
      */
     public function index(Request $request)
     {
-        $idOrganizacion = $request->input('id_organizacion') ?? Auth::user()?->id_organizacion;
+        $idOrganizacion = $request->input('id_organizacion') ?? $this->organizacionDelUsuario();
 
         $query = Sucursal::with('ciudad')
             ->orderByDesc('es_principal')

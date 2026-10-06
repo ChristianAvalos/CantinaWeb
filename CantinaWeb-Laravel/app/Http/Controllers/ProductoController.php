@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CreateProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class ProductoController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     /**
@@ -22,7 +24,7 @@ class ProductoController extends Controller
     {
         $search = $request->input('search');
         $mes = $request->input('mes');
-        $id_organizacion = Auth::user()->id_organizacion;
+        $id_organizacion = $this->organizacionDelUsuario();
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         // Si el search es una fecha en formato dd/mm/yyyy, la convertimos a yyyy-mm-dd
@@ -37,11 +39,9 @@ class ProductoController extends Controller
             $searchFecha = null;
         }
 
+        // Aislamiento estricto: cada organización ve solo sus productos.
         $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida'])
-            ->where(function ($query) use ($id_organizacion) {
-                $query->whereNull('id_organizacion')
-                    ->orWhere('id_organizacion', $id_organizacion);
-            })
+            ->where('id_organizacion', $id_organizacion)
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
                     $term = '%' . strtolower($search) . '%';
@@ -130,7 +130,7 @@ class ProductoController extends Controller
 
         // Crear el producto
         $producto = Producto::create([
-            'id_organizacion' => null, 
+            'id_organizacion' => $this->organizacionDelUsuario(),
             'codigo_interno' => $data['codigo_interno'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nombre' => $data['nombre'],
@@ -187,6 +187,10 @@ class ProductoController extends Controller
 
         // Buscar el producto por su ID
         $producto = Producto::findOrFail($id);
+
+        if (! $this->enAlcance($producto)) {
+            return response()->json(['message' => 'El producto no pertenece a tu organización.'], 403);
+        }
 
         // Subir la imagen si está presente
         if ($request->has('eliminar_imagen') && $request->eliminar_imagen) {
@@ -260,6 +264,11 @@ class ProductoController extends Controller
     {
         // Eliminar el producto por su ID
         $producto = Producto::findOrFail($id);
+
+        if (! $this->enAlcance($producto)) {
+            return response()->json(['message' => 'El producto no pertenece a tu organización.'], 403);
+        }
+
         $imagenAEliminar = $producto->imagen;
 
         // Primero eliminar el registro de la BD
@@ -290,6 +299,7 @@ class ProductoController extends Controller
 
         $producto = Producto::where('codigo_barras', $codigo_barras)
             ->where('id_TipoEstado', 1)
+            ->where('id_organizacion', $this->organizacionDelUsuario())
             ->first();
 
         if ($producto) {
@@ -310,7 +320,7 @@ class ProductoController extends Controller
      */
     private function aplicarStockSucursal(Producto $producto): Producto
     {
-        $idSucursal = Auth::user()?->id_sucursal;
+        $idSucursal = $this->sucursalDelUsuario();
 
         $producto->stock_sucursal = $idSucursal
             ? \App\Services\InventarioService::stockEnSucursal($producto->id, $idSucursal)
@@ -328,8 +338,8 @@ class ProductoController extends Controller
      */
     private function aplicarPrecioPersonalizado(Producto $producto): Producto
     {
-        $idOrganizacion = Auth::user()?->id_organizacion;
-        $idSucursal = Auth::user()?->id_sucursal;
+        $idOrganizacion = $this->organizacionDelUsuario();
+        $idSucursal = $this->sucursalDelUsuario();
 
         // Prioridad: precio de la SUCURSAL del usuario; si no hay, el de la organización.
         $precio = null;

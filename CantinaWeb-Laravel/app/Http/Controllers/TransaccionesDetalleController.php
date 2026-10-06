@@ -11,9 +11,11 @@ use App\Http\Requests\CreateTransaccionDetalleRequest;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Models\Producto;
 use App\Models\TipoMovimientos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class TransaccionesDetalleController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     private function recalcularMontoCabecera($idTransaccion): float
@@ -32,21 +34,13 @@ class TransaccionesDetalleController extends Controller
 
     /**
      * Busca un producto por código de barras dentro del alcance de la transacción.
-     *
-     * Los productos se crean con `id_organizacion = NULL` (ver ProductoController),
-     * así que se aceptan tanto los de la organización de la transacción como los
-     * que no tienen organización asignada. Es el mismo criterio que usa
-     * ProductoController@index.
+     * Los productos pertenecen a una organización, así que solo se aceptan los de
+     * la misma organización que la transacción.
      */
     private function buscarProductoPorCodigo(?string $codigoBarras, $idOrganizacion): ?Producto
     {
         return Producto::where('codigo_barras', $codigoBarras)
-            ->when($idOrganizacion, function ($q) use ($idOrganizacion) {
-                $q->where(function ($q2) use ($idOrganizacion) {
-                    $q2->whereNull('id_organizacion')
-                        ->orWhere('id_organizacion', $idOrganizacion);
-                });
-            })
+            ->where('id_organizacion', $idOrganizacion)
             ->first();
     }
 
@@ -69,6 +63,11 @@ class TransaccionesDetalleController extends Controller
                     'total' => 0,
                 ]
             ]);
+        }
+
+        $transaccion = Transacciones::find($id_transaccion);
+        if ($transaccion && ! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
         }
 
         $transaccionesDetalle = TransaccionesDetalle::with(['producto'])
@@ -121,6 +120,10 @@ class TransaccionesDetalleController extends Controller
         $transaccion = Transacciones::find($id_transaccion);
         if (!$transaccion) {
             return response()->json(['message' => 'Transacción no encontrada'], 404);
+        }
+
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
         }
 
         // Un documento ya posteado (Finalizado / Positivo / Negativo) es inmutable:
@@ -208,6 +211,10 @@ class TransaccionesDetalleController extends Controller
 
         $transaccion = Transacciones::findOrFail($detalle->id_transaccion);
 
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
+
         // Un documento ya posteado es inmutable: su stock ya fue aplicado.
         if ($transaccion->estaPosteada()) {
             return response()->json(['message' => 'No se pueden modificar los detalles de una transacción finalizada.'], 422);
@@ -263,6 +270,10 @@ class TransaccionesDetalleController extends Controller
         $idTransaccion = $detalle->id_transaccion;
 
         $transaccion = Transacciones::findOrFail($idTransaccion);
+
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
 
         // Un documento ya posteado es inmutable: su stock ya fue aplicado.
         if ($transaccion->estaPosteada()) {

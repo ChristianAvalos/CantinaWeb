@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\MovimientoHistorial;
 use App\Models\TipoMovimientos;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 /**
  * Kardex: historial de movimientos de stock.
@@ -16,6 +16,7 @@ use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
  */
 class MovimientoHistorialController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     /**
@@ -29,7 +30,7 @@ class MovimientoHistorialController extends Controller
         $idTransaccion = $request->input('id_transaccion');
         $fechaDesde = $request->input('fecha_desde');
         $fechaHasta = $request->input('fecha_hasta');
-        $idOrganizacion = Auth::user()->id_organizacion;
+        $idOrganizacion = $this->organizacionDelUsuario();
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $query = MovimientoHistorial::with(['producto', 'tipoMovimiento', 'transaccion', 'usuario'])

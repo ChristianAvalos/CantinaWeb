@@ -181,14 +181,18 @@ export default function Categoria() {
                                                 <td>{categoria.id}</td>
                                                 <td>{categoria.nombre}</td>
                                                 <td>
-                                                    <div className="flex space-x-2">
-                                                        <button onClick={() => openModal('editar', categoria)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit" />
-                                                        </button>
-                                                        <button onClick={() => handleDelete(categoria.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
-                                                        </button>
-                                                    </div>
+                                                    {categoria.id_organizacion ? (
+                                                        <div className="flex space-x-2">
+                                                            <button onClick={() => openModal('editar', categoria)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
+                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                            </button>
+                                                            <button onClick={() => handleDelete(categoria.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
+                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">Del sistema</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))

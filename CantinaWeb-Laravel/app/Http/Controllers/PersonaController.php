@@ -10,9 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class PersonaController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     /**
@@ -20,7 +22,7 @@ class PersonaController extends Controller
      */
     public function index(Request $request)
     {
-        //$id_organizacion = Auth::user()->id_organizacion;
+        $id_organizacion = $this->organizacionDelUsuario();
         $search = $request->input('search');
         $all = $request->boolean('all');
         $idTipoPersona = $request->input('id_tipo_persona');
@@ -35,6 +37,8 @@ class PersonaController extends Controller
 
         $personasQuery = Persona::with('TipoPersona') 
             ->with('tipoDocumento')
+            // Aislamiento estricto: solo las personas de la organización del usuario.
+            ->where('id_organizacion', $id_organizacion)
             ->when(is_numeric($idTipoPersona), function ($query) use ($idTipoPersona) {
                 $query->where('id_tipo_persona', (int) $idTipoPersona);
             })
@@ -89,6 +93,8 @@ class PersonaController extends Controller
     public function createPersona(CreatePersonaRequest $request)
     {
         $data = $request->validated();
+        // La persona pertenece SIEMPRE a la organización del usuario.
+        $data['id_organizacion'] = $this->organizacionDelUsuario();
         //Asigno el urev de usuario
         $data['UrevUsuario'] = 'Creado - ' . Auth::user()->name;
         $data['UrevFechaHora'] = Carbon::now();
@@ -128,6 +134,11 @@ class PersonaController extends Controller
     {
         $data = $request->validated();
         $persona = Persona::findOrFail($id);
+
+        if (! $this->enAlcance($persona)) {
+            return response()->json(['message' => 'La persona no pertenece a tu organización.'], 403);
+        }
+
         //Asigno el urev de usuario
         $data['UrevUsuario'] = 'Actualizado - ' . Auth::user()->name;
         $data['UrevFechaHora'] = Carbon::now();
@@ -142,6 +153,11 @@ class PersonaController extends Controller
     {
         // Eliminar la persona por su ID
         $persona = Persona::findOrFail($id);
+
+        if (! $this->enAlcance($persona)) {
+            return response()->json(['message' => 'La persona no pertenece a tu organización.'], 403);
+        }
+
         $persona->delete();
 
         return response()->json(['message' => 'Persona eliminada correctamente.'], 200);
@@ -150,6 +166,11 @@ class PersonaController extends Controller
     {
         // Buscar el usuario por ID
         $persona = Persona::findOrFail($id);
+
+        if (! $this->enAlcance($persona)) {
+            return response()->json(['message' => 'La persona no pertenece a tu organización.'], 403);
+        }
+
         //Asigno el estado del usuario
         $persona->id_tipoestado = $request->id_tipoestado;
         //Actualizo el urev de usuario

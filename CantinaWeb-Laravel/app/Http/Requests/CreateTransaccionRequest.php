@@ -52,23 +52,41 @@ class CreateTransaccionRequest extends FormRequest
                 }]
                 : ['nullable', 'exists:tipo_comprobantes,id']);
 
+        $idOrganizacionUsuario = $this->user()?->id_organizacion;
+        $idSucursalUsuario = $this->user()?->id_sucursal;
+
         $rules = [
             'fecha' => 'required|date',
             'lote' => 'nullable',
-            'id_organizacion' => 'required|exists:organizacion,id',
-            // Con más de una sucursal en la organización, elegir una es obligatorio.
-            // Además, la sucursal debe pertenecer a la organización seleccionada.
+            // La organización debe ser SIEMPRE la del usuario: no se puede
+            // comprar/vender/ajustar en nombre de otra organización.
+            'id_organizacion' => [
+                'required',
+                'exists:organizacion,id',
+                function ($attribute, $value, $fail) use ($idOrganizacionUsuario) {
+                    if ((int) $value !== (int) $idOrganizacionUsuario) {
+                        $fail('Solo podés operar con tu propia organización.');
+                    }
+                },
+            ],
+            // Con más de una sucursal en la organización del usuario, elegir una
+            // es obligatorio. La sucursal debe pertenecer a su organización y, si
+            // el usuario tiene una asignada, debe ser esa.
             'id_sucursal' => [
-                Rule::requiredIf(fn () => Sucursal::where('id_organizacion', $this->input('id_organizacion'))->count() > 1),
+                Rule::requiredIf(fn () => ! $idSucursalUsuario
+                    && Sucursal::where('id_organizacion', $idOrganizacionUsuario)->count() > 1),
                 'nullable',
                 'exists:sucursales,id',
-                function ($attribute, $value, $fail) {
+                function ($attribute, $value, $fail) use ($idOrganizacionUsuario, $idSucursalUsuario) {
                     if ($value === null) {
                         return;
                     }
-                    $idOrganizacion = $this->input('id_organizacion');
-                    if ($idOrganizacion && ! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacion)->exists()) {
-                        $fail('La sucursal seleccionada no pertenece a la organización.');
+                    if ($idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
+                        $fail('La sucursal seleccionada no es la tuya.');
+                        return;
+                    }
+                    if (! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacionUsuario)->exists()) {
+                        $fail('La sucursal seleccionada no pertenece a tu organización.');
                     }
                 },
             ],

@@ -12,9 +12,12 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\QueryException;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class PrecioVentaController extends Controller
 {
+    use PerteneceAOrganizacion;
+
     /**
      * Display a listing of the resource.
      */
@@ -26,7 +29,8 @@ class PrecioVentaController extends Controller
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         if ($request->query('all')) {
-            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado']);
+            $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
+                ->where('id_organizacion', $this->organizacionDelUsuario());
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
@@ -38,7 +42,9 @@ class PrecioVentaController extends Controller
             return response()->json(['data' => $precio_ventas]);
         }
 
-        $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado']);
+        // Aislamiento estricto: cada organización ve solo sus precios de venta.
+        $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
+            ->where('id_organizacion', $this->organizacionDelUsuario());
 
         if ($search) {
             $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
@@ -62,6 +68,10 @@ class PrecioVentaController extends Controller
     public function createPrecioVenta(CreatePrecioVentaRequest $request)
     {
         $validatedData = $request->validated();
+
+        // La organización SIEMPRE es la del usuario: no se puede crear un precio
+        // para otra organización.
+        $validatedData['id_organizacion'] = $this->organizacionDelUsuario();
 
         // Agregar información adicional
         $validatedData['id_tipoestado'] = 1; // Asignar un estado predeterminado (por ejemplo, "Activo")
@@ -116,6 +126,13 @@ class PrecioVentaController extends Controller
         // Buscar el precio de venta por ID
         $precioVenta = PrecioVenta::findOrFail($id);
 
+        if (! $this->enAlcance($precioVenta)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        }
+
+        // La organización no se puede reasignar.
+        $validatedData['id_organizacion'] = $precioVenta->id_organizacion;
+
         try {
             // Actualizar el registro en la base de datos
             $precioVenta->update($validatedData);
@@ -139,6 +156,11 @@ class PrecioVentaController extends Controller
         
         // Buscar el precio de venta por ID
         $precioVenta = PrecioVenta::findOrFail($id);
+
+        if (! $this->enAlcance($precioVenta)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        }
+
         //Asigno el estado del precio de venta
         $precioVenta->id_tipoestado = $tipoEstado->id;
         //Asigno el usuario que realizó la actualización
@@ -153,6 +175,11 @@ class PrecioVentaController extends Controller
     public function DeletePrecioVenta($id)
     {
         $precio_ventas = PrecioVenta::findOrFail($id);
+
+        if (! $this->enAlcance($precio_ventas)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        }
+
         $precio_ventas->delete();
 
         return response()->json(['message' => 'Precio de venta eliminada correctamente']);

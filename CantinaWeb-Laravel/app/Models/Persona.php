@@ -15,6 +15,7 @@ class Persona extends Model
     use HasFactory;
     protected $table = 'personas';
     protected $fillable = [
+        'id_organizacion',
         'nombre',
         'documento',
         'direccion',
@@ -42,6 +43,12 @@ class Persona extends Model
     public function tipoPersona()
     {
         return $this->belongsTo(TipoPersona::class, 'id_tipo_persona');
+    }
+
+    //relacion con organizacion
+    public function organizacion()
+    {
+        return $this->belongsTo(Organizacion::class, 'id_organizacion');
     }
 
     //relacion con tipo documento (C.I., RUC, ...)

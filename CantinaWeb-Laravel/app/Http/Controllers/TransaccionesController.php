@@ -21,9 +21,11 @@ use App\Models\TipoComprobante;
 use App\Models\TipoEstado;
 use App\Models\Comprobante;
 use App\Models\Cuota;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class TransaccionesController extends Controller
 {
+    use PerteneceAOrganizacion;
     use AplicaFiltrosDinamicos;
 
     /**
@@ -31,9 +33,6 @@ class TransaccionesController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-        $isAdmin = isset($user->rol_id) ? ($user->rol_id === 1) : false;
-
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
         $search = $filtros['search'] ?? $request->input('search');
@@ -70,14 +69,14 @@ class TransaccionesController extends Controller
             'cuotas',
             'caja'
         ]);
-        // Si NO es admin, limitar por la organización del usuario y, si tiene
-        // sucursal asignada, también por su sucursal.
-        if (! $isAdmin) {
-            $transacciones->where('id_organizacion', $user->id_organizacion);
+        // Aislamiento por organización: TODOS los usuarios (incluido el rol
+        // Administrador, que no es un admin global) ven solo los documentos de
+        // su propia organización y, si tienen sucursal asignada, solo los de esa
+        // sucursal.
+        $transacciones->where('id_organizacion', $this->organizacionDelUsuario());
 
-            if (! empty($user->id_sucursal)) {
-                $transacciones->where('id_sucursal', $user->id_sucursal);
-            }
+        if ($sucursal = $this->sucursalDelUsuario()) {
+            $transacciones->where('id_sucursal', $sucursal);
         }
 
         $transacciones = $transacciones->when($search, function ($q, $search) use ($searchFecha) {
@@ -144,11 +143,13 @@ class TransaccionesController extends Controller
     {
         $data = $request->validated();
 
-        $idOrganizacion = $data['id_organizacion'] ?? Auth::user()->id_organizacion;
-        // Sin sucursal explícita se usa la de la organización seleccionada
-        // (preferentemente la principal) y, si no tiene ninguna, se crea la principal.
-        // No se usa la sucursal del usuario: puede pertenecer a otra organización.
-        $idSucursal = $data['id_sucursal']
+        // La organización y la sucursal se toman SIEMPRE del usuario, nunca del
+        // request: así nadie puede crear un documento en otra organización.
+        $idOrganizacion = $this->organizacionDelUsuario();
+        // Preferencia de sucursal: la del usuario; si no tiene, la elegida
+        // (validada contra su organización); si no, la principal de su organización.
+        $idSucursal = $this->sucursalDelUsuario()
+            ?? $data['id_sucursal']
             ?? Sucursal::where('id_organizacion', $idOrganizacion)->orderByDesc('es_principal')->value('id')
             ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
@@ -193,7 +194,15 @@ class TransaccionesController extends Controller
         $data = $request->validate([
             'descripcion' => 'nullable|string|max:1000',
             'fecha' => 'required|date',
-            'id_organizacion' => 'required|exists:organizacion,id',
+            'id_organizacion' => [
+                'required',
+                'exists:organizacion,id',
+                function ($attribute, $value, $fail) {
+                    if ((int) $value !== (int) $this->organizacionDelUsuario()) {
+                        $fail('Solo podés vender dentro de tu propia organización.');
+                    }
+                },
+            ],
             'id_persona' => 'nullable|exists:personas,id',
             'id_TipoPago' => 'required|exists:tipo_pagos,id',
             'id_FormaPago' => 'required|exists:forma_pagos,id',
@@ -213,17 +222,18 @@ class TransaccionesController extends Controller
             $tipoTicket = TipoComprobante::whereRaw('LOWER(nombre) = ?', ['ticket'])->first();
             $ticketTipoComprobanteId = $tipoTicket ? $tipoTicket->id : null;
 
-            // La venta POS se registra en la sucursal del usuario (o en la principal
-            // de la organización si aún no tiene sucursal asignada).
-            $idSucursal = Auth::user()?->id_sucursal
-                ?? Sucursal::principalDeOCrear((int) $data['id_organizacion'])->id;
+            // La venta POS se registra SIEMPRE en la organización del usuario y en
+            // su sucursal (o en la principal de su organización si no tiene una).
+            $idOrganizacion = $this->organizacionDelUsuario();
+            $idSucursal = $this->sucursalDelUsuario()
+                ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
-            $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId, $idSucursal) {
+            $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId, $idOrganizacion, $idSucursal) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)
                 $cabecera = Transacciones::create([
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
-                    'id_organizacion' => $data['id_organizacion'],
+                    'id_organizacion' => $idOrganizacion,
                     'id_sucursal' => $idSucursal,
                     'id_persona' => $data['id_persona'] ?? null,
                     'id_TipoEstado' => EstadoTransaccion::FINALIZADO,
@@ -243,7 +253,9 @@ class TransaccionesController extends Controller
                 // 2) Detalles: validar stock y descontar
                 $montoTotal = 0;
                 foreach ($data['detalles'] as $detalle) {
-                    $producto = Producto::where('codigo_barras', $detalle['codigo_barras'])->first();
+                    $producto = Producto::where('codigo_barras', $detalle['codigo_barras'])
+                        ->where('id_organizacion', $idOrganizacion)
+                        ->first();
                     if (!$producto) {
                         throw new \Exception("Producto no encontrado (código: {$detalle['codigo_barras']})");
                     }
@@ -444,6 +456,10 @@ class TransaccionesController extends Controller
             ], 404);
         }
 
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La venta no pertenece a tu organización o sucursal.'], 403);
+        }
+
         return response()->json([
             'comprobante' => $transaccion->comprobante,
         ], 200);
@@ -481,6 +497,10 @@ class TransaccionesController extends Controller
     {
         $data = $request->validated();
         $transaccion = Transacciones::findOrFail($id);
+
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
 
         // No permitir editar una transacción ya posteada ni anulada.
         // Las correcciones de cabecera se hacen con /corregir y las reversiones con /anular.
@@ -534,7 +554,7 @@ class TransaccionesController extends Controller
                     'lote' => $data['lote'] ?? null,
                     'id_persona' => $data['id_persona'],
                     'id_TipoEstado' => $idTipoEstado,
-                    'id_sucursal' => $data['id_sucursal'] ?? $transaccion->id_sucursal,
+                    'id_sucursal' => $this->sucursalDelUsuario() ?? $data['id_sucursal'] ?? $transaccion->id_sucursal,
                     'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
                     'direccion' => ($idTipoMovimiento === 3) ? ($data['direccion'] ?? null) : null,
                     'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
@@ -544,7 +564,6 @@ class TransaccionesController extends Controller
                     'id_TipoMoneda' => $data['id_TipoMoneda'] ?? null,
                     'id_Caja' => $data['id_Caja'] ?? null,
                     'id_Banco' => $data['id_Banco'] ?? null,
-                    'id_organizacion' => $data['id_organizacion'] ?? Auth::user()->id_organizacion,
                     'id_usuario' => Auth::user()->id,
                     'id_TipoMovimiento' => $data['id_TipoMovimiento'],
                     'monto' => $montoNormalizado,
@@ -660,6 +679,10 @@ class TransaccionesController extends Controller
     {
         $transaccion = Transacciones::findOrFail($id);
 
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
+
         // Evitar anular dos veces la misma transacción
         if ($transaccion->esAnulada()) {
             return response()->json(['message' => 'La transacción ya está anulada.'], 422);
@@ -749,6 +772,10 @@ class TransaccionesController extends Controller
     {
         $transaccion = Transacciones::findOrFail($id);
 
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
+
         // No corregir transacciones ya anuladas
         if ($transaccion->esAnulada()) {
             return response()->json(['message' => 'No se puede corregir una transacción anulada.'], 422);
@@ -795,6 +822,10 @@ class TransaccionesController extends Controller
         }
 
         $transaccion = Transacciones::findOrFail($id);
+
+        if (! $this->enAlcance($transaccion, true)) {
+            return response()->json(['message' => 'La transacción no pertenece a tu organización o sucursal.'], 403);
+        }
 
         // Candados: no se borra nada que ya haya impactado o esté enlazado.
         if ($transaccion->estaPosteada()) {

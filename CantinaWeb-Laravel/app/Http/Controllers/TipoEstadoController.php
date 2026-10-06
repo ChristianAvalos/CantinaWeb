@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\TipoEstado;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class TipoEstadoController extends Controller
 {
+    use PerteneceAOrganizacion;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $id_organizacion = Auth::user()->id_organizacion;
+        $id_organizacion = $this->organizacionDelUsuario();
 
         $query = TipoEstado::where(function ($query) use ($id_organizacion) {
             $query->whereNull('id_organizacion')

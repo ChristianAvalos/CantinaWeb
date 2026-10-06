@@ -6,17 +6,17 @@ use App\Models\Cuota;
 use App\Models\TipoEstado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class CuotasController extends Controller
 {
+    use PerteneceAOrganizacion;
+
     /**
      * Lista las cuotas (ventas a crédito/cuotas) con filtros.
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-        $isAdmin = isset($user->rol_id) ? ($user->rol_id === 1) : false;
-
         $estado = $request->input('estado');            // pendiente | pagada | todas
         $search = $request->input('search');
         $fechaDesde = $request->input('fecha_desde');
@@ -41,12 +41,16 @@ class CuotasController extends Controller
             });
         });
 
-        // Si no es admin, limitar por la organización del usuario
-        if (! $isAdmin) {
-            $cuotas->whereHas('transaccion', function ($q) use ($user) {
-                $q->where('id_organizacion', $user->id_organizacion);
-            });
-        }
+        // Aislamiento por organización: todos (incluido el Administrador, que no
+        // es un admin global) ven solo las cuotas de su organización y, si tienen
+        // sucursal asignada, solo las de esa sucursal.
+        $cuotas->whereHas('transaccion', function ($q) {
+            $q->where('id_organizacion', $this->organizacionDelUsuario());
+
+            if ($sucursal = $this->sucursalDelUsuario()) {
+                $q->where('id_sucursal', $sucursal);
+            }
+        });
 
         $cuotas->when($estado && $estado !== 'todas', function ($q) use ($estado, $idPendiente, $idFinalizado) {
             $q->where('id_TipoEstado', $estado === 'pagada' ? $idFinalizado : $idPendiente);
@@ -97,7 +101,11 @@ class CuotasController extends Controller
      */
     public function pagar(Request $request, $id)
     {
-        $cuota = Cuota::findOrFail($id);
+        $cuota = Cuota::with('transaccion')->findOrFail($id);
+
+        if (! $this->enAlcance($cuota->transaccion, true)) {
+            return response()->json(['message' => 'La cuota no pertenece a tu organización o sucursal.'], 403);
+        }
 
         $idFinalizado = $this->idEstadoPorDescripcion('Finalizado');
 
@@ -123,7 +131,11 @@ class CuotasController extends Controller
      */
     public function revertirPago($id)
     {
-        $cuota = Cuota::findOrFail($id);
+        $cuota = Cuota::with('transaccion')->findOrFail($id);
+
+        if (! $this->enAlcance($cuota->transaccion, true)) {
+            return response()->json(['message' => 'La cuota no pertenece a tu organización o sucursal.'], 403);
+        }
 
         $idPendiente = $this->idEstadoPorDescripcion('Pendiente');
 
