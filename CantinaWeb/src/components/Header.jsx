@@ -5,7 +5,7 @@ import ChangePasswordModal from '../views/ModalPassword';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Header({ onToggleSidebar }) {
-  const { logout, user } = useAuth({ middleware: 'auth' })
+  const { logout, user, mutate } = useAuth({ middleware: 'auth' })
   const { themes, themeName, setTheme, resetTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -169,7 +169,8 @@ export default function Header({ onToggleSidebar }) {
           usuario={user}
           modo={modalMode}
           onClose={closeModal}
-          ocultarRolesYOrganizaciones={true}
+          onNombreActualizado={(nombre) => mutate({ ...user, name: nombre }, false)}
+            ocultarRolesYOrganizaciones={true}
         />
       )}
 

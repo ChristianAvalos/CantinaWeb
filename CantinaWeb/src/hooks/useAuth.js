@@ -177,6 +177,7 @@ export const useAuth = ({middleware,url}) =>{
         registro,
         logout,
         user,
+        mutate,
         error
     }
 

@@ -2,7 +2,7 @@ import { useEffect, useState,useRef } from 'react';
 import clienteAxios from "../config/axios";
 import { toast } from "react-toastify";
 
-export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUsuarios, ocultarRolesYOrganizaciones }) {
+export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUsuarios, ocultarRolesYOrganizaciones, onNombreActualizado }) {
     const [nombre, setNombre] = useState(usuario.name || '');
     const [nombreUsuario,setNombreUsuario] = useState(usuario.nameUser || '');
     const [correo, setCorreo] = useState(usuario.email || '');
@@ -116,6 +116,9 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                         Authorization: `Bearer ${token}`
                     }
                 });
+                if (modo === 'perfil' && typeof onNombreActualizado === 'function') {
+                    onNombreActualizado(nombre);
+                }
                 toast.success('Usuario actualizado exitosamente.');
             }
 
