@@ -17,17 +17,17 @@ import ResumenPanel from "./ResumenPanel";
  * Sistema, todas) y si además tiene permiso sobre el módulo.
  */
 const TARJETAS = [
-    { clave: 'cobranzas_pendientes', titulo: 'Cobranzas pendientes', ruta: '/cobranzas', icono: 'fas fa-hand-holding-dollar', color: 'bg-orange-500', permiso: 'Cobranzas' },
-    { clave: 'pagos_proveedores_pendientes', titulo: 'Pagos a proveedores pendientes', ruta: '/pagos-proveedores', icono: 'fas fa-file-invoice-dollar', color: 'bg-rose-600', permiso: 'Pagos_Proveedores' },
-    { clave: 'transacciones', titulo: 'Transacciones', ruta: '/transacciones', icono: 'ion ion-stats-bars', color: 'bg-green-500', permiso: 'Transacciones', modal: 'transacciones' },
-    { clave: 'productos', titulo: 'Productos', ruta: '/productos', icono: 'fas fa-boxes', color: 'bg-blue-500', permiso: 'Productos' },
-    { clave: 'personas', titulo: 'Clientes / Proveedores', ruta: '/personas', icono: 'fas fa-users', color: 'bg-teal-500', permiso: 'Personas' },
-    { clave: 'categorias', titulo: 'Categorías', ruta: '/categorias', icono: 'fas fa-list', color: 'bg-sky-500', permiso: 'Categorias', modal: 'categoria' },
-    { clave: 'precios_venta', titulo: 'Precios de venta', ruta: '/precio-ventas', icono: 'fas fa-tags', color: 'bg-cyan-600', permiso: 'Precio_Ventas' },
-    { clave: 'movimientos', titulo: 'Movimientos de inventario', ruta: '/historial-inventario', icono: 'fas fa-clipboard-list', color: 'bg-slate-600', permiso: 'Historial_Inventario' },
-    { clave: 'organizaciones', titulo: 'Organizaciones', ruta: '/organizacion', icono: 'fas fa-building', color: 'bg-indigo-500', permiso: 'Organizacion' },
-    { clave: 'usuarios', titulo: 'Usuarios registrados', ruta: '/usuarios', icono: 'ion ion-person-add', color: 'bg-yellow-400', permiso: 'Herraminetas_usuarios', modal: 'usuarios' },
-    { clave: 'roles', titulo: 'Roles', ruta: '/usuarios/roles', icono: 'ion ion-android-lock', color: 'bg-red-500', permiso: 'Herraminetas_usuarios', modal: 'roles' },
+    { clave: 'cobranzas_pendientes', titulo: 'Cobranzas pendientes', ruta: '/cobranzas', icono: 'fas fa-hand-holding-dollar', acento: 'text-orange-600', chip: 'bg-orange-100 text-orange-700', permiso: 'Cobranzas' },
+    { clave: 'pagos_proveedores_pendientes', titulo: 'Pagos a proveedores pendientes', ruta: '/pagos-proveedores', icono: 'fas fa-file-invoice-dollar', acento: 'text-rose-600', chip: 'bg-rose-100 text-rose-700', permiso: 'Pagos_Proveedores' },
+    { clave: 'transacciones', titulo: 'Transacciones', ruta: '/transacciones', icono: 'fas fa-chart-column', acento: 'text-emerald-600', chip: 'bg-emerald-100 text-emerald-700', permiso: 'Transacciones', modal: 'transacciones' },
+    { clave: 'productos', titulo: 'Productos', ruta: '/productos', icono: 'fas fa-boxes', acento: 'text-blue-600', chip: 'bg-blue-100 text-blue-700', permiso: 'Productos' },
+    { clave: 'personas', titulo: 'Clientes / Proveedores', ruta: '/personas', icono: 'fas fa-users', acento: 'text-teal-600', chip: 'bg-teal-100 text-teal-700', permiso: 'Personas' },
+    { clave: 'categorias', titulo: 'Categorías', ruta: '/categorias', icono: 'fas fa-list', acento: 'text-sky-600', chip: 'bg-sky-100 text-sky-700', permiso: 'Categorias', modal: 'categoria' },
+    { clave: 'precios_venta', titulo: 'Precios de venta', ruta: '/precio-ventas', icono: 'fas fa-tags', acento: 'text-cyan-600', chip: 'bg-cyan-100 text-cyan-700', permiso: 'Precio_Ventas' },
+    { clave: 'movimientos', titulo: 'Movimientos de inventario', ruta: '/historial-inventario', icono: 'fas fa-clipboard-list', acento: 'text-slate-600', chip: 'bg-slate-100 text-slate-700', permiso: 'Historial_Inventario' },
+    { clave: 'organizaciones', titulo: 'Organizaciones', ruta: '/organizacion', icono: 'fas fa-building', acento: 'text-indigo-600', chip: 'bg-indigo-100 text-indigo-700', permiso: 'Organizacion' },
+    { clave: 'usuarios', titulo: 'Usuarios registrados', ruta: '/usuarios', icono: 'fas fa-user-plus', acento: 'text-amber-600', chip: 'bg-amber-100 text-amber-700', permiso: 'Herraminetas_usuarios', modal: 'usuarios' },
+    { clave: 'roles', titulo: 'Roles', ruta: '/usuarios/roles', icono: 'fas fa-user-shield', acento: 'text-red-600', chip: 'bg-red-100 text-red-700', permiso: 'Herraminetas_usuarios', modal: 'roles' },
 ];
 
 export default function Home() {
@@ -128,26 +128,42 @@ export default function Home() {
             <section className="p-6 bg-gray-50 min-h-[calc(100vh-120px)]">
                 <div className="max-w-7xl mx-auto">
                     {/* Cajas resumen */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
                         {tarjetas.map((tarjeta) => (
-                            <div key={tarjeta.clave} className={`${tarjeta.color} rounded-lg shadow-md p-5 flex flex-col justify-between`}>
-                                <div>
-                                    <h3 className="text-white text-3xl font-bold">{contadores[tarjeta.clave]}</h3>
-                                    <p className="text-white text-lg">{tarjeta.titulo}</p>
-                                </div>
-                                <div className="flex items-center justify-between mt-4">
+                            <div
+                                key={tarjeta.clave}
+                                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500" title={tarjeta.titulo}>
+                                            {tarjeta.titulo}
+                                        </p>
+                                        <h3 className={`mt-1 text-3xl font-bold tabular-nums ${tarjeta.acento}`}>
+                                            {contadores[tarjeta.clave]}
+                                        </h3>
+                                    </div>
                                     {tarjeta.modal ? (
                                         <button
                                             type="button"
                                             onClick={() => openModal('crear', tarjeta.modal)}
                                             title={`Nuevo: ${tarjeta.titulo}`}
+                                            aria-label={`Nuevo: ${tarjeta.titulo}`}
+                                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-slate-300 ${tarjeta.chip}`}
                                         >
-                                            <i className={`${tarjeta.icono} text-white text-2xl`} />
+                                            <i className={tarjeta.icono} />
                                         </button>
                                     ) : (
-                                        <i className={`${tarjeta.icono} text-white text-2xl`} />
+                                        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg ${tarjeta.chip}`}>
+                                            <i className={tarjeta.icono} />
+                                        </span>
                                     )}
-                                    <Link to={tarjeta.ruta} className="text-white text-sm underline hover:text-gray-200">Más información</Link>
+                                </div>
+                                <div className="mt-4 border-t border-slate-100 pt-3">
+                                    <Link to={tarjeta.ruta} className={`inline-flex items-center gap-1.5 text-sm font-semibold hover:underline ${tarjeta.acento}`}>
+                                        Más información
+                                        <i className="fas fa-arrow-right text-[10px]" />
+                                    </Link>
                                 </div>
                             </div>
                         ))}
