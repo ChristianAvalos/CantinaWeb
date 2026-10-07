@@ -1,7 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { degradadoDesdeColor } from '../helpers/coloresIconos';
 
 const AUTH_USER_ID_KEY = 'AUTH_USER_ID';
 const GLOBAL_THEME_KEY = 'G360_THEME_GLOBAL';
+const GLOBAL_PANEL_COLOR_KEY = 'G360_PANELCOLOR_GLOBAL';
+const GLOBAL_ICON_MODE_KEY = 'G360_ICONMODE_GLOBAL';
+const GLOBAL_ICON_COLOR_KEY = 'G360_ICONCOLOR_GLOBAL';
+const MODO_ICONOS_POR_DEFECTO = 'modulo';
+const COLOR_ICONOS_POR_DEFECTO = '#2563eb';
 
 const THEMES = {
   default: {
@@ -61,6 +67,36 @@ function themeKeyForUserId(userId) {
   return userId ? `G360_THEME_USER_${userId}` : GLOBAL_THEME_KEY;
 }
 
+function iconModeKeyForUserId(userId) {
+  return userId ? `G360_ICONMODE_USER_${userId}` : GLOBAL_ICON_MODE_KEY;
+}
+
+function iconColorKeyForUserId(userId) {
+  return userId ? `G360_ICONCOLOR_USER_${userId}` : GLOBAL_ICON_COLOR_KEY;
+}
+
+function panelColorKeyForUserId(userId) {
+  return userId ? `G360_PANELCOLOR_USER_${userId}` : GLOBAL_PANEL_COLOR_KEY;
+}
+
+function leerColorPanel(userId) {
+  return localStorage.getItem(panelColorKeyForUserId(userId))
+    || localStorage.getItem(GLOBAL_PANEL_COLOR_KEY)
+    || null;
+}
+
+function leerModoIconos(userId) {
+  return localStorage.getItem(iconModeKeyForUserId(userId))
+    || localStorage.getItem(GLOBAL_ICON_MODE_KEY)
+    || MODO_ICONOS_POR_DEFECTO;
+}
+
+function leerColorIconos(userId) {
+  return localStorage.getItem(iconColorKeyForUserId(userId))
+    || localStorage.getItem(GLOBAL_ICON_COLOR_KEY)
+    || COLOR_ICONOS_POR_DEFECTO;
+}
+
 function parseRgbTriplet(value) {
   const parts = String(value || '').trim().split(/\s+/).map((n) => Number(n));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
@@ -104,7 +140,22 @@ export function ThemeProvider({ children }) {
     return saved && THEMES[saved] ? saved : 'default';
   });
 
-  const theme = useMemo(() => THEMES[themeName] ?? THEMES.default, [themeName]);
+  // Color de fondo de los paneles elegido libremente. Cuando está definido,
+  // tiene prioridad sobre el tema con nombre.
+  const [colorPanel, setColorPanelState] = useState(() => leerColorPanel(readUserId()));
+
+  const theme = useMemo(() => {
+    if (colorPanel) {
+      const generado = degradadoDesdeColor(colorPanel);
+      if (generado) return generado;
+    }
+    return THEMES[themeName] ?? THEMES.default;
+  }, [themeName, colorPanel]);
+
+  // Color de los íconos del panel lateral: por módulo (por defecto) o un color
+  // elegido por el usuario, que se adapta al fondo del tema.
+  const [modoIconos, setModoIconosState] = useState(() => leerModoIconos(readUserId()));
+  const [colorIconos, setColorIconosState] = useState(() => leerColorIconos(readUserId()));
 
   const syncUserId = useCallback(() => {
     setUserId(readUserId());
@@ -129,6 +180,7 @@ export function ThemeProvider({ children }) {
     // Cuando cambia el usuario: cargar su tema; si no tiene, usar tema global o default.
     const perUserKey = themeKeyForUserId(userId);
     const saved = perUserKey ? localStorage.getItem(perUserKey) : null;
+    setColorPanelState(leerColorPanel(userId));
     if (saved && THEMES[saved]) {
       setThemeName(saved);
       return;
@@ -145,10 +197,17 @@ export function ThemeProvider({ children }) {
 
   const setTheme = useCallback((nextThemeName) => {
     if (!THEMES[nextThemeName]) return;
+    // Elegir un tema con nombre descarta el color de fondo personalizado.
+    setColorPanelState(null);
+    try {
+      localStorage.removeItem(panelColorKeyForUserId(readUserId()));
+    } catch {
+      // noop
+    }
     // Aplicar inmediatamente las variables CSS para respuesta instantánea
     try {
       applyCssVars(THEMES[nextThemeName]);
-    } catch (err) {
+    } catch {
       // noop
     }
     // Guardar localmente de inmediato: siempre actualizar la clave global
@@ -169,14 +228,57 @@ export function ThemeProvider({ children }) {
     setThemeName(nextThemeName);
   }, []);
 
+  const setColorPanel = useCallback((color) => {
+    if (!color) return;
+    setColorPanelState(color);
+    try {
+      localStorage.setItem(GLOBAL_PANEL_COLOR_KEY, color);
+      localStorage.setItem(panelColorKeyForUserId(readUserId()), color);
+    } catch {
+      // noop
+    }
+  }, []);
+
   const resetTheme = useCallback(() => {
     const perUserKey = themeKeyForUserId(userId);
     if (perUserKey) localStorage.removeItem(perUserKey);
+    setColorPanelState(null);
+    try {
+      localStorage.removeItem(panelColorKeyForUserId(userId));
+    } catch {
+      // noop
+    }
     // Aplicar default inmediatamente
     applyCssVars(THEMES.default);
     console.debug('[Theme] resetTheme -> default');
     setThemeName('default');
   }, [userId]);
+
+  useEffect(() => {
+    // Al cambiar de usuario se recuperan sus preferencias de color de íconos.
+    setModoIconosState(leerModoIconos(userId));
+    setColorIconosState(leerColorIconos(userId));
+  }, [userId]);
+
+  const setModoIconos = useCallback((modo) => {
+    setModoIconosState(modo);
+    try {
+      localStorage.setItem(GLOBAL_ICON_MODE_KEY, modo);
+      localStorage.setItem(iconModeKeyForUserId(readUserId()), modo);
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const setColorIconos = useCallback((color) => {
+    setColorIconosState(color);
+    try {
+      localStorage.setItem(GLOBAL_ICON_COLOR_KEY, color);
+      localStorage.setItem(iconColorKeyForUserId(readUserId()), color);
+    } catch {
+      // noop
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -186,8 +288,14 @@ export function ThemeProvider({ children }) {
       setTheme,
       resetTheme,
       userId,
+      colorPanel,
+      setColorPanel,
+      modoIconos,
+      colorIconos,
+      setModoIconos,
+      setColorIconos,
     }),
-    [themeName, theme, setTheme, resetTheme, userId]
+    [themeName, theme, setTheme, resetTheme, userId, colorPanel, setColorPanel, modoIconos, colorIconos, setModoIconos, setColorIconos]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

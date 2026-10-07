@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router"
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useAuthPermisos from "../hooks/useAuthPermisos";
 import { useTheme } from '../context/ThemeContext';
+import { colorIconoParaFondos } from '../helpers/coloresIconos';
 
 const sectionRoutes = {
   operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/pagos-proveedores', '/ajustes', '/transacciones', '/precio-ventas', '/historial-inventario'],
@@ -38,7 +39,7 @@ const ICONO_COLORES = {
 
 export default function SideNav() {
   const { hasPermission, isAdmin, loading } = useAuthPermisos();
-  const { theme } = useTheme();
+  const { theme, modoIconos, colorIconos } = useTheme();
   const location = useLocation();
 
   // Estado para el término de búsqueda y los ítems del menú
@@ -48,9 +49,19 @@ export default function SideNav() {
 
   const isLightTheme = theme.on === '15 23 42';
   const colorIcono = (clave) => {
+    // En modo personalizado el color va por `style`, para poder ajustarlo al
+    // fondo del tema con cualquier color elegido por el usuario.
+    if (modoIconos !== 'modulo') return '';
     const [paraOscuro, paraClaro] = ICONO_COLORES[clave] ?? [];
     return isLightTheme ? paraClaro : paraOscuro;
   };
+
+  // Color elegido por el usuario, adaptado a los extremos del degradado.
+  const colorIconosAjustado = useMemo(
+    () => colorIconoParaFondos(colorIconos, [theme.from, theme.to], 3),
+    [colorIconos, theme.from, theme.to]
+  );
+  const estiloIcono = modoIconos !== 'modulo' ? { color: colorIconosAjustado } : undefined;
   const dividerColor = isLightTheme ? `rgba(${theme.on}, 0.14)` : 'rgba(255, 255, 255, 0.1)';
   const sidenavStyle = {
     backgroundColor: `rgb(${theme.from})`,
@@ -237,7 +248,7 @@ export default function SideNav() {
                   {hasPermission('Compras') && (
                     <li>
                       <Link to="/compras" className={getItemLinkClasses('/compras')}>
-                        <i className={`fas fa-cart-arrow-down h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('compras')}`} aria-hidden="true" />
+                        <i className={`fas fa-cart-arrow-down h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('compras')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Compras</span>
                       </Link>
                     </li>
@@ -246,7 +257,7 @@ export default function SideNav() {
                   {hasPermission('Ventas') && (
                     <li>
                       <Link to="/ventas" className={getItemLinkClasses('/ventas')}>
-                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventas')}`} aria-hidden="true" />
+                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventas')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Ventas</span>
                       </Link>
                     </li>
@@ -255,7 +266,7 @@ export default function SideNav() {
                   {hasPermission('Ventas') && (
                     <li>
                       <Link to="/ventas-rapidas" className={getItemLinkClasses('/ventas-rapidas')}>
-                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventasRapidas')}`} aria-hidden="true" />
+                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventasRapidas')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Ventas Rápidas</span>
                       </Link>
                     </li>
@@ -264,7 +275,7 @@ export default function SideNav() {
                   {hasPermission('Cobranzas') && (
                     <li>
                       <Link to="/cobranzas" className={getItemLinkClasses('/cobranzas')}>
-                        <i className={`fas fa-money-check-dollar h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('cobranzas')}`} aria-hidden="true" />
+                        <i className={`fas fa-money-check-dollar h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('cobranzas')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Cobranzas</span>
                       </Link>
                     </li>
@@ -273,7 +284,7 @@ export default function SideNav() {
                   {hasPermission('Pagos_Proveedores') && (
                     <li>
                       <Link to="/pagos-proveedores" className={getItemLinkClasses('/pagos-proveedores')}>
-                        <i className={`fas fa-industry h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('pagos')}`} aria-hidden="true" />
+                        <i className={`fas fa-industry h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('pagos')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Pagos a Proveedores</span>
                       </Link>
                     </li>
@@ -282,7 +293,7 @@ export default function SideNav() {
                   {hasPermission('Ajustes') && (
                     <li>
                       <Link to="/ajustes" className={getItemLinkClasses('/ajustes')}>
-                        <i className={`fas fa-gears h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ajustes')}`} aria-hidden="true" />
+                        <i className={`fas fa-gears h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ajustes')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Ajustes</span>
                       </Link>
                     </li>
@@ -291,7 +302,7 @@ export default function SideNav() {
                   {isAdmin && hasPermission('Transacciones') && (
                     <li>
                       <Link to="/transacciones" className={getItemLinkClasses('/transacciones')}>
-                        <i className={`fas fa-chart-column h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('transacciones')}`} aria-hidden="true" />
+                        <i className={`fas fa-chart-column h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('transacciones')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Transacciones</span>
                       </Link>
                     </li>
@@ -300,7 +311,7 @@ export default function SideNav() {
                   {hasPermission('Precio_Ventas') && (
                     <li>
                       <Link to="/precio-ventas" className={getItemLinkClasses('/precio-ventas')}>
-                        <i className={`fas fa-tags h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('precioVentas')}`} aria-hidden="true" />
+                        <i className={`fas fa-tags h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('precioVentas')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Precio Ventas</span>
                       </Link>
                     </li>
@@ -309,7 +320,7 @@ export default function SideNav() {
                   {hasPermission('Historial_Inventario') && (
                     <li>
                       <Link to="/historial-inventario" className={getItemLinkClasses('/historial-inventario')}>
-                        <i className={`fas fa-clipboard-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('historial')}`} aria-hidden="true" />
+                        <i className={`fas fa-clipboard-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('historial')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Historial de Inventario</span>
                       </Link>
                     </li>
@@ -331,7 +342,7 @@ export default function SideNav() {
                   {hasPermission('Productos') && (
                                 <li>
                                   <Link to="/productos" className={getItemLinkClasses('/productos')}>
-                                    <i className={`fas fa-boxes h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('productos')}`} aria-hidden="true" />
+                                    <i className={`fas fa-boxes h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('productos')}`} style={estiloIcono} aria-hidden="true" />
                                     <span>Productos</span>
                       </Link>
                     </li>
@@ -340,7 +351,7 @@ export default function SideNav() {
                   {hasPermission('Categorias') && (
                                 <li>
                                   <Link to="/categorias" className={getItemLinkClasses('/categorias')}>
-                                    <i className={`fas fa-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('categorias')}`} aria-hidden="true" />
+                                    <i className={`fas fa-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('categorias')}`} style={estiloIcono} aria-hidden="true" />
                                     <span>Categorias</span>
                       </Link>
                     </li>
@@ -349,7 +360,7 @@ export default function SideNav() {
                   {hasPermission('Personas') && (
                                 <li>
                                   <Link to="/personas" className={getItemLinkClasses('/personas')}>
-                                    <i className={`fas fa-address-card h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('personas')}`} aria-hidden="true" />
+                                    <i className={`fas fa-address-card h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('personas')}`} style={estiloIcono} aria-hidden="true" />
                                     <span>Clientes/Proveedores</span>
                       </Link>
                     </li>
@@ -370,7 +381,7 @@ export default function SideNav() {
                   {hasPermission('Organizacion') && (
                     <li>
                       <Link to="/organizacion" className={getItemLinkClasses('/organizacion')}>
-                        <i className={`fas fa-sitemap h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('organizacion')}`} aria-hidden="true" />
+                        <i className={`fas fa-sitemap h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('organizacion')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Organizacion</span>
                       </Link>
                     </li>
@@ -382,7 +393,7 @@ export default function SideNav() {
                     <>
                       <li>
                         <Link to="/usuarios" className={getItemLinkClasses('/usuarios')}>
-                          <i className={`fas fa-users h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('usuarios')}`} aria-hidden="true" />
+                          <i className={`fas fa-users h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('usuarios')}`} style={estiloIcono} aria-hidden="true" />
                           <span>Usuarios</span>
                         </Link>
                       </li>
@@ -390,7 +401,7 @@ export default function SideNav() {
 
                       <li>
                         <Link to="/usuarios/roles" className={getItemLinkClasses('/usuarios/roles')}>
-                          <i className={`fas fa-user-shield h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('roles')}`} aria-hidden="true" />
+                          <i className={`fas fa-user-shield h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('roles')}`} style={estiloIcono} aria-hidden="true" />
                           <span>Roles usuario</span>
                         </Link>
                       </li>
@@ -417,7 +428,7 @@ export default function SideNav() {
                   {hasPermission('Reporte_Usuarios') && (
                     <li>
                       <Link to="/usuarios/reporte" className={getItemLinkClasses('/usuarios/reporte')}>
-                        <i className={`fas fa-print h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('reportes')}`} aria-hidden="true" />
+                        <i className={`fas fa-print h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('reportes')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Reporte de usuarios</span>
                       </Link>
                     </li>

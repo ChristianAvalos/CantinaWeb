@@ -3,10 +3,23 @@ import ModalUsuarios from '../views/ModalUsuarios';
 import { useAuth } from "../hooks/useAuth";
 import ChangePasswordModal from '../views/ModalPassword';
 import { useTheme } from '../context/ThemeContext';
+import { PALETA_COLORES, tripletaAHex } from '../helpers/coloresIconos';
 
 export default function Header({ onToggleSidebar }) {
   const { logout, user, mutate } = useAuth({ middleware: 'auth' })
-  const { themes, themeName, setTheme, resetTheme } = useTheme();
+  const {
+    themes,
+    theme,
+    themeName,
+    setTheme,
+    resetTheme,
+    colorPanel,
+    setColorPanel,
+    modoIconos,
+    colorIconos,
+    setModoIconos,
+    setColorIconos,
+  } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -92,27 +105,111 @@ export default function Header({ onToggleSidebar }) {
               </button>
 
               {dropdownOpen && (
-                <ul className="absolute right-0 top-14 w-56 rounded-lg border border-gray-200 bg-white shadow-lg z-30 transition-all duration-200 ease-in-out">
+                <ul className="absolute right-0 top-14 w-72 max-h-[75vh] overflow-y-auto scroll-sutil rounded-lg border border-gray-200 bg-white shadow-lg z-30 transition-all duration-200 ease-in-out">
                   <li className="px-4 pt-3 pb-2">
-                    <div className="text-xs font-semibold text-gray-500">Tema</div>
-                    <select
-                      className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={themeName}
-                      onChange={(e) => setTheme(e.target.value)}
-                    >
-                      {Object.entries(themes).map(([key, t]) => (
-                        <option key={key} value={key} className="text-slate-700">
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={resetTheme}
-                      className="mt-2 w-full rounded-md bg-gray-100 px-2 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
-                    >
-                      Restaurar por defecto
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-gray-500">Colores de paneles o fondo</div>
+                      {colorPanel && (
+                        <button
+                          type="button"
+                          onClick={resetTheme}
+                          className="text-[0.68rem] font-semibold text-blue-600 hover:underline"
+                        >
+                          Por defecto
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {Object.entries(themes).map(([key, t]) => {
+                        const activo = !colorPanel && themeName === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            title={t.label}
+                            aria-label={t.label}
+                            aria-pressed={activo}
+                            onClick={() => setTheme(key)}
+                            className={`h-6 w-6 rounded-full border transition ${activo ? 'border-slate-700 ring-2 ring-slate-300' : 'border-black/10 hover:scale-110'}`}
+                            style={{ backgroundImage: `linear-gradient(135deg, rgb(${t.from}), rgb(${t.to}))` }}
+                          />
+                        );
+                      })}
+                      <label
+                        title="Otro color de fondo"
+                        className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-400 text-slate-500 hover:bg-gray-100"
+                      >
+                        <i className="fas fa-plus text-[0.6rem]" />
+                        <input
+                          type="color"
+                          value={colorPanel || tripletaAHex(theme.from) || '#1e3a8a'}
+                          onChange={(e) => setColorPanel(e.target.value)}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                        <span className="sr-only">Elegir otro color de fondo</span>
+                      </label>
+                    </div>
+                    <p className="mt-2 text-[0.68rem] leading-snug text-gray-500">
+                      El texto y los íconos se adaptan solos al fondo.
+                    </p>
+                  </li>
+
+                  {/* Paleta de colores de los íconos del panel lateral */}
+                  <li className="px-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-gray-500">Color de los íconos</div>
+                      {modoIconos !== 'modulo' && (
+                        <button
+                          type="button"
+                          onClick={() => setModoIconos('modulo')}
+                          className="text-[0.68rem] font-semibold text-blue-600 hover:underline"
+                        >
+                          Por módulo
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {PALETA_COLORES.map((color) => {
+                        const activo = modoIconos !== 'modulo'
+                          && colorIconos.toLowerCase() === color.valor.toLowerCase();
+                        return (
+                          <button
+                            key={color.valor}
+                            type="button"
+                            title={color.nombre}
+                            aria-label={color.nombre}
+                            aria-pressed={activo}
+                            onClick={() => {
+                              setColorIconos(color.valor);
+                              setModoIconos('personalizado');
+                            }}
+                            className={`h-6 w-6 rounded-full border transition ${activo ? 'border-slate-700 ring-2 ring-slate-300' : 'border-black/10 hover:scale-110'}`}
+                            style={{ backgroundColor: color.valor }}
+                          />
+                        );
+                      })}
+                      <label
+                        title="Otro color"
+                        className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-400 text-slate-500 hover:bg-gray-100"
+                      >
+                        <i className="fas fa-plus text-[0.6rem]" />
+                        <input
+                          type="color"
+                          value={colorIconos}
+                          onChange={(e) => {
+                            setColorIconos(e.target.value);
+                            setModoIconos('personalizado');
+                          }}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                        <span className="sr-only">Elegir otro color</span>
+                      </label>
+                    </div>
+                    <p className="mt-2 text-[0.68rem] leading-snug text-gray-500">
+                      {modoIconos === 'modulo'
+                        ? 'Cada módulo usa su color.'
+                        : 'El color se aclara u oscurece solo según el tema.'}
+                    </p>
                   </li>
                   <li><hr className="my-1 border-gray-200" /></li>
                   <li>
