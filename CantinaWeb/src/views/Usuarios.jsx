@@ -284,21 +284,21 @@ export default function Usuarios() {
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', usuario)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit User" />
+                                                            <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit User" title="Edit User" />
                                                         </button>
                                                         <button onClick={() => handleDelete(usuario.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
+                                                            <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete User" title="Delete User" />
                                                         </button>
                                                         <button onClick={() => handleResetPassword(usuario.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/rotate.png" alt="Reset password" />
+                                                            <i className="fas fa-rotate-right text-sky-600" role="img" aria-label="Reset password" title="Reset password" />
                                                         </button>
 
                                                         <button onClick={() => handleUserActive(usuario.id, usuario.id_tipoestado)}>
                                                             {usuario.id_tipoestado === 1 ? (
-                                                                <img src="/img/Icon/toggle-on.png" alt="Edit User" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-on w-5 h-5 mr-2 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Edit User" title="Edit User" />
                                                                 // <i className="fas fa-toggle-on"></i>
                                                             ) : (
-                                                                <img src="/img/Icon/toggle-off.png" alt="Edit User" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-off w-5 h-5 mr-2 text-[1.15rem] text-center text-slate-400" role="img" aria-label="Edit User" title="Edit User" />
                                                                 // <i className="fas fa-toggle-off"></i>
                                                             )}
                                                         </button>

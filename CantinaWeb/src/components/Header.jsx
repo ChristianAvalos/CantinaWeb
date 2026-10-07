@@ -124,7 +124,7 @@ export default function Header({ onToggleSidebar }) {
                       className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors duration-150 ease-in-out"
                     > 
                     <div className='flex items-center'>
-                      <img src="/img/Icon/user-man.png" alt="User" className="w-5 h-5 mr-2"  />
+                      <i className="fas fa-user w-5 h-5 mr-2 text-[1.15rem] text-center text-sky-500" aria-hidden="true" />
                       Mi perfil
                     </div>
                       
@@ -139,7 +139,7 @@ export default function Header({ onToggleSidebar }) {
                       }}
                     >
                       <div className='flex items-center'>
-                        <img src="/img/Icon/key-user-filled.png" alt="Change Password" className="w-5 h-5 mr-2" />
+                        <i className="fas fa-key w-5 h-5 mr-2 text-[1.15rem] text-center text-amber-500" aria-hidden="true" />
                         Cambiar contraseña
                       </div>
                       
@@ -151,7 +151,7 @@ export default function Header({ onToggleSidebar }) {
                       className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors duration-150 ease-in-out"
                     >
                       <div className='flex items-center'>
-                        <img src="/img/Icon/exit.png" alt="Logout" className="w-5 h-5 mr-2" />
+                        <i className="fas fa-right-from-bracket w-5 h-5 mr-2 text-[1.15rem] text-center text-slate-500" aria-hidden="true" />
                         Cerrar sesión
                       </div>
                       

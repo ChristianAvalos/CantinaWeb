@@ -29,11 +29,7 @@ const IconTrash = () => (
 );
 const IconBarcode = () => (
     <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 ring-1 ring-inset ring-white/20">
-        <img
-            src="/img/Icon/barcode.png"
-            alt=""
-            className="h-4 w-4 object-contain opacity-95"
-        />
+        <i className="fas fa-barcode h-4 w-4 text-[0.95rem] text-center" aria-hidden="true" />
     </span>
 );
 const IconCart = () => (
@@ -42,11 +38,7 @@ const IconCart = () => (
     // </svg>
 
     <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 ring-1 ring-inset ring-white/20">
-        <img
-            src="/img/Icon/shopping-cart.png"
-            alt=""
-            className="h-4 w-4 object-contain opacity-95"
-        />
+        <i className="fas fa-cart-shopping h-4 w-4 text-[0.95rem] text-center" aria-hidden="true" />
     </span>
 );
 const IconCash = () => (
@@ -637,11 +629,7 @@ export default function VentasRapidas() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
                                 </svg> */}
                                 <span className="w-20 h-20 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <img
-                                        src="/img/Icon/shopping-cart2.png"
-                                        alt=""
-                                        className="h-20 w-20 object-contain opacity-30"
-                                    />
+                                    <i className="fas fa-cart-shopping h-20 w-20 opacity-30 text-[5rem] text-center" aria-hidden="true" />
                                 </span>
                                 <p className="text-lg font-medium">No hay productos en el carrito</p>
                                 <p className="text-sm">Escanea un código o busca un producto para comenzar</p>

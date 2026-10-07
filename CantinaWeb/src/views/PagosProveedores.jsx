@@ -202,14 +202,14 @@ export default function PagosProveedores() {
                                                                 onClick={() => solicitarRevertir(cuota)}
                                                                 className="text-sm text-slate-500 hover:text-red-600"
                                                             >
-                                                                <img src="/img/Icon/rotate.png" alt="Revertir" />
+                                                                <i className="fas fa-rotate-right text-sky-600" role="img" aria-label="Revertir" title="Revertir" />
                                                             </button>
                                                         ) : (
                                                             <button
                                                                 onClick={() => solicitarPago(cuota)}
                                                                 className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
                                                             >
-                                                                <img src="/img/Icon/checked.png" alt="Pagar" />
+                                                                <i className="fas fa-circle-check text-emerald-600" role="img" aria-label="Pagar" title="Pagar" />
                                                             </button>
                                                         )}
                                                     </td>

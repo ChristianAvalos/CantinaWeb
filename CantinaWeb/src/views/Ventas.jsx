@@ -261,29 +261,29 @@ export default function Ventas() {
                                                             {/* Reimprimir comprobante (solo si la venta tiene snapshot guardado) */}
                                                             {venta.comprobante && (
                                                                 <button onClick={() => handleReimprimir(venta)} title="Reimprimir comprobante" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/report-print.png" alt="Reimprimir" />
+                                                                    <i className="fas fa-print text-slate-600" role="img" aria-label="Reimprimir" title="Reimprimir" />
                                                                 </button>
                                                             )}
                                                             {/* Ver detalle (solo lectura) */}
                                                             <button onClick={() => handleVer(venta)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                <img src="/img/Icon/eye.png" alt="Ver" />
+                                                                <i className="fas fa-eye text-blue-600" role="img" aria-label="Ver" title="Ver" />
                                                             </button>
                                                             {/* Continuar un borrador (estado Activo = creada pero sin finalizar) */}
                                                             {Number(venta.id_TipoEstado) === 1 && (
                                                                 <button onClick={() => openModal('editar', venta)} title="Continuar" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Continuar" title="Continuar" />
                                                                 </button>
                                                             )}
                                                             {/* Corregir cabecera (solo si ya fue finalizada: ni borrador ni anulada) */}
                                                             {Number(venta.id_TipoEstado) !== 7 && Number(venta.id_TipoEstado) !== 1 && (
                                                                 <button onClick={() => openModal('corregir', venta)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/edit.png" alt="Corregir" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Corregir" title="Corregir" />
                                                                 </button>
                                                             )}
                                                             {/* Anular (oculto si ya está anulada) */}
                                                             {Number(venta.id_TipoEstado) !== 7 && (
                                                                 <button onClick={() => handleAnular(venta)} title="Anular venta" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                    <i className="fas fa-rotate-right text-sky-600" role="img" aria-label="Anular" title="Anular" />
                                                                 </button>
                                                             )}
                                                         </div>

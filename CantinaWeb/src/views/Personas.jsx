@@ -246,17 +246,17 @@ export default function Personas() {
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', persona)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit" />
+                                                            <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit" title="Edit" />
                                                         </button>
                                                         <button onClick={() => handleDelete(persona.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
+                                                            <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete" title="Delete" />
                                                         </button>
                                                         <button onClick={() => handlePersonaActive(persona.id, persona.id_tipoestado)}>
                                                             {persona.id_tipoestado === 1 ? (
-                                                                <img src="/img/Icon/toggle-on.png" alt="Edit User" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-on w-5 h-5 mr-2 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Edit User" title="Edit User" />
                                                                 // <i className="fas fa-toggle-on"></i>
                                                             ) : (
-                                                                <img src="/img/Icon/toggle-off.png" alt="Edit User" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-off w-5 h-5 mr-2 text-[1.15rem] text-center text-slate-400" role="img" aria-label="Edit User" title="Edit User" />
                                                                 // <i className="fas fa-toggle-off"></i>
                                                             )}
                                                         </button>

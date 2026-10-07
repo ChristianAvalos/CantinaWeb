@@ -398,11 +398,15 @@ export default function ModalOrganizacion({ onClose, modo, refrescarOrganizacion
 
                         <div className="col-span-1 flex flex-col items-center justify-center border-l-2 border-gray-200">
                             <div>
-                                <img
-                                    src={previewImage ||  (organizacion.Imagen ? `${baseURL}/img/organizaciones/${organizacion.Imagen}` : '/img/Icon/factory.png')}
-                                    alt={`Imagen de ${organizacion.RazonSocial}`}
-                                    className="max-w-full h-auto rounded"
-                                />
+                                {(previewImage || organizacion.Imagen) ? (
+                                    <img
+                                        src={previewImage || `${baseURL}/img/organizaciones/${organizacion.Imagen}`}
+                                        alt={`Imagen de ${organizacion.RazonSocial}`}
+                                        className="max-w-full h-auto rounded"
+                                    />
+                                ) : (
+                                    <i className="fas fa-industry text-[6rem] text-slate-300" aria-hidden="true" />
+                                )}
                             </div>
                             <label class="bg-slate-700 text-white rounded px-2 py-1 hover:bg-slate-900 transition" for="imagen">
                                 Imagen

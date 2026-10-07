@@ -189,11 +189,9 @@ export default function FiltrosBar({
                         aria-label={isCollapsed ? 'Ver filtros' : 'Ocultar filtros'}
                         title={isCollapsed ? 'Ver filtros' : 'Ocultar filtros'}
                     >
-                        <img
-                            src={isCollapsed ? '/img/Icon/filter.png' : '/img/Icon/filter-gear.png'}
-                            alt=""
+                        <i
+                            className={`fas ${isCollapsed ? 'fa-filter' : 'fa-sliders'} h-5 w-5 text-center text-[1.15rem]`}
                             aria-hidden="true"
-                            className="h-5 w-5 object-contain"
                         />
                     </button>
                 </div>
@@ -207,11 +205,9 @@ export default function FiltrosBar({
                         aria-label={isCollapsed ? 'Ver filtros' : 'Ocultar filtros'}
                         title={isCollapsed ? 'Ver filtros' : 'Ocultar filtros'}
                     >
-                        <img
-                            src={isCollapsed ? '/img/Icon/filter.png' : '/img/Icon/filter-gear.png'}
-                            alt=""
+                        <i
+                            className={`fas ${isCollapsed ? 'fa-filter' : 'fa-sliders'} h-5 w-5 text-center text-[1.15rem]`}
                             aria-hidden="true"
-                            className="h-5 w-5 object-contain"
                         />
                     </button>
 

@@ -136,7 +136,7 @@ export default function Home() {
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500" title={tarjeta.titulo}>
+                                        <p className="line-clamp-2 text-xs font-semibold uppercase tracking-wide text-slate-500" title={tarjeta.titulo}>
                                             {tarjeta.titulo}
                                         </p>
                                         <h3 className={`mt-1 text-3xl font-bold tabular-nums ${tarjeta.acento}`}>

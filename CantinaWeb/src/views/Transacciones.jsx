@@ -273,30 +273,30 @@ export default function Transacciones() {
                                                         <div className="flex items-center justify-center gap-1">
                                                             {/* Ver detalle (solo lectura) */}
                                                             <button type="button" onClick={() => handleVer(transaccion)} title="Ver detalle" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/eye.png" alt="Ver" />
+                                                                <i className="fas fa-eye text-blue-600" role="img" aria-label="Ver" title="Ver" />
                                                             </button>
                                                             {/* Continuar un borrador (estado Activo) */}
                                                             {esBorrador && (
                                                                 <button type="button" onClick={() => handleContinuar(transaccion)} title="Continuar" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
-                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Continuar" title="Continuar" />
                                                                 </button>
                                                             )}
                                                             {/* Corregir cabecera (ni borrador ni anulada) */}
                                                             {estado !== 7 && estado !== 1 && (
                                                                 <button type="button" onClick={() => handleCorregir(transaccion)} title="Corregir datos" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
-                                                                    <img src="/img/Icon/edit.png" alt="Corregir" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Corregir" title="Corregir" />
                                                                 </button>
                                                             )}
                                                             {/* Anular (oculto si ya está anulada) */}
                                                             {estado !== 7 && (
                                                                 <button type="button" onClick={() => pedirAnular(transaccion)} title="Anular" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
-                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                    <i className="fas fa-rotate-right text-sky-600" role="img" aria-label="Anular" title="Anular" />
                                                                 </button>
                                                             )}
                                                             {/* Eliminar físicamente: solo admin y solo borradores */}
                                                             {esBorrador && (
                                                                 <button type="button" onClick={() => pedirEliminar(transaccion)} title="Eliminar definitivamente" className="flex items-center rounded p-1 hover:bg-red-100 focus:outline-none">
-                                                                    <img src="/img/Icon/trash_bin-remove.png" alt="Eliminar" />
+                                                                    <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Eliminar" title="Eliminar" />
                                                                 </button>
                                                             )}
                                                         </div>

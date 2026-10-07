@@ -262,16 +262,16 @@ export default function PrecioVenta() {
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', precioVenta)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit" />
+                                                            <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit" title="Edit" />
                                                         </button>
                                                         <button onClick={() => handleDelete(precioVenta.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
+                                                            <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete" title="Delete" />
                                                         </button>
                                                         <button onClick={() => handlePrecioVentaActive(precioVenta.id, precioVenta.tipoEstado)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
                                                             {precioVenta.tipoEstado === 'Activo' ? (
-                                                                <img src="/img/Icon/toggle-on.png" alt="Edit Precio Venta" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-on w-5 h-5 mr-2 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Edit Precio Venta" title="Edit Precio Venta" />
                                                             ) : (
-                                                                <img src="/img/Icon/toggle-off.png" alt="Edit Precio Venta" className="w-5 h-5 mr-2" />
+                                                                <i className="fas fa-toggle-off w-5 h-5 mr-2 text-[1.15rem] text-center text-slate-400" role="img" aria-label="Edit Precio Venta" title="Edit Precio Venta" />
                                                             )}
                                                         </button>
                                                     </div>

@@ -1452,12 +1452,12 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                                         toast.error(result.message);
                                                                     }
                                                                 }} className="flex items-center rounded-md p-1.5 transition-colors hover:bg-blue-100 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" className="h-4 w-4" />
+                                                                <i className="fas fa-pen-to-square h-4 w-4 text-[0.95rem] text-center text-blue-600" role="img" aria-label="Edit" title="Edit" />
                                                             </button>
                                                             <button
                                                                 type='button'
                                                                 onClick={() => handleDelete(detalle.id)} className="flex items-center rounded-md p-1.5 transition-colors hover:bg-red-100 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete transaccion detalle" className="h-4 w-4" />
+                                                                <i className="fas fa-trash-can h-4 w-4 text-[0.95rem] text-center text-rose-600" role="img" aria-label="Delete transaccion detalle" title="Delete transaccion detalle" />
                                                             </button>
                                                         </div>
                                                     )}

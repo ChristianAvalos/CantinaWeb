@@ -190,13 +190,13 @@ export default function Roles() {
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => openModal('editar', roles)} className="flex items-center focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit Rol" />
+                                                            <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit Rol" title="Edit Rol" />
                                                         </button>
                                                         <button onClick={() => openModalRolePermissions(roles.id)} className="flex items-center focus:outline-none">
-                                                            <img src="/img/Icon/planning-user.png" alt="Rol permisos" />
+                                                            <i className="fas fa-user-gear text-indigo-600" role="img" aria-label="Rol permisos" title="Rol permisos" />
                                                         </button>
                                                         <button onClick={() => handleDelete(roles.id)} className="flex items-center focus:outline-none">
-                                                            <img src="/img/Icon/trash_bin-remove.png" alt="Delete Rol" />
+                                                            <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete Rol" title="Delete Rol" />
                                                         </button>
                                                     </div>
                                                 </td>

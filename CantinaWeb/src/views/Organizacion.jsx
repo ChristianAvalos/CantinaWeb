@@ -257,22 +257,22 @@ export default function Organizacion() {
                                                 <td>
                                                     <div className="flex space-x-2">
                                                         <button onClick={() => setOrganizacionSucursales(organizacion)} title="Sucursales" className="flex items-center rounded p-1 hover:bg-gray-200 focus:outline-none">
-                                                            <img src="/img/Icon/organogram.png" alt="Sucursales" />
+                                                            <i className="fas fa-sitemap text-slate-500" role="img" aria-label="Sucursales" title="Sucursales" />
                                                         </button>
                                                         <button onClick={() => openModal('editar', organizacion)} className="flex items-center focus:outline-none">
-                                                            <img src="/img/Icon/edit.png" alt="Edit Rol" />
+                                                            <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit Rol" title="Edit Rol" />
                                                         </button>
                                                         {isAdmin && (
                                                             <button onClick={() => handleDelete(organizacion.id)} className="flex items-center focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete Rol" />
+                                                                <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete Rol" title="Delete Rol" />
                                                             </button>
                                                         )}
                                                         {isAdmin && (
                                                             <button onClick={() => handleEstado(organizacion)} title={Number(organizacion.id_tipoestado) === 1 ? 'Desactivar' : 'Activar'} className="flex items-center focus:outline-none">
                                                                 {Number(organizacion.id_tipoestado) === 1 ? (
-                                                                    <img src="/img/Icon/toggle-on.png" alt="Activo" className="w-5 h-5" />
+                                                                    <i className="fas fa-toggle-on w-5 h-5 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Activo" title="Activo" />
                                                                 ) : (
-                                                                    <img src="/img/Icon/toggle-off.png" alt="Inactivo" className="w-5 h-5" />
+                                                                    <i className="fas fa-toggle-off w-5 h-5 text-[1.15rem] text-center text-slate-400" role="img" aria-label="Inactivo" title="Inactivo" />
                                                                 )}
                                                             </button>
                                                         )}

@@ -184,10 +184,10 @@ export default function Categoria() {
                                                     {categoria.id_organizacion ? (
                                                         <div className="flex space-x-2">
                                                             <button onClick={() => openModal('editar', categoria)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                                <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit" title="Edit" />
                                                             </button>
                                                             <button onClick={() => handleDelete(categoria.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete" />
+                                                                <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete" title="Delete" />
                                                             </button>
                                                         </div>
                                                     ) : (

@@ -223,24 +223,24 @@ export default function Ajustes() {
                                                         <div className="flex items-center justify-center space-x-2">
                                                             {/* Ver detalle (solo lectura) */}
                                                             <button onClick={() => handleVer(ajuste)} title="Ver detalle" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                <img src="/img/Icon/eye.png" alt="Ver" />
+                                                                <i className="fas fa-eye text-blue-600" role="img" aria-label="Ver" title="Ver" />
                                                             </button>
                                                             {/* Continuar un borrador (estado Activo = creado pero sin finalizar) */}
                                                             {Number(ajuste.id_TipoEstado) === 1 && (
                                                                 <button onClick={() => openModal('editar', ajuste)} title="Continuar" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/edit.png" alt="Continuar" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Continuar" title="Continuar" />
                                                                 </button>
                                                             )}
                                                             {/* Corregir cabecera (solo si ya fue finalizado: ni borrador ni anulado) */}
                                                             {Number(ajuste.id_TipoEstado) !== 7 && Number(ajuste.id_TipoEstado) !== 1 && (
                                                                 <button onClick={() => openModal('corregir', ajuste)} title="Corregir datos" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/edit.png" alt="Corregir" />
+                                                                    <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Corregir" title="Corregir" />
                                                                 </button>
                                                             )}
                                                             {/* Anular (oculto si ya está anulado) */}
                                                             {Number(ajuste.id_TipoEstado) !== 7 && (
                                                                 <button onClick={() => handleAnular(ajuste)} title="Anular ajuste" className="flex items-center rounded hover:bg-gray-200 focus:outline-none p-1">
-                                                                    <img src="/img/Icon/rotate.png" alt="Anular" />
+                                                                    <i className="fas fa-rotate-right text-sky-600" role="img" aria-label="Anular" title="Anular" />
                                                                 </button>
                                                             )}
                                                         </div>

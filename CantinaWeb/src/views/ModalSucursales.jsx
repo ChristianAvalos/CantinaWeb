@@ -169,7 +169,7 @@ export default function ModalSucursales({ organizacion, onClose }) {
                                             className="rounded p-1 hover:bg-gray-200"
                                             title="Editar"
                                         >
-                                            <img src="/img/Icon/edit.png" alt="Editar" className="h-4 w-4" />
+                                            <i className="fas fa-pen-to-square h-4 w-4 text-[0.95rem] text-center text-blue-600" role="img" aria-label="Editar" title="Editar" />
                                         </button>
                                         {!s.es_principal && (
                                             <button
@@ -178,7 +178,7 @@ export default function ModalSucursales({ organizacion, onClose }) {
                                                 className="rounded p-1 hover:bg-red-100"
                                                 title="Eliminar"
                                             >
-                                                <img src="/img/Icon/trash_bin-remove.png" alt="Eliminar" className="h-4 w-4" />
+                                                <i className="fas fa-trash-can h-4 w-4 text-[0.95rem] text-center text-rose-600" role="img" aria-label="Eliminar" title="Eliminar" />
                                             </button>
                                         )}
                                         <button
@@ -188,9 +188,9 @@ export default function ModalSucursales({ organizacion, onClose }) {
                                             title={Number(s.id_tipo_estado) === 1 ? 'Desactivar' : 'Activar'}
                                         >
                                             {Number(s.id_tipo_estado) === 1 ? (
-                                                <img src="/img/Icon/toggle-on.png" alt="Activo" className="h-5 w-5" />
+                                                <i className="fas fa-toggle-on h-5 w-5 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Activo" title="Activo" />
                                             ) : (
-                                                <img src="/img/Icon/toggle-off.png" alt="Inactivo" className="h-5 w-5" />
+                                                <i className="fas fa-toggle-off h-5 w-5 text-[1.15rem] text-center text-slate-400" role="img" aria-label="Inactivo" title="Inactivo" />
                                             )}
                                         </button>
                                     </td>

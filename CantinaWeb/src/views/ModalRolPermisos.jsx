@@ -63,7 +63,7 @@ const ModalRolPermisos = ({ roleId, onClose, refrescarRoles }) => {
                         onClick={handleSelectAll}
                         className="flex items-center bg-green-500 text-white text-sm px-3 py-1 rounded hover:bg-green-600 transition duration-200"
                     >
-                        <img src="/img/checked.png" alt="Seleccionar Todo" className="w-4 h-4 mr-1" />
+                        <i className="fas fa-check w-4 h-4 mr-1 text-[0.95rem] text-center" aria-hidden="true" />
                         Seleccionar Todo
                     </button>
 
@@ -71,7 +71,7 @@ const ModalRolPermisos = ({ roleId, onClose, refrescarRoles }) => {
                         onClick={handleDeselectAll}
                         className="flex items-center g360-danger text-white text-sm px-3 py-1 rounded hover:opacity-90 transition duration-200"
                     >
-                        <img src="/img/unchecked.png" alt="Desmarcar Todo" className="w-4 h-4 mr-1" />
+                        <i className="fas fa-xmark w-4 h-4 mr-1 text-[0.95rem] text-center" aria-hidden="true" />
                         Desmarcar Todo
                     </button>
                 </div>

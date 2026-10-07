@@ -15,6 +15,27 @@ const buildExpandedSections = (pathname) =>
     Object.entries(sectionRoutes).map(([section, routes]) => [section, routes.includes(pathname)])
   );
 
+// Color de cada ícono del menú, alineado con las tarjetas del dashboard.
+// El primer tono se usa sobre los temas oscuros y el segundo sobre los claros.
+const ICONO_COLORES = {
+  compras: ['text-sky-300', 'text-sky-700'],
+  ventas: ['text-emerald-300', 'text-emerald-700'],
+  ventasRapidas: ['text-green-300', 'text-green-700'],
+  cobranzas: ['text-orange-300', 'text-orange-700'],
+  pagos: ['text-rose-300', 'text-rose-700'],
+  ajustes: ['text-violet-300', 'text-violet-700'],
+  transacciones: ['text-teal-300', 'text-teal-700'],
+  precioVentas: ['text-cyan-300', 'text-cyan-700'],
+  historial: ['text-amber-300', 'text-amber-700'],
+  productos: ['text-blue-300', 'text-blue-700'],
+  categorias: ['text-sky-300', 'text-sky-700'],
+  personas: ['text-teal-300', 'text-teal-700'],
+  organizacion: ['text-indigo-300', 'text-indigo-700'],
+  usuarios: ['text-amber-300', 'text-amber-700'],
+  roles: ['text-red-300', 'text-red-700'],
+  reportes: ['text-slate-300', 'text-slate-600'],
+};
+
 export default function SideNav() {
   const { hasPermission, isAdmin, loading } = useAuthPermisos();
   const { theme } = useTheme();
@@ -26,6 +47,10 @@ export default function SideNav() {
   const [expandedSections, setExpandedSections] = useState(() => buildExpandedSections(location.pathname));
 
   const isLightTheme = theme.on === '15 23 42';
+  const colorIcono = (clave) => {
+    const [paraOscuro, paraClaro] = ICONO_COLORES[clave] ?? [];
+    return isLightTheme ? paraClaro : paraOscuro;
+  };
   const dividerColor = isLightTheme ? `rgba(${theme.on}, 0.14)` : 'rgba(255, 255, 255, 0.1)';
   const sidenavStyle = {
     backgroundColor: `rgb(${theme.from})`,
@@ -212,7 +237,7 @@ export default function SideNav() {
                   {hasPermission('Compras') && (
                     <li>
                       <Link to="/compras" className={getItemLinkClasses('/compras')}>
-                        <img src="/img/Icon/shopping-cart-arrow-in.png" alt="Compras" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-cart-arrow-down h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('compras')}`} aria-hidden="true" />
                         <span>Compras</span>
                       </Link>
                     </li>
@@ -221,7 +246,7 @@ export default function SideNav() {
                   {hasPermission('Ventas') && (
                     <li>
                       <Link to="/ventas" className={getItemLinkClasses('/ventas')}>
-                        <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventas')}`} aria-hidden="true" />
                         <span>Ventas</span>
                       </Link>
                     </li>
@@ -230,7 +255,7 @@ export default function SideNav() {
                   {hasPermission('Ventas') && (
                     <li>
                       <Link to="/ventas-rapidas" className={getItemLinkClasses('/ventas-rapidas')}>
-                        <img src="/img/Icon/shopping-cart-arrow-out.png" alt="Ventas Rápidas" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-cash-register h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ventasRapidas')}`} aria-hidden="true" />
                         <span>Ventas Rápidas</span>
                       </Link>
                     </li>
@@ -239,7 +264,7 @@ export default function SideNav() {
                   {hasPermission('Cobranzas') && (
                     <li>
                       <Link to="/cobranzas" className={getItemLinkClasses('/cobranzas')}>
-                        <img src="/img/Icon/check-edit.png" alt="Cobranzas" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-money-check-dollar h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('cobranzas')}`} aria-hidden="true" />
                         <span>Cobranzas</span>
                       </Link>
                     </li>
@@ -248,7 +273,7 @@ export default function SideNav() {
                   {hasPermission('Pagos_Proveedores') && (
                     <li>
                       <Link to="/pagos-proveedores" className={getItemLinkClasses('/pagos-proveedores')}>
-                        <img src="/img/Icon/factory.png" alt="Pagos a Proveedores" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-industry h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('pagos')}`} aria-hidden="true" />
                         <span>Pagos a Proveedores</span>
                       </Link>
                     </li>
@@ -257,7 +282,7 @@ export default function SideNav() {
                   {hasPermission('Ajustes') && (
                     <li>
                       <Link to="/ajustes" className={getItemLinkClasses('/ajustes')}>
-                        <img src="/img/Icon/processes-filled.png" alt="Ajustes" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-gears h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('ajustes')}`} aria-hidden="true" />
                         <span>Ajustes</span>
                       </Link>
                     </li>
@@ -266,7 +291,7 @@ export default function SideNav() {
                   {isAdmin && hasPermission('Transacciones') && (
                     <li>
                       <Link to="/transacciones" className={getItemLinkClasses('/transacciones')}>
-                        <img src="/img/Icon/sort.png" alt="Transacciones" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-chart-column h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('transacciones')}`} aria-hidden="true" />
                         <span>Transacciones</span>
                       </Link>
                     </li>
@@ -275,7 +300,7 @@ export default function SideNav() {
                   {hasPermission('Precio_Ventas') && (
                     <li>
                       <Link to="/precio-ventas" className={getItemLinkClasses('/precio-ventas')}>
-                        <img src="/img/Icon/account-statement-filled.png" alt="Precio Ventas" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-tags h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('precioVentas')}`} aria-hidden="true" />
                         <span>Precio Ventas</span>
                       </Link>
                     </li>
@@ -284,7 +309,7 @@ export default function SideNav() {
                   {hasPermission('Historial_Inventario') && (
                     <li>
                       <Link to="/historial-inventario" className={getItemLinkClasses('/historial-inventario')}>
-                        <img src="/img/Icon/history-list.png" alt="Historial de Inventario" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-clipboard-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('historial')}`} aria-hidden="true" />
                         <span>Historial de Inventario</span>
                       </Link>
                     </li>
@@ -306,7 +331,7 @@ export default function SideNav() {
                   {hasPermission('Productos') && (
                                 <li>
                                   <Link to="/productos" className={getItemLinkClasses('/productos')}>
-                                    <img src="/img/Icon/product-filled.bmp" alt="Productos" className="h-5 w-5 shrink-0" />
+                                    <i className={`fas fa-boxes h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('productos')}`} aria-hidden="true" />
                                     <span>Productos</span>
                       </Link>
                     </li>
@@ -315,7 +340,7 @@ export default function SideNav() {
                   {hasPermission('Categorias') && (
                                 <li>
                                   <Link to="/categorias" className={getItemLinkClasses('/categorias')}>
-                                    <img src="/img/Icon/tag-filled-green.png" alt="Categorias" className="h-5 w-5 shrink-0" />
+                                    <i className={`fas fa-list h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('categorias')}`} aria-hidden="true" />
                                     <span>Categorias</span>
                       </Link>
                     </li>
@@ -324,7 +349,7 @@ export default function SideNav() {
                   {hasPermission('Personas') && (
                                 <li>
                                   <Link to="/personas" className={getItemLinkClasses('/personas')}>
-                                    <img src="/img/Icon/business-card-man.png" alt="Clientes y proveedores" className="h-5 w-5 shrink-0" />
+                                    <i className={`fas fa-address-card h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('personas')}`} aria-hidden="true" />
                                     <span>Clientes/Proveedores</span>
                       </Link>
                     </li>
@@ -345,7 +370,7 @@ export default function SideNav() {
                   {hasPermission('Organizacion') && (
                     <li>
                       <Link to="/organizacion" className={getItemLinkClasses('/organizacion')}>
-                        <img src="/img/Icon/organogram.png" alt="Organizacion" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-sitemap h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('organizacion')}`} aria-hidden="true" />
                         <span>Organizacion</span>
                       </Link>
                     </li>
@@ -357,7 +382,7 @@ export default function SideNav() {
                     <>
                       <li>
                         <Link to="/usuarios" className={getItemLinkClasses('/usuarios')}>
-                          <img src="/img/Icon/user-group.png" alt="Usuarios" className="h-5 w-5 shrink-0" />
+                          <i className={`fas fa-users h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('usuarios')}`} aria-hidden="true" />
                           <span>Usuarios</span>
                         </Link>
                       </li>
@@ -365,7 +390,7 @@ export default function SideNav() {
 
                       <li>
                         <Link to="/usuarios/roles" className={getItemLinkClasses('/usuarios/roles')}>
-                          <img src="/img/Icon/manage-user.png" alt="Roles usuario" className="h-5 w-5 shrink-0" />
+                          <i className={`fas fa-user-shield h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('roles')}`} aria-hidden="true" />
                           <span>Roles usuario</span>
                         </Link>
                       </li>
@@ -392,7 +417,7 @@ export default function SideNav() {
                   {hasPermission('Reporte_Usuarios') && (
                     <li>
                       <Link to="/usuarios/reporte" className={getItemLinkClasses('/usuarios/reporte')}>
-                        <img src="/img/Icon/report-print.png" alt="Reporte de usuarios" className="h-5 w-5 shrink-0" />
+                        <i className={`fas fa-print h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('reportes')}`} aria-hidden="true" />
                         <span>Reporte de usuarios</span>
                       </Link>
                     </li>

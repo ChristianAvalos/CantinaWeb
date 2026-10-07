@@ -434,11 +434,15 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
 
                         <div className="col-span-1 flex flex-col items-center justify-center border-l-2 border-gray-200">
                             <div>
-                                <img
-                                    src={previewImage || (producto.imagen ? `${baseURL}/img/producto/${producto.imagen}` : '/img/Icon/product-filled.png')}
-                                    alt={`Imagen de ${producto.name}`}
-                                    className="max-w-full h-auto rounded"
-                                />
+                                {(previewImage || producto.imagen) ? (
+                                    <img
+                                        src={previewImage || `${baseURL}/img/producto/${producto.imagen}`}
+                                        alt={`Imagen de ${producto.name}`}
+                                        className="max-w-full h-auto rounded"
+                                    />
+                                ) : (
+                                    <i className="fas fa-boxes text-[6rem] text-slate-300" aria-hidden="true" />
+                                )}
                             </div>
                             
                             <label class="bg-slate-700 text-white rounded px-2 py-1 hover:bg-slate-900 transition" for="imagen">

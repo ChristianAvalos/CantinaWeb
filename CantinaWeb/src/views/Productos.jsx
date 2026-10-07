@@ -208,11 +208,7 @@ export default function Productos() {
                                                                 style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
                                                             />
                                                         ) : (
-                                                            <img 
-                                                                src='/img/Icon/product-filled.png'
-                                                                alt={producto.nombre}
-                                                                style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
-                                                            />
+                                                            <i className="fas fa-boxes text-[1.7rem] text-slate-300" aria-hidden="true" />
                                                         )}
                                                     </td>
                                                     <td>{producto.id}</td>
@@ -233,10 +229,10 @@ export default function Productos() {
                                                     <td>
                                                         <div className="flex space-x-2">
                                                             <button onClick={() => openModal('editar', producto)} className="flex items-center  rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/edit.png" alt="Edit" />
+                                                                <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Edit" title="Edit" />
                                                             </button>
                                                             <button onClick={() => handleDelete(producto.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
-                                                                <img src="/img/Icon/trash_bin-remove.png" alt="Delete User" />
+                                                                <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete User" title="Delete User" />
                                                             </button>
                                                         </div>
                                                     </td>
