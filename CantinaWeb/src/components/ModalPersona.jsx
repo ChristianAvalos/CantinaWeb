@@ -254,7 +254,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 max-h-[80vh] overflow-y-auto">
                         {/* Campos del formulario */}
-                        {esAdminSistema && modo === 'crear' && (
+                        {esAdminSistema && (modo === 'crear' || modo === 'editar') && (
                             <div className="sm:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700">Organización</label>
                                 <select
