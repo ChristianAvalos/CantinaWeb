@@ -33,7 +33,8 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
     // Actualizar el estado del formulario cuando cambie la categoria
     useEffect(() => {
         if (modo === 'editar') {
-            setNombre(categoria.nombre || '');
+            setNombre(categoria.nombre || ''),
+            setOrganizacionSeleccionada(categoria.id_organizacion ? String(categoria.id_organizacion) : '');
         }
     }, [categoria, modo]); // Dependencia en 'categoria' y 'modo'
 
@@ -54,7 +55,7 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
             };
 
             // El Administrador de Sistema puede crear en otra organización.
-            if (modo === 'crear' && esAdminSistema && organizacionSeleccionada) {
+            if ((modo === 'crear' || modo === 'editar') && esAdminSistema && organizacionSeleccionada) {
                 categoriaData.id_organizacion = organizacionSeleccionada;
             }
 
@@ -115,7 +116,7 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                    {esAdminSistema && modo === 'crear' && (
+                    {esAdminSistema && (modo === 'crear' || modo === 'editar') && (
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Organización</label>
                             <select

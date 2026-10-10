@@ -111,6 +111,9 @@ class CategoriasController extends Controller
 
         $categoria->update([
             'nombre' => $data['nombre'],
+            'id_organizacion' => $this->esAdminSistema()
+                ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
+                : $this->organizacionDelUsuario(),
             'UrevUsuario' => 'Actualizado -' . Auth::user()->name,
             'UrevFechaHora' => now(),
 

@@ -29,7 +29,8 @@ class UpdatePersonaRequest extends FormRequest
                 'email' => ['nullable','email'],
                 'id_tipo_persona' => ['required','integer'],
                 'id_tipo_documento' => ['nullable','integer'],
-                'id_tipoestado' => ['nullable','integer']
+                'id_tipoestado' => ['nullable','integer'],
+                'id_organizacion' => ['required','integer'],
             ];
     }
     public function messages()
@@ -41,7 +42,9 @@ class UpdatePersonaRequest extends FormRequest
             'telefono' => 'El teléfono debe ser una cadena de texto',
             'email' => 'El email debe ser una dirección de correo válida',
             'id_tipo_persona' => 'El tipo de persona es obligatorio',
-            'id_tipoestado' => 'El estado es obligatorio'
+            'id_tipoestado' => 'El estado es obligatorio',
+            'id_organizacion' => 'La organización debe ser un número entero',
+            'id_organizacion.required' => 'La organización es obligatoria',
         ];
     }
 }
