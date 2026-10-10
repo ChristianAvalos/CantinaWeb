@@ -122,7 +122,8 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                 id_tipo_persona: persona.id_tipo_persona || '',
                 id_tipo_documento: persona.id_tipo_documento || '',
                 // Se conserva el estado actual (no se edita en el modal).
-                id_tipoestado: persona.id_tipoestado || '1'
+                id_tipoestado: persona.id_tipoestado || '1',
+                id_organizacion: persona.id_organizacion ? String(persona.id_organizacion) : ''
             });
         }
     }, [persona, modo]); // Dependencia en 'persona' y 'modo'
