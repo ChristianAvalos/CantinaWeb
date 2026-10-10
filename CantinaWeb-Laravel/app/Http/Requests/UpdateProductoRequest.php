@@ -71,7 +71,8 @@ class UpdateProductoRequest extends FormRequest
                 'id_TipoEstado' => ['nullable','integer'],
                 'imagen' => ['nullable','image','mimes:jpeg,png,jpg,gif,svg','max:5048'],
                 'eliminar_imagen' => ['nullable'],
-                'fecha' => ['required','date']
+                'fecha' => ['required','date'],
+                'id_organizacion' => ['required','integer'],
             ];
         }
         public function messages()
@@ -92,7 +93,8 @@ class UpdateProductoRequest extends FormRequest
                 'imagen.mimes' => 'La imagen debe ser un archivo de tipo: jpeg, png, jpg, gif, svg',
                 'imagen.max' => 'La imagen no debe ser mayor a 2MB',
                 'fecha.required' => 'La fecha de creación es obligatoria',
-                'fecha.date' => 'La fecha de creación debe ser una fecha válida'
+                'fecha.date' => 'La fecha de creación debe ser una fecha válida',
+                'id_organizacion.required' => 'La organización es obligatoria',
             ];
         }
 }

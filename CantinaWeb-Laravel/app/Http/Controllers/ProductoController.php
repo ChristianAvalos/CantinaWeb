@@ -240,6 +240,7 @@ class ProductoController extends Controller
         // Actuaizar el producto
         $producto->update([
             'codigo_interno' => $data['codigo_interno'] ?? null,
+            'id_organizacion' => $data['id_organizacion'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nombre' => $data['nombre'],
             'descripcion' => $data['descripcion'] ?? null,

@@ -82,6 +82,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                 precio_venta: producto.precio_venta || '',
                 stock_minimo: producto.stock_minimo || '',
                 id_TipoEstado: producto.id_TipoEstado || '',
+                id_organizacion: producto.id_organizacion ? String(producto.id_organizacion) : '',
                 UrevCalc: producto.UrevCalc || '',
                 fecha: producto.created_at ? formatDateToInput(producto.created_at) : formatDateToInput(new Date())
             });
@@ -221,7 +222,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-h-[80vh] overflow-y-auto">
                         {/* Campos del formulario */}
                         <div className="col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {esAdminSistema && modo === 'crear' && (
+                            {esAdminSistema && (modo === 'crear' || modo === 'editar') && (
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Organización</label>
                                     <select
