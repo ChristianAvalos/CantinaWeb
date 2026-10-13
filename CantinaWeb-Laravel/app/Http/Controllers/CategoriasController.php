@@ -24,7 +24,7 @@ class CategoriasController extends Controller
         $all = $request->input('all');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
-        $categoriasQuery = Categorias::query()
+        $categoriasQuery = Categorias::with('organizacion')
             // Aislamiento por organización; el Administrador de Sistema ve todas.
             ->when(! $this->esAdminSistema(), function ($query) use ($id_organizacion) {
                 $query->where(function ($q2) use ($id_organizacion) {

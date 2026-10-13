@@ -41,6 +41,7 @@ class PersonaController extends Controller
 
         $personasQuery = Persona::with('TipoPersona') 
             ->with('tipoDocumento')
+            ->with('organizacion')
             // Aislamiento por organización; el Administrador de Sistema ve todas
             // (o filtra por ?id_organizacion=).
             ->when($id_organizacion, fn ($q) => $q->where('id_organizacion', $id_organizacion))

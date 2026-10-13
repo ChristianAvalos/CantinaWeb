@@ -6,6 +6,10 @@ import AlertaModal from "../components/AlertaModal"
 import { obtenerCategorias } from '../helpers/HelpersUsuarios';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import { useAuth } from "../hooks/useAuth";
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 3;
 
 const FILTROS_CATEGORIAS = [
     {
@@ -23,6 +27,11 @@ const FILTROS_CATEGORIAS_INICIALES = {
 
 
 export default function Categoria() {
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
     //grilla de categorias 
     const [categorias, setCategorias] = useState([]);
     const [categoriaSeleccionado, setcategoriaSeleccionado] = useState(null);
@@ -168,17 +177,19 @@ export default function Categoria() {
                                     <thead>
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Nombre</th>
                                             <th>Utilidades</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {categorias.length === 0 ? (
-                                            <NoExistenDatos colSpan={3} mensaje="No existen categorías." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen categorías." />
                                         ) : (
                                         categorias.map((categoria) => (
                                             <tr key={categoria.id}>
                                                 <td>{categoria.id}</td>
+                                                {esAdminSistema && <td>{categoria.organizacion?.RazonSocial || 'Del sistema'}</td>}
                                                 <td>{categoria.nombre}</td>
                                                 <td>
                                                     {categoria.id_organizacion ? (

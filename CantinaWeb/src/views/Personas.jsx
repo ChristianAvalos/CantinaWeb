@@ -5,6 +5,10 @@ import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerPersonas } from '../helpers/HelperPersonas';
 import NoExistenDatos from "../components/NoExistenDatos";
+import { useAuth } from "../hooks/useAuth";
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 9;
 import { formatDateTimeToMinutes, formatDateToInput } from '../helpers/HelpersFechas';
 import { formatearPorFormato } from '../helpers/HelpersNumeros';
 import FiltrosBar from "../components/FiltrosBar";
@@ -35,6 +39,11 @@ const formatearDocumentoPersona = (persona) => {
 
 
 export default function Personas() {
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
     //grilla de personas 
     const [personas, setPersonas] = useState([]);
     const [personaSeleccionado, setPersonaSeleccionado] = useState(null);
@@ -217,6 +226,7 @@ export default function Personas() {
                                     <thead>
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Nombre</th>
                                             <th>Documento Nro</th>
                                             <th>Dirección</th>
@@ -229,11 +239,12 @@ export default function Personas() {
                                     </thead>
                                     <tbody>
                                         {personas.length === 0 ? (
-                                            <NoExistenDatos colSpan={10} mensaje="No existen personas." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen personas." />
                                         ) : (
                                         personas.map((persona) => (
                                             <tr key={persona.id}>
                                                 <td>{persona.id}</td>
+                                                {esAdminSistema && <td>{persona.organizacion?.RazonSocial || 'Sin organización'}</td>}
                                                 <td>{persona.nombre}</td>
                                                 <td>{formatearDocumentoPersona(persona)}</td>
                                                 <td>{persona.direccion}</td>

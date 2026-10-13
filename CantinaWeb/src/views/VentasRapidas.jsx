@@ -58,6 +58,18 @@ export default function VentasRapidas() {
     const token = localStorage.getItem('AUTH_TOKEN');
     const searchInputRef = useRef(null);
 
+    // ─── Estados de organización / sucursal de venta ───────────────
+    // El POS siempre vende en una sucursal concreta (ahí se descuenta el stock).
+    // El Administrador de Sistema puede elegir cualquier organización con su
+    // sucursal; el resto queda fijo en la suya.
+    const [organizaciones, setOrganizaciones] = useState([]);
+    const [organizacionSeleccionada, setOrganizacionSeleccionada] = useState('');
+    const [sucursales, setSucursales] = useState([]);
+    const [sucursalSeleccionada, setSucursalSeleccionada] = useState('');
+    const esAdminSistema = Number(user?.rol_id) === 1;
+    const organizacionPredeterminadaRef = useRef(false);
+    const sucursalAnteriorRef = useRef(null);
+
     // ─── Estados del carrito ───────────────────────────────────────
     const [cart, setCart] = useState([]);
 
@@ -166,6 +178,102 @@ export default function VentasRapidas() {
         fetchOpcionesPago();
     }, [token]);
 
+    // ─── Cargar organizaciones (el backend ya acota al no-admin) ──
+    useEffect(() => {
+        clienteAxios.get('api/organizacion?all=true', { headers: { Authorization: `Bearer ${token}` } })
+            .then(({ data }) => setOrganizaciones(Array.isArray(data) ? data : []))
+            .catch(() => setOrganizaciones([]));
+    }, [token]);
+
+    // La organización por defecto (la del usuario) se fija UNA sola vez, para no
+    // pisar la selección que haga el Administrador de Sistema.
+    useEffect(() => {
+        if (organizacionPredeterminadaRef.current) {
+            return;
+        }
+
+        const idOrg = user?.id_organizacion ? String(user.id_organizacion) : '';
+
+        if (!idOrg) {
+            return;
+        }
+
+        organizacionPredeterminadaRef.current = true;
+        setOrganizacionSeleccionada(idOrg);
+    }, [user]);
+
+    // ─── Sucursales de la organización elegida ────────────────────
+    useEffect(() => {
+        let cancelado = false;
+
+        const cargarSucursales = async () => {
+            if (!organizacionSeleccionada) {
+                setSucursales([]);
+                setSucursalSeleccionada('');
+                return;
+            }
+
+            try {
+                const { data } = await clienteAxios.get('api/sucursales', {
+                    params: { id_organizacion: organizacionSeleccionada },
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (cancelado) return;
+
+                const lista = Array.isArray(data) ? data : [];
+                setSucursales(lista);
+                setSucursalSeleccionada((prev) => {
+                    if (prev && lista.some((s) => String(s.id) === String(prev))) {
+                        return prev;
+                    }
+                    // Un usuario con sucursal asignada solo puede vender en la suya.
+                    const propia = !esAdminSistema && user?.id_sucursal ? String(user.id_sucursal) : '';
+                    if (propia && lista.some((s) => String(s.id) === propia)) {
+                        return propia;
+                    }
+                    const principal = lista.find((s) => s.es_principal) ?? lista[0];
+                    return principal ? String(principal.id) : '';
+                });
+            } catch (err) {
+                if (cancelado) return;
+                console.error('Error cargando sucursales del POS:', err);
+                setSucursales([]);
+                setSucursalSeleccionada('');
+            }
+        };
+
+        cargarSucursales();
+        return () => { cancelado = true; };
+    }, [organizacionSeleccionada, token, esAdminSistema, user?.id_sucursal]);
+
+    // El carrito cotiza precios y stock de la sucursal elegida: al cambiarla
+    // queda inválido y se vacía.
+    useEffect(() => {
+        const clave = `${organizacionSeleccionada}|${sucursalSeleccionada}`;
+
+        if (sucursalAnteriorRef.current === null) {
+            sucursalAnteriorRef.current = clave;
+            return;
+        }
+
+        if (sucursalAnteriorRef.current === clave) {
+            return;
+        }
+
+        const cambioOrganizacion = sucursalAnteriorRef.current.split('|')[0] !== organizacionSeleccionada;
+        sucursalAnteriorRef.current = clave;
+
+        setCart([]);
+        setSearchTerm('');
+        setSearchResults([]);
+        setShowDropdown(false);
+
+        if (cambioOrganizacion) {
+            setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
+            setClienteSearch('');
+        }
+    }, [organizacionSeleccionada, sucursalSeleccionada]);
+
     // ─── Búsqueda de productos (debounced) ────────────────────────
     useEffect(() => {
         if (!debouncedSearch || debouncedSearch.trim().length === 0) {
@@ -181,8 +289,16 @@ export default function VentasRapidas() {
             setIsSearching(true);
             try {
                 const term = debouncedSearch.trim();
+                // Contexto de venta: el backend cotiza precio y stock con esta
+                // organización y sucursal.
+                const contexto = new URLSearchParams();
+                if (organizacionSeleccionada) contexto.append('id_organizacion', organizacionSeleccionada);
+                if (sucursalSeleccionada) contexto.append('id_sucursal', sucursalSeleccionada);
+                const contextoQuery = contexto.toString();
+                const sufijoContexto = contextoQuery ? `&${contextoQuery}` : '';
+
                 // Primero intentar búsqueda exacta por código de barras
-                const { data: barcodeData } = await clienteAxios.get(`api/productos/buscar?codigo_barras=${encodeURIComponent(term)}`, {
+                const { data: barcodeData } = await clienteAxios.get(`api/productos/buscar?codigo_barras=${encodeURIComponent(term)}${sufijoContexto}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
@@ -210,7 +326,7 @@ export default function VentasRapidas() {
                 }
 
                 // Si no hay coincidencia exacta, buscar por nombre/código
-                const { data: searchData } = await clienteAxios.get(`api/productos?search=${encodeURIComponent(term)}&precio_org=1`, {
+                const { data: searchData } = await clienteAxios.get(`api/productos?search=${encodeURIComponent(term)}&precio_org=1${sufijoContexto}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
@@ -236,7 +352,7 @@ export default function VentasRapidas() {
 
         buscar();
         return () => { cancelled = true; };
-    }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, organizacionSeleccionada, sucursalSeleccionada]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ─── Cerrar dropdown al hacer clic fuera ──────────────────────
     useEffect(() => {
@@ -257,6 +373,8 @@ export default function VentasRapidas() {
         try {
             const params = new URLSearchParams({ all: '1', tipo_persona: 'Cliente', id_tipoestado: '1' });
             if (term) params.append('search', term);
+            // Los clientes se buscan en la organización de venta elegida.
+            if (esAdminSistema && organizacionSeleccionada) params.append('id_organizacion', organizacionSeleccionada);
             const { data } = await clienteAxios.get(`api/personas?${params.toString()}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -264,7 +382,7 @@ export default function VentasRapidas() {
         } catch (err) {
             console.error('Error buscando clientes:', err);
         }
-    }, [token]);
+    }, [token, esAdminSistema, organizacionSeleccionada]);
 
     // ─── Añadir producto al carrito ──
     const addProductoToCart = useCallback((producto) => {
@@ -414,6 +532,14 @@ export default function VentasRapidas() {
             toast.warning('Selecciona un método de pago');
             return;
         }
+        if (!organizacionSeleccionada) {
+            toast.warning('Selecciona la organización de venta');
+            return;
+        }
+        if (sucursales.length > 1 && !sucursalSeleccionada) {
+            toast.warning('Selecciona la sucursal de venta');
+            return;
+        }
 
         setIsProcessing(true);
 
@@ -424,7 +550,8 @@ export default function VentasRapidas() {
             const transactionPayload = {
                 descripcion: `Venta rápida - ${cart.length} producto(s)`,
                 fecha: fechaActual,
-                id_organizacion: user?.id_organizacion || '',
+                id_organizacion: organizacionSeleccionada || user?.id_organizacion || '',
+                id_sucursal: sucursalSeleccionada || '',
                 id_persona: selectedCliente.id || '',
                 id_TipoPago: selectedTipoPago,
                 id_FormaPago: selectedFormaPago,
@@ -539,6 +666,41 @@ export default function VentasRapidas() {
         >
             {/* ═══════════════ PANEL IZQUIERDO: BÚSQUEDA + CARRITO ═══════════════ */}
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
+                {/* ── Organización y sucursal donde se vende ── */}
+                <div className="flex-shrink-0 mb-2 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <i className="fas fa-store h-3.5 w-3.5" aria-hidden="true" /> Sucursal de venta
+                    </span>
+                    <select
+                        value={organizacionSeleccionada}
+                        onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
+                        disabled={!esAdminSistema || isProcessing}
+                        title="Organización"
+                        className={`rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${esAdminSistema ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-600'}`}
+                    >
+                        <option value="">Organización…</option>
+                        {organizaciones
+                            .filter((organizacion) => esAdminSistema || String(organizacion.id) === String(user?.id_organizacion))
+                            .map((organizacion) => (
+                                <option key={organizacion.id} value={organizacion.id}>
+                                    {organizacion.RazonSocial}
+                                </option>
+                            ))}
+                    </select>
+                    <select
+                        value={sucursalSeleccionada}
+                        onChange={(e) => setSucursalSeleccionada(e.target.value)}
+                        disabled={sucursales.length <= 1 || isProcessing}
+                        title="Sucursal"
+                        className={`rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${sucursales.length > 1 ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-600'}`}
+                    >
+                        {sucursales.length === 0 && <option value="">Sin sucursales</option>}
+                        {sucursales.map((sucursal) => (
+                            <option key={sucursal.id} value={sucursal.id}>{sucursal.nombre}</option>
+                        ))}
+                    </select>
+                </div>
+
                 {/* ── Barra de búsqueda ── */}
                 <div className="flex-shrink-0 mb-3" ref={searchContainerRef}>
                     <div className="relative">

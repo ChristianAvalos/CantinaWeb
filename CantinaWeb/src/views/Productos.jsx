@@ -7,6 +7,10 @@ import { obtenerProductos } from '../helpers/HelperProductos';
 import { formatearGuarani, formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import { useAuth } from "../hooks/useAuth";
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 16;
 
 const FILTROS_PRODUCTOS = [
     {
@@ -28,6 +32,11 @@ const FILTROS_PRODUCTOS_INICIALES = {
 };
 
 export default function Productos() {
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
     //grilla de productos 
     const [productos, setProductos] = useState([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
@@ -177,6 +186,7 @@ export default function Productos() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>Imagen</th>
                                             <th>ID</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Codigo interno</th>
                                             <th>Codigo de barra</th>
                                             <th>Nombre</th>
@@ -195,7 +205,7 @@ export default function Productos() {
                                     </thead>
                                     <tbody>
                                         {productos.length === 0 ? (
-                                            <NoExistenDatos colSpan={17} mensaje="No existen productos." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen productos." />
                                         ) : (
 
                                             productos.map((producto) => (
@@ -212,6 +222,7 @@ export default function Productos() {
                                                         )}
                                                     </td>
                                                     <td>{producto.id}</td>
+                                                    {esAdminSistema && <td>{producto.organizacion?.RazonSocial || 'Sin organización'}</td>}
                                                     <td>{producto.codigo_interno}</td>
                                                     <td>{producto.codigo_barras}</td>
                                                     <td>{producto.nombre}</td>

@@ -6,7 +6,12 @@ import AlertaModal from "../components/AlertaModal"
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
 import { formatearGuarani } from '../helpers/HelpersNumeros';
+import { useAuth } from "../hooks/useAuth";
 
+
+// Columnas base de la grilla (sin Organización ni Sucursal, que solo ve el
+// Administrador de Sistema: los demás operan en una única organización).
+const COLUMNAS_BASE = 6;
 
 const FILTROS_PrecioVenta = [
     {
@@ -30,6 +35,11 @@ const FILTROS_PrecioVenta_INICIALES = {
 
 
 export default function PrecioVenta() {
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
     //grilla de precios de venta
     const [preciosVenta, setPreciosVenta] = useState([]);
     const [precioVentaSeleccionado, setPrecioVentaSeleccionado] = useState(null);
@@ -239,8 +249,8 @@ export default function PrecioVenta() {
                                             <th>ID</th>
                                             <th>Codigo</th>
                                             <th>Nombre</th>
-                                            <th>Organización</th>
-                                            <th>Sucursal</th>
+                                            {esAdminSistema && <th>Organización</th>}
+                                            {esAdminSistema && <th>Sucursal</th>}
                                             <th>Tipo de moneda</th>
                                             <th>Precio</th>
                                             <th>Utilidades</th>
@@ -248,15 +258,15 @@ export default function PrecioVenta() {
                                     </thead>
                                     <tbody>
                                         {preciosVenta.length === 0 ? (
-                                            <NoExistenDatos colSpan={8} mensaje="No existen precios de venta." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 2 : COLUMNAS_BASE} mensaje="No existen precios de venta." />
                                         ) : (
                                         preciosVenta.map((precioVenta) => (
                                             <tr key={precioVenta.id}>
                                                 <td>{precioVenta.id}</td>
                                                 <td>{precioVenta.codigo_barras}</td>
                                                 <td>{precioVenta.nombre}</td>
-                                                <td>{precioVenta.organizacion}</td>
-                                                <td>{precioVenta.sucursal || '—'}</td>
+                                                {esAdminSistema && <td>{precioVenta.organizacion || 'Sin organización'}</td>}
+                                                {esAdminSistema && <td>{precioVenta.sucursal || '—'}</td>}
                                                 <td>{precioVenta.tipoMoneda}</td>
                                                 <td>{formatearGuarani(precioVenta.precio)}</td>
                                                 <td>

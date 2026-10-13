@@ -5,6 +5,10 @@ import AlertaModal from "../components/AlertaModal";
 import { formatearGuarani } from '../helpers/HelpersNumeros';
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import { useAuth } from "../hooks/useAuth";
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 7;
 
 const FILTROS_PAGOS_PROVEEDORES = [
     {
@@ -50,6 +54,11 @@ function formatearFechaVista(fecha) {
 }
 
 export default function PagosProveedores() {
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
+
     const [cuotas, setCuotas] = useState([]);
     const [paginaActual, setPaginaActual] = useState(1);
     const [totalPaginas, setTotalPaginas] = useState(1);
@@ -170,6 +179,7 @@ export default function PagosProveedores() {
                                     <thead>
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>N°</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Compra</th>
                                             <th>Proveedor</th>
                                             <th>Vencimiento</th>
@@ -180,11 +190,12 @@ export default function PagosProveedores() {
                                     </thead>
                                     <tbody>
                                         {cuotas.length === 0 ? (
-                                            <NoExistenDatos colSpan={7} mensaje="No existen cuotas de compras." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen cuotas de compras." />
                                         ) : (
                                             cuotas.map((cuota) => (
                                                 <tr key={cuota.id}>
                                                     <td className="text-center">{cuota.numero}</td>
+                                                    {esAdminSistema && <td>{cuota.transaccion?.organizacion?.RazonSocial || 'Sin organización'}</td>}
                                                     <td>{cuota.transaccion?.descripcion || `Compra #${cuota.id_transaccion}`}</td>
                                                     <td>{cuota.transaccion?.persona?.nombre || 'Proveedor'}</td>
                                                     <td className="text-center">{formatearFechaVista(cuota.fecha_vencimiento)}</td>

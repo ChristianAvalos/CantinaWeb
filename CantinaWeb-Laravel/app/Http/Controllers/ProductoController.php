@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use DateTime;
 use Carbon\Carbon;
 use App\Models\Producto;
+use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CreateProductoRequest;
@@ -45,7 +46,7 @@ class ProductoController extends Controller
 
         // Aislamiento por organización; el Administrador de Sistema ve todos
         // (o filtra por ?id_organizacion=).
-        $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida'])
+        $productos = Producto::with(['categoria', 'tipoEstado', 'unidadMedida', 'organizacion'])
             ->when($id_organizacion, fn ($q) => $q->where('id_organizacion', $id_organizacion))
             ->when($search, function ($query, $search) use ($searchFecha) {
                 $query->where(function ($q) use ($search, $searchFecha) {
@@ -81,10 +82,12 @@ class ProductoController extends Controller
         // personalizado de la organización a cada producto, para que la búsqueda
         // por nombre muestre el MISMO precio que al escanear por código de barras.
         if ($request->boolean('precio_org')) {
-            $productos->getCollection()->transform(function ($producto) {
-                $producto = $this->aplicarPrecioPersonalizado($producto);
+            [$idOrganizacionPos, $idSucursalPos] = $this->contextoPos($request, $id_organizacion ? (int) $id_organizacion : null);
 
-                return $this->aplicarStockSucursal($producto);
+            $productos->getCollection()->transform(function ($producto) use ($idOrganizacionPos, $idSucursalPos) {
+                $producto = $this->aplicarPrecioPersonalizado($producto, $idOrganizacionPos, $idSucursalPos);
+
+                return $this->aplicarStockSucursal($producto, $idSucursalPos);
             });
         }
 
@@ -319,10 +322,11 @@ class ProductoController extends Controller
             ->first();
 
         if ($producto) {
-            // Aplicar el precio de venta personalizado de la organización
-            $this->aplicarPrecioPersonalizado($producto);
-            // Exponer el stock de la sucursal del usuario (el POS valida con esto).
-            $this->aplicarStockSucursal($producto);
+            // Precio y stock con los que el POS cotiza y valida: los de la
+            // organización/sucursal elegidas en el POS.
+            [$idOrganizacionPos, $idSucursalPos] = $this->contextoPos($request, $idOrganizacionFiltro ? (int) $idOrganizacionFiltro : null);
+            $this->aplicarPrecioPersonalizado($producto, $idOrganizacionPos, $idSucursalPos);
+            $this->aplicarStockSucursal($producto, $idSucursalPos);
 
             return response()->json(['producto' => $producto], 200);
         } else {
@@ -331,18 +335,52 @@ class ProductoController extends Controller
     }
 
     /**
-     * Agrega `stock_sucursal` con el stock del producto en la sucursal del
-     * usuario (si tiene). Si no tiene sucursal, deja el total del producto.
+     * Agrega `stock_sucursal` con el stock del producto en la sucursal del POS.
+     * Si no se puede resolver una sucursal, deja el total del producto.
      */
-    private function aplicarStockSucursal(Producto $producto): Producto
+    private function aplicarStockSucursal(Producto $producto, ?int $idSucursal): Producto
     {
-        $idSucursal = $this->sucursalDelUsuario();
-
         $producto->stock_sucursal = $idSucursal
             ? \App\Services\InventarioService::stockEnSucursal($producto->id, $idSucursal)
             : (float) $producto->stock_actual;
 
         return $producto;
+    }
+
+    /**
+     * Organización y sucursal con las que el POS resuelve precio y stock.
+     *
+     * Debe ser la MISMA sucursal en la que se descuenta la venta, por eso la
+     * elegida (`?id_sucursal=`) se valida contra el alcance del usuario. El
+     * Administrador de Sistema puede consultar cualquier organización/sucursal;
+     * el resto queda en la suya o, si no tiene una asignada, en la principal de
+     * esa organización —que es donde el POS postea cuando no se elige sucursal.
+     *
+     * @return array{0: ?int, 1: ?int} [idOrganizacion, idSucursal]
+     */
+    private function contextoPos(Request $request, ?int $idOrganizacion): array
+    {
+        $idOrganizacion = $idOrganizacion ?: $this->organizacionDelUsuario();
+
+        if (! $this->esAdminSistema() && ($sucursal = $this->sucursalDelUsuario())) {
+            return [$idOrganizacion, (int) $sucursal];
+        }
+
+        $solicitada = $request->input('id_sucursal');
+
+        if ($solicitada && $idOrganizacion
+            && Sucursal::where('id', $solicitada)->where('id_organizacion', $idOrganizacion)->exists()) {
+            return [$idOrganizacion, (int) $solicitada];
+        }
+
+        // Sin sucursal explícita: la principal de la organización consultada. Sin
+        // organización se mantiene el comportamiento previo (sucursal del usuario
+        // o, si no tiene, el total del producto).
+        $principal = $idOrganizacion
+            ? Sucursal::where('id_organizacion', $idOrganizacion)->orderByDesc('es_principal')->value('id')
+            : null;
+
+        return [$idOrganizacion, $principal ? (int) $principal : $this->sucursalDelUsuario()];
     }
 
     /**
@@ -352,12 +390,9 @@ class ProductoController extends Controller
      * Se usa tanto en la búsqueda por código de barras como por nombre,
      * para que el precio mostrado en el POS sea siempre consistente.
      */
-    private function aplicarPrecioPersonalizado(Producto $producto): Producto
+    private function aplicarPrecioPersonalizado(Producto $producto, ?int $idOrganizacion, ?int $idSucursal): Producto
     {
-        $idOrganizacion = $this->organizacionDelUsuario();
-        $idSucursal = $this->sucursalDelUsuario();
-
-        // Prioridad: precio de la SUCURSAL del usuario; si no hay, el de la organización.
+        // Prioridad: precio de la SUCURSAL; si no hay, el de la organización.
         $precio = null;
 
         if ($idSucursal) {

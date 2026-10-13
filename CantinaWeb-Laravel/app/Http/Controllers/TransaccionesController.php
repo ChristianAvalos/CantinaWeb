@@ -22,6 +22,7 @@ use App\Models\TipoComprobante;
 use App\Models\TipoEstado;
 use App\Models\Comprobante;
 use App\Models\Cuota;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class TransaccionesController extends Controller
@@ -193,15 +194,44 @@ class TransaccionesController extends Controller
      */
     public function crearVentaPos(Request $request)
     {
+        $esAdmin = $this->esAdminSistema();
+        $idSucursalUsuario = $this->sucursalDelUsuario();
+        // El Administrador de Sistema elige la organización destino; el resto
+        // vende siempre dentro de la suya.
+        $idOrganizacionDestino = $esAdmin
+            ? ($request->input('id_organizacion') ?? $this->organizacionDelUsuario())
+            : $this->organizacionDelUsuario();
+
         $data = $request->validate([
             'descripcion' => 'nullable|string|max:1000',
             'fecha' => 'required|date',
             'id_organizacion' => [
                 'required',
                 'exists:organizacion,id',
-                function ($attribute, $value, $fail) {
-                    if ((int) $value !== (int) $this->organizacionDelUsuario()) {
+                function ($attribute, $value, $fail) use ($esAdmin) {
+                    if (! $esAdmin && (int) $value !== (int) $this->organizacionDelUsuario()) {
                         $fail('Solo podés vender dentro de tu propia organización.');
+                    }
+                },
+            ],
+            // Con más de una sucursal en la organización destino, elegir una es
+            // obligatorio; y debe pertenecer a esa organización y, si el usuario
+            // tiene una asignada, ser la suya.
+            'id_sucursal' => [
+                Rule::requiredIf(fn () => ! $idSucursalUsuario
+                    && Sucursal::where('id_organizacion', $idOrganizacionDestino)->count() > 1),
+                'nullable',
+                'exists:sucursales,id',
+                function ($attribute, $value, $fail) use ($esAdmin, $idOrganizacionDestino, $idSucursalUsuario) {
+                    if ($value === null) {
+                        return;
+                    }
+                    if (! $esAdmin && $idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
+                        $fail('La sucursal seleccionada no es la tuya.');
+                        return;
+                    }
+                    if (! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacionDestino)->exists()) {
+                        $fail('La sucursal seleccionada no pertenece a la organización.');
                     }
                 },
             ],
@@ -226,12 +256,10 @@ class TransaccionesController extends Controller
 
             // La organización la elige el Administrador de Sistema; el resto usa
             // la suya, con su sucursal (o la principal de la organización).
-            $idOrganizacion = $this->esAdminSistema()
-                ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
-                : $this->organizacionDelUsuario();
-            $idSucursal = (! $this->esAdminSistema() && $this->sucursalDelUsuario())
-                ? $this->sucursalDelUsuario()
-                : Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
+            $idOrganizacion = $idOrganizacionDestino;
+            $idSucursal = $data['id_sucursal']
+                ?? ((! $esAdmin && $idSucursalUsuario) ? (int) $idSucursalUsuario : null)
+                ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
             $venta = DB::transaction(function () use ($data, $ticketTipoComprobanteId, $idOrganizacion, $idSucursal) {
                 // 1) Cabecera (Venta = movimiento 2, Finalizado = estado 3)

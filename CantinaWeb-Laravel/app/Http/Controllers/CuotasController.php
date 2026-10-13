@@ -30,7 +30,7 @@ class CuotasController extends Controller
         $cuotas = Cuota::with([
             'tipoEstado',
             'transaccion' => function ($q) {
-                $q->with(['persona', 'tipoPago', 'tipoEstado']);
+                $q->with(['persona', 'tipoPago', 'tipoEstado', 'organizacion']);
             },
         ]);
 
