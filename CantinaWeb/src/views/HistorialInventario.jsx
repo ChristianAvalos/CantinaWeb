@@ -5,10 +5,14 @@ import { formatearDecimalSinCeros } from '../helpers/HelpersNumeros';
 import { formatDateTimeToMinutes } from '../helpers/HelpersFechas';
 import NoExistenDatos from '../components/NoExistenDatos';
 import FiltrosBar from '../components/FiltrosBar';
+import { useAuth } from '../hooks/useAuth';
 
 // Deben coincidir con TipoMovimientos::DIRECCION_* del backend.
 const DIRECCION_ENTRADA = 'entrada';
 const DIRECCION_SALIDA = 'salida';
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 12;
 
 const FILTROS_HISTORIAL = [
     {
@@ -49,6 +53,11 @@ const FILTROS_HISTORIAL_INICIALES = {
 export default function HistorialInventario() {
     const [movimientos, setMovimientos] = useState([]);
     const [totales, setTotales] = useState({ registros: 0, entradas: 0, salidas: 0 });
+
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
 
     //paginacion
     const [paginaActual, setPaginaActual] = useState(1);
@@ -125,6 +134,7 @@ export default function HistorialInventario() {
                                         <tr className="font-bold g360-gradient rounded text-center">
                                             <th>ID</th>
                                             <th>Fecha</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Producto</th>
                                             <th>Código</th>
                                             <th>Movimiento</th>
@@ -139,12 +149,13 @@ export default function HistorialInventario() {
                                     </thead>
                                     <tbody>
                                         {movimientos.length === 0 ? (
-                                            <NoExistenDatos colSpan={12} mensaje="No existen movimientos de inventario." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen movimientos de inventario." />
                                         ) : (
                                             movimientos.map((movimiento) => (
                                                 <tr key={movimiento.id}>
                                                     <td className="text-center">{movimiento.id}</td>
                                                     <td className="text-center">{formatDateTimeToMinutes(movimiento.fecha)}</td>
+                                                    {esAdminSistema && <td>{movimiento.organizacion?.RazonSocial || 'Sin organización'}</td>}
                                                     <td>{movimiento.producto_nombre || movimiento.producto?.nombre || 'Producto eliminado'}</td>
                                                     <td className="text-center">{movimiento.producto_codigo || '—'}</td>
                                                     <td>

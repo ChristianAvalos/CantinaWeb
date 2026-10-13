@@ -8,9 +8,13 @@ import { formatearGuarani } from '../helpers/HelpersNumeros';
 import dayjs from "dayjs";
 import NoExistenDatos from "../components/NoExistenDatos";
 import FiltrosBar from "../components/FiltrosBar";
+import { useAuth } from "../hooks/useAuth";
 
 const TIPO_POR_MOVIMIENTO = { 1: 'compra', 2: 'venta', 3: 'ajuste' };
 const ETIQUETA_TIPO = { 1: 'Compra', 2: 'Venta', 3: 'Ajuste' };
+
+// Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
+const COLUMNAS_BASE = 10;
 
 const FILTROS_TRANSACCIONES = [
     {
@@ -58,6 +62,11 @@ export default function Transacciones() {
     const [transaccionSeleccionada, setTransaccionSeleccionada] = useState({});
     //tipo de transacción con el que se abre el modal (compra|venta|ajuste)
     const [tipoModal, setTipoModal] = useState('');
+
+    // Solo el Administrador de Sistema ve la columna Organización: los demás
+    // operan siempre dentro de una única organización.
+    const { user } = useAuth({ middleware: 'auth' });
+    const esAdminSistema = Number(user?.rol_id) === 1;
 
     //paginacion
     const [paginaActual, setPaginaActual] = useState(1);
@@ -237,6 +246,7 @@ export default function Transacciones() {
                                             <th>ID</th>
                                             <th>Fecha</th>
                                             <th>Tipo</th>
+                                            {esAdminSistema && <th>Organización</th>}
                                             <th>Nro. Comprobante</th>
                                             <th>Cliente / Proveedor</th>
                                             <th className="text-right">Monto</th>
@@ -248,7 +258,7 @@ export default function Transacciones() {
                                     </thead>
                                     <tbody>
                                         {transacciones.length === 0 ? (
-                                            <NoExistenDatos colSpan={10} mensaje="No existen transacciones." />
+                                            <NoExistenDatos colSpan={esAdminSistema ? COLUMNAS_BASE + 1 : COLUMNAS_BASE} mensaje="No existen transacciones." />
                                         ) : (
 
                                             transacciones.map((transaccion) => {
@@ -259,6 +269,7 @@ export default function Transacciones() {
                                                     <td className="text-center tabular-nums">{transaccion.id}</td>
                                                     <td className="text-center">{transaccion.fecha ? String(transaccion.fecha).slice(0, 10) : '—'}</td>
                                                     <td className="text-center">{transaccion.tipo_movimiento?.nombre || '—'}</td>
+                                                    {esAdminSistema && <td>{transaccion.organizacion?.RazonSocial || 'Sin organización'}</td>}
                                                     <td className="text-center tabular-nums">{transaccion.nro_comprobante || '—'}</td>
                                                     <td>{transaccion.persona?.nombre || '—'}</td>
                                                     <td className="text-right font-semibold tabular-nums">{formatearGuarani(transaccion.monto)}</td>
