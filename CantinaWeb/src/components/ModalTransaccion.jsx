@@ -152,16 +152,26 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
 
-    // La organización es SIEMPRE la del usuario: no se puede operar en otra.
-    // Al crear se autoselecciona para dejar el formulario listo.
+    // El Administrador de Sistema puede operar en cualquier organización; el
+    // resto queda fijo en la suya. Se autoselecciona la organización del usuario
+    // UNA sola vez al crear para dejar el formulario listo, sin pisar la
+    // selección manual que haga el Administrador de Sistema.
+    const organizacionPredeterminadaRef = useRef(false);
     useEffect(() => {
+        if (organizacionPredeterminadaRef.current) {
+            return;
+        }
+
         const idOrg = user?.id_organizacion ? String(user.id_organizacion) : '';
 
-        if (!transaccion?.id_organizacion && idOrg && organizacionSeleccionada !== idOrg) {
-            setorganizacionSeleccionada(idOrg);
-            setForm(prev => ({ ...prev, id_organizacion: idOrg }));
+        if (transaccion?.id_organizacion || !idOrg) {
+            return;
         }
-    }, [user, transaccion, organizacionSeleccionada]);
+
+        organizacionPredeterminadaRef.current = true;
+        setorganizacionSeleccionada(idOrg);
+        setForm(prev => ({ ...prev, id_organizacion: idOrg }));
+    }, [user, transaccion]);
 
     //Esta parte es de las alertas
     const [mostrarAlertaModal, setMostrarAlertaModal] = useState(false);
@@ -656,6 +666,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     if (listaSucursales.length === 0) {
                         return { ...prev, id_sucursal: '' };
                     }
+                    // Un usuario no admin con sucursal asignada solo puede operar en la suya.
+                    const sucursalUsuario = !esAdminSistema && user?.id_sucursal ? String(user.id_sucursal) : '';
+                    if (sucursalUsuario && listaSucursales.some(s => String(s.id) === sucursalUsuario)) {
+                        return { ...prev, id_sucursal: sucursalUsuario };
+                    }
                     // Con una sola sucursal se usa automáticamente; con varias,
                     // se elige por defecto la principal.
                     const principal = listaSucursales.find(s => s.es_principal) ?? listaSucursales[0];
@@ -671,7 +686,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         cargarSucursales();
 
         return () => { cancelado = true; };
-    }, [organizacionSeleccionada, token]);
+    }, [organizacionSeleccionada, token, esAdminSistema, user?.id_sucursal]);
 
 
     // Validación: el monto recibido (y el vuelto) solo aplica cuando la venta se paga en EFECTIVO.
@@ -1037,12 +1052,14 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 </div>
                             )}
 
-                            {/* Organización: 2 columnas para cerrar la fila de pagos sin dejar huecos */}
+                            {/* Organización: solo el Administrador de Sistema puede cambiarla;
+                                el resto queda fijo en la suya (y elige sucursal si tiene más de una).
+                                2 columnas para cerrar la fila de pagos sin dejar huecos */}
                             <div className="col-span-2">
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Organización</label>
                                 <select
-                                    disabled={esBloqueado}
-                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esBloqueado || !esAdminSistema}
+                                    className={`w-full px-3 py-2 border ${errores.id_organizacion ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado || !esAdminSistema ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={organizacionSeleccionada}
                                     onChange={(e) => {
                                         const id = e.target.value;
