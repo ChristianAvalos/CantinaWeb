@@ -40,6 +40,11 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
     const token = localStorage.getItem('AUTH_TOKEN');
     //Para que el cursor inicie en el campo codigo de barras
     const codigoBarrasRef = useRef(null);
+    // Los datos por defecto y la carga del producto se aplican UNA sola vez por
+    // apertura: el usuario (SWR) y el producto (listado) pueden llegar con otra
+    // referencia y no deben pisar lo que el usuario ya eligió o escribió.
+    const organizacionPredeterminadaRef = useRef(false);
+    const formularioSincronizadoRef = useRef(false);
 
     const [organizaciones, setOrganizaciones] = useState([]);
     const { user } = useAuth({ middleware: 'auth' });
@@ -56,7 +61,9 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
     }, [esAdminSistema, token]);
 
     useEffect(() => {
-        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion
+            && !organizacionPredeterminadaRef.current) {
+            organizacionPredeterminadaRef.current = true;
             setForm((prev) => ({ ...prev, id_organizacion: String(user.id_organizacion) }));
         }
     }, [modo, esAdminSistema, user]);
@@ -69,7 +76,8 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
 
     // Actualizar el estado del formulario cuando cambie el producto
     useEffect(() => {
-        if (modo === 'editar') {
+        if (modo === 'editar' && !formularioSincronizadoRef.current) {
+            formularioSincronizadoRef.current = true;
             setForm({
                 codigo_barras: producto.codigo_barras || '',
                 codigo_interno: producto.codigo_interno || '',

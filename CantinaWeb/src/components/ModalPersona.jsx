@@ -26,6 +26,11 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     const [errores, setErrores] = useState({});
     const [organizaciones, setOrganizaciones] = useState([]);
     const id_tipo_personaRef = useRef(null);
+    // Los datos por defecto y la carga de la persona se aplican UNA sola vez por
+    // apertura: el usuario (SWR) y la persona (listado) pueden llegar con otra
+    // referencia y no deben pisar lo que el usuario ya eligió o escribió.
+    const organizacionPredeterminadaRef = useRef(false);
+    const formularioSincronizadoRef = useRef(false);
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
 
@@ -41,7 +46,9 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     }, [esAdminSistema]);
 
     useEffect(() => {
-        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion
+            && !organizacionPredeterminadaRef.current) {
+            organizacionPredeterminadaRef.current = true;
             setForm((prev) => ({ ...prev, id_organizacion: String(user.id_organizacion) }));
         }
     }, [modo, esAdminSistema, user]);
@@ -112,7 +119,8 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
     // Actualizar el estado del formulario cuando cambie la persona
     useEffect(() => {
-        if (modo === 'editar') {
+        if (modo === 'editar' && !formularioSincronizadoRef.current) {
+            formularioSincronizadoRef.current = true;
             setForm({
                 nombre: persona.nombre || '',
                 documento: persona.documento || '',

@@ -39,12 +39,25 @@ export default function ModalPrecioVenta({
     const [sucursales, setSucursales] = useState([]);
     const [errores, setErrores] = useState({});
     const codigoBarrasRef = useRef(null);
+    // Los datos por defecto y la carga del precio se aplican UNA sola vez por
+    // apertura: el usuario (SWR) y el precio (listado) pueden llegar con otra
+    // referencia y no deben pisar lo que el usuario ya eligió o escribió.
+    const organizacionPredeterminadaRef = useRef(false);
+    const formularioSincronizadoRef = useRef(false);
 
     const token = localStorage.getItem("AUTH_TOKEN");
 
+    // El Administrador de Sistema (o un usuario sin sucursal asignada) elige la
+    // sucursal; el resto queda fijo en la suya, que es lo que valida el backend.
+    const sucursalBloqueada = !esAdminSistema && !!user?.id_sucursal;
+    // La organización solo la elige el Administrador de Sistema al crear: al
+    // editar, el backend conserva la del registro.
+    const organizacionBloqueada = !esAdminSistema || modo === 'editar';
+
     // Actualizar el estado del formulario cuando cambie el precio venta o el modo
     useEffect(() => {
-        if (modo === "editar") {
+        if (modo === "editar" && !formularioSincronizadoRef.current) {
+            formularioSincronizadoRef.current = true;
             setNombre(precioVenta.nombre || "");
         }
     }, [precioVenta, modo]); // Dependencia en 'precioVenta' y 'modo'
@@ -140,7 +153,9 @@ export default function ModalPrecioVenta({
 
     // Al crear, la organización queda fija en la del usuario (no se puede elegir otra).
     useEffect(() => {
-        if (!precioVenta?.id_organizacion && user?.id_organizacion) {
+        if (!precioVenta?.id_organizacion && user?.id_organizacion
+            && !organizacionPredeterminadaRef.current) {
+            organizacionPredeterminadaRef.current = true;
             setOrganizacionSeleccionada(String(user.id_organizacion));
         }
     }, [user, precioVenta]);
@@ -159,18 +174,28 @@ export default function ModalPrecioVenta({
                 });
                 const lista = Array.isArray(data) ? data : [];
                 setSucursales(lista);
-                if (lista.length === 1) {
-                    setSucursalSeleccionada(String(lista[0].id));
-                } else if (lista.length > 1) {
-                    setSucursalSeleccionada((prev) => prev || String(lista.find((s) => s.es_principal)?.id ?? lista[0].id));
-                }
+                setSucursalSeleccionada((prev) => {
+                    // Se conserva la sucursal si pertenece a la organización elegida.
+                    if (prev && lista.some((s) => String(s.id) === String(prev))) {
+                        return prev;
+                    }
+                    // Un usuario con sucursal asignada solo puede cotizar en la suya.
+                    const propia = !esAdminSistema && user?.id_sucursal ? String(user.id_sucursal) : '';
+                    if (propia && lista.some((s) => String(s.id) === propia)) {
+                        return propia;
+                    }
+                    // Con una sola sucursal se usa automáticamente; con varias,
+                    // se elige por defecto la principal.
+                    const principal = lista.find((s) => s.es_principal) ?? lista[0];
+                    return principal ? String(principal.id) : '';
+                });
             } catch (error) {
                 console.error('Error al cargar sucursales', error);
                 setSucursales([]);
             }
         };
         fetchSucursales();
-    }, [organizacionSeleccionada, token]);
+    }, [organizacionSeleccionada, token, esAdminSistema, user?.id_sucursal]);
 
     // Buscar producto por código de barras y autocompletar nombre
     useEffect(() => {
@@ -269,7 +294,8 @@ export default function ModalPrecioVenta({
                             Organizacion
                         </label>
                         <select
-                            className={`w-full px-3 py-2 border ${errores.id_organizacion ? "border-red-500" : "border-gray-300"} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                            disabled={organizacionBloqueada}
+                            className={`w-full px-3 py-2 border ${errores.id_organizacion ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${organizacionBloqueada ? "bg-gray-100 text-gray-600" : "bg-white"}`}
                             value={organizacionSeleccionada}
                             onChange={(e) => setOrganizacionSeleccionada(e.target.value)}
                         >
@@ -295,8 +321,11 @@ export default function ModalPrecioVenta({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Sucursal
                             </label>
+                            {/* Un usuario con sucursal asignada solo puede cotizar en la suya:
+                                el combo queda fijo en esa sucursal. */}
                             <select
-                                className={`w-full px-3 py-2 border ${errores.id_sucursal ? "border-red-500" : "border-gray-300"} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                disabled={sucursalBloqueada}
+                                className={`w-full px-3 py-2 border ${errores.id_sucursal ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${sucursalBloqueada ? "bg-gray-100 text-gray-600" : "bg-white"}`}
                                 value={sucursalSeleccionada}
                                 onChange={(e) => setSucursalSeleccionada(e.target.value)}
                             >

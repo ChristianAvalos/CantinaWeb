@@ -9,6 +9,11 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
     const [organizacionSeleccionada, setOrganizacionSeleccionada] = useState('');
     const [organizaciones, setOrganizaciones] = useState([]);
     const nombreRef = useRef(null);
+    // Los datos por defecto y la carga de la categoría se aplican UNA sola vez por
+    // apertura: el usuario (SWR) y la categoría (listado) pueden llegar con otra
+    // referencia y no deben pisar lo que el usuario ya eligió o escribió.
+    const organizacionPredeterminadaRef = useRef(false);
+    const formularioSincronizadoRef = useRef(false);
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
 
@@ -25,14 +30,17 @@ export default function ModalCategoria({ onClose, modo, categoria = {}, refresca
     }, [esAdminSistema, token]);
 
     useEffect(() => {
-        if (modo === 'crear' && esAdminSistema && user?.id_organizacion) {
+        if (modo === 'crear' && esAdminSistema && user?.id_organizacion
+            && !organizacionPredeterminadaRef.current) {
+            organizacionPredeterminadaRef.current = true;
             setOrganizacionSeleccionada(String(user.id_organizacion));
         }
     }, [modo, esAdminSistema, user]);
 
     // Actualizar el estado del formulario cuando cambie la categoria
     useEffect(() => {
-        if (modo === 'editar') {
+        if (modo === 'editar' && !formularioSincronizadoRef.current) {
+            formularioSincronizadoRef.current = true;
             setNombre(categoria.nombre || ''),
             setOrganizacionSeleccionada(categoria.id_organizacion ? String(categoria.id_organizacion) : '');
         }

@@ -30,7 +30,8 @@ class PrecioVentaController extends Controller
 
         if ($request->query('all')) {
             $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
-                ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()));
+                ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()))
+                ->when(! $this->esAdminSistema() && $this->sucursalDelUsuario(), fn ($q) => $q->where('id_sucursal', $this->sucursalDelUsuario()));
             if (!empty($filtros)) {
                 $this->aplicarFiltrosDinamicos($precio_ventas_Query, $filtros, ['search', 'all']);
             }
@@ -44,7 +45,8 @@ class PrecioVentaController extends Controller
 
         // Aislamiento por organización; el Administrador de Sistema ve todos.
         $precio_ventas_Query = PrecioVenta::with(['producto', 'tipoMoneda', 'organizacion', 'sucursal', 'tipoEstado'])
-            ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()));
+            ->when(! $this->esAdminSistema(), fn ($q) => $q->where('id_organizacion', $this->organizacionDelUsuario()))
+            ->when(! $this->esAdminSistema() && $this->sucursalDelUsuario(), fn ($q) => $q->where('id_sucursal', $this->sucursalDelUsuario()));
 
         if ($search) {
             $precio_ventas_Query->whereHas('producto', function ($q) use ($search) {
@@ -127,8 +129,8 @@ class PrecioVentaController extends Controller
         // Buscar el precio de venta por ID
         $precioVenta = PrecioVenta::findOrFail($id);
 
-        if (! $this->enAlcance($precioVenta)) {
-            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        if (! $this->enAlcance($precioVenta, true)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización o sucursal.'], 403);
         }
 
         // La organización no se puede reasignar.
@@ -158,8 +160,8 @@ class PrecioVentaController extends Controller
         // Buscar el precio de venta por ID
         $precioVenta = PrecioVenta::findOrFail($id);
 
-        if (! $this->enAlcance($precioVenta)) {
-            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        if (! $this->enAlcance($precioVenta, true)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización o sucursal.'], 403);
         }
 
         //Asigno el estado del precio de venta
@@ -177,8 +179,8 @@ class PrecioVentaController extends Controller
     {
         $precio_ventas = PrecioVenta::findOrFail($id);
 
-        if (! $this->enAlcance($precio_ventas)) {
-            return response()->json(['message' => 'El precio de venta no pertenece a tu organización.'], 403);
+        if (! $this->enAlcance($precio_ventas, true)) {
+            return response()->json(['message' => 'El precio de venta no pertenece a tu organización o sucursal.'], 403);
         }
 
         $precio_ventas->delete();

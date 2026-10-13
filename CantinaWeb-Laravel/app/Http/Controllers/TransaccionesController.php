@@ -585,7 +585,7 @@ class TransaccionesController extends Controller
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'lote' => $data['lote'] ?? null,
-                    'id_persona' => $data['id_persona'],
+                    'id_persona' => $data['id_persona'] ?? null,
                     'id_TipoEstado' => $idTipoEstado,
                     'id_sucursal' => (! $this->esAdminSistema() && $this->sucursalDelUsuario())
                         ? $this->sucursalDelUsuario()

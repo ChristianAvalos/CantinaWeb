@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Sucursal;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,7 +26,30 @@ class UpdatePrecioVentaRequest extends FormRequest
     {
         return [
             'id_organizacion' => 'required|exists:organizacion,id',
-            'id_sucursal' => 'required|exists:sucursales,id',
+            'id_sucursal' => [
+                'required',
+                'exists:sucursales,id',
+                // El Administrador de Sistema cotiza en cualquier sucursal de la
+                // organización elegida; un usuario con sucursal asignada, solo en
+                // la suya. La sucursal debe pertenecer a la organización destino.
+                function ($attribute, $value, $fail) {
+                    $user = $this->user();
+                    $esAdminSistema = (int) ($user?->rol_id) === 1;
+                    $idOrganizacionDestino = $esAdminSistema
+                        ? ($this->input('id_organizacion') ?? $user?->id_organizacion)
+                        : $user?->id_organizacion;
+
+                    if (! $esAdminSistema && $user?->id_sucursal
+                        && (int) $value !== (int) $user->id_sucursal) {
+                        $fail('Solo podés cotizar en tu propia sucursal.');
+                        return;
+                    }
+
+                    if (! Sucursal::where('id', $value)->where('id_organizacion', $idOrganizacionDestino)->exists()) {
+                        $fail('La sucursal seleccionada no pertenece a la organización.');
+                    }
+                },
+            ],
             'id_tipo_moneda' => 'required|exists:tipo_monedas,id',
             'codigo_barras' => 'required|string|max:255',
             'id_producto' => [
