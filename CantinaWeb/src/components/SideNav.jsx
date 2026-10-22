@@ -387,6 +387,15 @@ export default function SideNav() {
                     </li>
                   )}
 
+                  {hasPermission('Organizacion') && (
+                    <li>
+                      <Link to="/datos-facturacion" className={getItemLinkClasses('/datos-facturacion')}>
+                        <i className={`fas fa-file-invoice h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('organizacion')}`} style={estiloIcono} aria-hidden="true" />
+                        <span>Datos facturacion</span>
+                      </Link>
+                    </li>
+                  )}
+
 
                   {hasPermission('Herraminetas_usuarios') && (
 

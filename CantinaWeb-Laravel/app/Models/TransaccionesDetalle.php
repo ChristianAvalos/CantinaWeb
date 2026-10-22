@@ -21,6 +21,8 @@ class   TransaccionesDetalle extends Model
         'fecha_vencimiento',
         'precio_unitario',
         'subtotal',
+        'tipo_iva',
+        'monto_iva',
         'UrevUsuario',
         'UrevFechaHora'
     ];

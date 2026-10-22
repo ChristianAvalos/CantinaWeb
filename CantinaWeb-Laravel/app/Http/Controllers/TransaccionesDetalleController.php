@@ -142,6 +142,9 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $request->precio_unitario;
         $subtotal = $cantidad * $precioUnitario;
 
+        // IVA contenido en el subtotal, según el tipo elegido para la línea.
+        $iva = \App\Services\IvaService::desglosar($subtotal, $data['tipo_iva'] ?? \App\Services\IvaService::TIPO_10);
+
         // El detalle se guarda SIN mover stock: el kardex se registra recién al
         // finalizar (postear) la transacción. Igual validamos temprano para avisar
         // si no alcanza el stock (validación "suave", sin bloquear el borrador).
@@ -160,6 +163,8 @@ class TransaccionesDetalleController extends Controller
             'cantidad' => $cantidad,
             'precio_unitario' => $precioUnitario,
             'subtotal' => $subtotal,
+            'tipo_iva' => $iva['tipo_iva'],
+            'monto_iva' => $iva['monto_iva'],
             'lote' => isset($data['lote']) ? $data['lote'] : null,
             'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
             'UrevUsuario' => $usuario,

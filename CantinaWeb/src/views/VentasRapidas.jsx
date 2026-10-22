@@ -66,7 +66,18 @@ export default function VentasRapidas() {
     const [organizacionSeleccionada, setOrganizacionSeleccionada] = useState('');
     const [sucursales, setSucursales] = useState([]);
     const [sucursalSeleccionada, setSucursalSeleccionada] = useState('');
+
+    // Comprobante a emitir: Ticket por defecto; Factura cuando el cliente la pide
+    // (exige cliente con RUC y timbrado vigente).
+    const [tipoComprobante, setTipoComprobante] = useState('');
+    const [comprobantes, setComprobantes] = useState([]);
+    const [timbradoVigente, setTimbradoVigente] = useState(true);
+    const esFactura = comprobantes.find((c) => String(c.id) === String(tipoComprobante))?.nombre?.trim().toLowerCase() === 'factura';
     const esAdminSistema = Number(user?.rol_id) === 1;
+    // El Administrador de Organización (rol 3) puede elegir la sucursal dentro de
+    // su organización. Un vendedor (rol 2) solo cobra: no elige nada.
+    const esAdminOrganizacion = Number(user?.rol_id) === 3;
+    const puedeElegirSucursal = esAdminSistema || esAdminOrganizacion;
     const organizacionPredeterminadaRef = useRef(false);
     const sucursalAnteriorRef = useRef(null);
 
@@ -176,6 +187,27 @@ export default function VentasRapidas() {
             }
         };
         fetchOpcionesPago();
+    }, [token]);
+
+    // ─── Comprobante del POS (Ticket / Factura) y timbrado ─────────
+    useEffect(() => {
+        const headers = { Authorization: `Bearer ${token}` };
+        Promise.all([
+            clienteAxios.get('api/tipo_comprobante', { headers }),
+            clienteAxios.get('api/datos_facturacion', { headers }).catch(() => ({ data: {} })),
+        ]).then(([tcRes, datosRes]) => {
+            const permitidos = (tcRes.data || []).filter((tc) =>
+                ['ticket', 'factura'].includes(String(tc.nombre || '').trim().toLowerCase())
+            );
+            setComprobantes(permitidos);
+
+            const ticket = permitidos.find((tc) => String(tc.nombre).trim().toLowerCase() === 'ticket');
+            if (ticket) setTipoComprobante(String(ticket.id));
+
+            setTimbradoVigente(Boolean(datosRes.data?.activo?.timbrado_vigente));
+        }).catch((err) => {
+            console.error('Error cargando comprobantes:', err);
+        });
     }, [token]);
 
     // ─── Cargar organizaciones (el backend ya acota al no-admin) ──
@@ -540,6 +572,16 @@ export default function VentasRapidas() {
             toast.warning('Selecciona la sucursal de venta');
             return;
         }
+        if (esFactura) {
+            if (!timbradoVigente) {
+                toast.error('No hay timbrado vigente: no se puede emitir Factura.');
+                return;
+            }
+            if (!selectedCliente.id) {
+                toast.warning('Para Factura seleccioná el cliente (con RUC).');
+                return;
+            }
+        }
 
         setIsProcessing(true);
 
@@ -553,6 +595,7 @@ export default function VentasRapidas() {
                 id_organizacion: organizacionSeleccionada || user?.id_organizacion || '',
                 id_sucursal: sucursalSeleccionada || '',
                 id_persona: selectedCliente.id || '',
+                id_TipoComprobante: tipoComprobante || '',
                 id_TipoPago: selectedTipoPago,
                 id_FormaPago: selectedFormaPago,
                 monto_recibido: pagoRecibidoNumero,
@@ -690,15 +733,39 @@ export default function VentasRapidas() {
                     <select
                         value={sucursalSeleccionada}
                         onChange={(e) => setSucursalSeleccionada(e.target.value)}
-                        disabled={sucursales.length <= 1 || isProcessing}
-                        title="Sucursal"
-                        className={`rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${sucursales.length > 1 ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-600'}`}
+                        disabled={!puedeElegirSucursal || sucursales.length <= 1 || isProcessing}
+                        title={puedeElegirSucursal ? 'Sucursal' : 'Sucursal asignada'}
+                        className={`rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${puedeElegirSucursal && sucursales.length > 1 ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-600'}`}
                     >
                         {sucursales.length === 0 && <option value="">Sin sucursales</option>}
                         {sucursales.map((sucursal) => (
                             <option key={sucursal.id} value={sucursal.id}>{sucursal.nombre}</option>
                         ))}
                     </select>
+
+                    <span className="ml-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <i className="fas fa-file-invoice h-3.5 w-3.5" aria-hidden="true" /> Comprobante
+                    </span>
+                    <select
+                        value={tipoComprobante}
+                        onChange={(e) => setTipoComprobante(e.target.value)}
+                        disabled={isProcessing}
+                        title="Comprobante"
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                        {comprobantes.map((tc) => (
+                            <option
+                                key={tc.id}
+                                value={tc.id}
+                                disabled={String(tc.nombre).trim().toLowerCase() === 'factura' && !timbradoVigente}
+                            >
+                                {tc.nombre}{String(tc.nombre).trim().toLowerCase() === 'factura' && !timbradoVigente ? ' (sin timbrado)' : ''}
+                            </option>
+                        ))}
+                    </select>
+                    {esFactura && !timbradoVigente && (
+                        <span className="text-xs font-semibold text-red-600">Cargá un timbrado vigente</span>
+                    )}
                 </div>
 
                 {/* ── Barra de búsqueda ── */}

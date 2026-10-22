@@ -7,6 +7,7 @@ use App\Models\Transacciones;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 
 class SucursalController extends Controller
@@ -41,10 +42,19 @@ class SucursalController extends Controller
         $data = $request->validate([
             'id_organizacion' => 'required|exists:organizacion,id',
             'nombre'          => 'required|string|max:150',
+            'establecimiento' => 'nullable|digits:3',
+            // El punto de expedición no se puede repetir dentro de la organización:
+            // cada uno lleva su propia numeración y se pisarían los correlativos.
+            'punto_expedicion' => [
+                'nullable', 'digits:3',
+                Rule::unique('sucursales', 'punto_expedicion')
+                    ->where(fn ($q) => $q->where('id_organizacion', $request->input('id_organizacion'))
+                        ->where('establecimiento', $request->input('establecimiento') ?: '001')),
+            ],
             'direccion'       => 'nullable|string',
             'ciudad_id'       => 'nullable|exists:ciudad,id',
             'telefono'        => 'nullable|string',
-        ]);
+        ], $this->mensajesExpedicion());
 
         // El Administrador de Sistema puede crear en cualquier organización; el
         // administrador de organización, solo en la suya.
@@ -58,6 +68,8 @@ class SucursalController extends Controller
         $sucursal = Sucursal::create([
             'id_organizacion' => $data['id_organizacion'],
             'nombre'          => $data['nombre'],
+            'establecimiento' => $data['establecimiento'] ?? '001',
+            'punto_expedicion' => $data['punto_expedicion'] ?? '001',
             'direccion'       => $data['direccion'] ?? null,
             'ciudad_id'       => $data['ciudad_id'] ?? null,
             'telefono'        => $data['telefono'] ?? null,
@@ -83,14 +95,24 @@ class SucursalController extends Controller
 
         $data = $request->validate([
             'nombre'         => 'required|string|max:150',
+            'establecimiento' => 'nullable|digits:3',
+            'punto_expedicion' => [
+                'nullable', 'digits:3',
+                Rule::unique('sucursales', 'punto_expedicion')
+                    ->where(fn ($q) => $q->where('id_organizacion', $sucursal->id_organizacion)
+                        ->where('establecimiento', $request->input('establecimiento') ?: $sucursal->establecimiento))
+                    ->ignore($sucursal->id),
+            ],
             'direccion'      => 'nullable|string',
             'ciudad_id'      => 'nullable|exists:ciudad,id',
             'telefono'       => 'nullable|string',
             'id_tipo_estado' => 'nullable|exists:tipo_estados,id',
-        ]);
+        ], $this->mensajesExpedicion());
 
         $sucursal->update([
             'nombre'         => $data['nombre'],
+            'establecimiento' => $data['establecimiento'] ?? $sucursal->establecimiento,
+            'punto_expedicion' => $data['punto_expedicion'] ?? $sucursal->punto_expedicion,
             'direccion'      => $data['direccion'] ?? null,
             'ciudad_id'      => $data['ciudad_id'] ?? null,
             'telefono'       => $data['telefono'] ?? null,
@@ -103,6 +125,16 @@ class SucursalController extends Controller
             'message'  => 'Sucursal actualizada correctamente.',
             'sucursal' => $sucursal,
         ]);
+    }
+
+    /** Mensajes de los campos de expedición (3 dígitos, como exige el timbrado). */
+    private function mensajesExpedicion(): array
+    {
+        return [
+            'establecimiento.digits' => 'El establecimiento debe tener exactamente 3 dígitos.',
+            'punto_expedicion.digits' => 'El punto de expedición debe tener exactamente 3 dígitos.',
+            'punto_expedicion.unique' => 'Ese punto de expedición ya está en uso en la organización.',
+        ];
     }
 
     public function destroy($id)

@@ -15,6 +15,7 @@ const InicioUsuarios = lazy(() => import("./views/InicioUsuarios"));
 const RolesUsuarios = lazy(() => import("./views/RolesUsuarios"));
 const UserReportRolesPermission = lazy(() => import("./report/UserReportRolesPermission"));
 const Organizacion = lazy(() => import("./views/Organizacion"));
+const DatosFacturacion = lazy(() => import("./views/DatosFacturacion"));
 const ErrorEstadoUsuario = lazy(() => import("./views/ErrorEstadoUsuario"));
 const Transacciones = lazy(() => import("./views/Transacciones"));
 const Categorias = lazy(() => import("./views/Categorias"));
@@ -86,6 +87,14 @@ const router = createBrowserRouter ([
                 element: withSuspense(
                 <ProtectedRoute permission="Organizacion">
                     <Organizacion/>
+                </ProtectedRoute>
+                )
+            },
+            {
+                path:'/datos-facturacion',
+                element: withSuspense(
+                <ProtectedRoute permission="Organizacion">
+                    <DatosFacturacion/>
                 </ProtectedRoute>
                 )
             },

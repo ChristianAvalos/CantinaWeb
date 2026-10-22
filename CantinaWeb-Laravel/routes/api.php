@@ -8,6 +8,7 @@ use App\Http\Controllers\FormaPagoController;
 use App\Http\Controllers\MovimientoHistorialController;
 use App\Http\Controllers\MotivoAjusteController;
 use App\Http\Controllers\OrganizacionController;
+use App\Http\Controllers\DatosFacturacionController;
 use App\Http\Controllers\PaisController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PersonaController;
@@ -69,6 +70,11 @@ Route::middleware('auth:sanctum')->group(function() {
 
     //Organizacion 
     Route::get('/organizacion',[OrganizacionController::class,'index']);
+    // Datos para facturación (timbrado, RUC fiscal, secuencias)
+    Route::get('/datos_facturacion', [DatosFacturacionController::class, 'index']);
+    Route::post('/datos_facturacion', [DatosFacturacionController::class, 'store']);
+    Route::put('/datos_facturacion/{id}', [DatosFacturacionController::class, 'update']);
+    Route::post('/datos_facturacion/{id}/activar', [DatosFacturacionController::class, 'activar']);
     Route::delete('/organizacion/{id}', [OrganizacionController::class, 'DeleteOrganizacion']);
     Route::post('/crear_organizacion',[OrganizacionController::class,'createOrganizacion']);
     Route::put('/update_organizacion/{id}',[OrganizacionController::class,'updateOrganizacion']);

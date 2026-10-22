@@ -26,7 +26,10 @@ class CreateTransaccionDetalleRequest extends FormRequest
                 'lote' => ['nullable', 'string'],
                 'fecha_vencimiento' => ['nullable', 'date'],
                 'precio_unitario' => ['required', 'numeric', 'gt:0'],
-                'cantidad' => ['required', 'numeric', 'gt:0']
+                'cantidad' => ['required', 'numeric', 'gt:0'],
+                // IVA de la línea: se graba con la línea porque el precio depende
+                // de la organización/sucursal y la factura debe ser reproducible.
+                'tipo_iva' => ['nullable', 'in:10,5,exenta'],
                 
             ];
         }
@@ -44,6 +47,7 @@ class CreateTransaccionDetalleRequest extends FormRequest
                 'cantidad.gt' => 'La cantidad debe ser mayor a 0',
                 'lote.string' => 'El lote debe ser una cadena de texto',
                 'fecha_vencimiento.date' => 'La fecha de vencimiento debe ser una fecha válida',
+                'tipo_iva.in' => 'El IVA debe ser 10, 5 o exenta.',
             ];
         }
 }

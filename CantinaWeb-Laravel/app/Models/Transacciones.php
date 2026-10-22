@@ -35,6 +35,7 @@ class Transacciones extends Model
         'id_MotivoAjuste',
         'direccion',
         'id_TipoComprobante',
+        'id_transaccion_origen',
         'id_TipoPago',
         'id_FormaPago',
         'id_Moneda',

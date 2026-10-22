@@ -57,12 +57,23 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
     const cliente = d.cliente || null;
     const items = Array.isArray(d.items) ? d.items : [];
 
-    const total = Number(d.total) || 0;
-    const subtotalRaw = Number(d.subtotal);
-    const subtotal = Number.isFinite(subtotalRaw) ? subtotalRaw : (total - (Number(d.iva) || 0));
-    const iva = Number(d.iva) || 0;
+    // Soporta el formato nuevo (totales anidados) y el viejo (plano).
+    const t = d.totales || {};
+    const total = Number(t.total ?? d.total) || 0;
+    const iva = Number(t.iva ?? d.iva) || 0;
+    const subtotal = Number(t.subtotal ?? d.subtotal) || (total - iva);
+    const gravada10 = Number(t.gravada10) || 0;
+    const iva10 = Number(t.iva10) || 0;
+    const gravada5 = Number(t.gravada5) || 0;
+    const iva5 = Number(t.iva5) || 0;
+    const exenta = Number(t.exenta) || 0;
     const montoRecibido = Number(d.monto_recibido) || 0;
     const vuelto = Number(d.vuelto) || 0;
+
+    const esFiscal = Boolean(d.es_fiscal);
+    const timbrado = d.timbrado || null;
+    const punto = d.punto_expedicion || null;
+    const referencia = d.referencia || null;
 
     const lineas = [];
 
@@ -70,16 +81,34 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
     if (empresa.RazonSocial) lineas.push(`<div class="ct-empresa ct-center">${esc(empresa.RazonSocial)}</div>`);
     if (empresa.RUC) lineas.push(`<div class="ct-center ct-muted">RUC: ${esc(fmtDoc(empresa.RUC))}</div>`);
     if (empresa.Direccion) lineas.push(`<div class="ct-center ct-muted">${esc(empresa.Direccion)}</div>`);
+    if (empresa.ActividadEconomica) lineas.push(`<div class="ct-center ct-muted">${esc(empresa.ActividadEconomica)}</div>`);
     const telEmail = [empresa.Telefono && `Tel: ${esc(empresa.Telefono)}`, empresa.Email && esc(empresa.Email)]
         .filter(Boolean)
         .join('  ');
     if (telEmail) lineas.push(`<div class="ct-center ct-muted">${telEmail}</div>`);
     lineas.push('<hr class="ct-sep" />');
 
-    // ── Título / número / fecha ──
+    // ── Título / timbrado / número / fecha ──
     lineas.push(`<div class="ct-titulo">${esc(d.titulo || 'COMPROBANTE DE VENTA')}</div>`);
-    if (d.numero) lineas.push(`<div class="ct-center ct-bold">Nº VENTA ${esc(String(d.numero))}</div>`);
+
+    if (esFiscal && timbrado?.numero) {
+        lineas.push(`<div class="ct-center ct-bold">Timbrado Nº ${esc(String(timbrado.numero))}</div>`);
+        const vigencia = [timbrado.inicio, timbrado.vencimiento].filter(Boolean).join(' al ');
+        if (vigencia) lineas.push(`<div class="ct-center ct-muted">Vigencia: ${esc(vigencia)}</div>`);
+    }
+
+    if (esFiscal && punto) {
+        lineas.push(`<div class="ct-center ct-muted">Est. ${esc(punto.establecimiento)} - Pto. ${esc(punto.punto)}</div>`);
+    }
+
+    if (d.numero) {
+        lineas.push(`<div class="ct-center ct-bold">Nº ${esc(String(d.numero))}</div>`);
+    }
     if (d.fecha) lineas.push(`<div class="ct-center ct-muted">${esc(d.fecha)}</div>`);
+
+    if (referencia) {
+        lineas.push(`<div class="ct-center ct-muted">Ref. ${esc(referencia.tipo_comprobante || 'Comprobante')} Nº ${esc(String(referencia.numero))} del ${esc(referencia.fecha || '')}</div>`);
+    }
 
     if (anulada) {
         lineas.push('<div class="ct-anulado">ANULADA</div>');
@@ -95,6 +124,7 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
     }
     if (d.tipo_pago) lineas.push(`<div class="ct-fila"><span>Pago:</span><span class="ct-right">${esc(d.tipo_pago)}</span></div>`);
     if (d.forma_pago) lineas.push(`<div class="ct-fila"><span>Forma:</span><span class="ct-right">${esc(d.forma_pago)}</span></div>`);
+    if (d.condicion_venta?.etiqueta) lineas.push(`<div class="ct-fila"><span>Condición:</span><span class="ct-right">${esc(d.condicion_venta.etiqueta)}</span></div>`);
 
     lineas.push('<hr class="ct-sep" />');
 
@@ -118,9 +148,23 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
 
     lineas.push('<hr class="ct-sep" />');
 
-    // ── Totales ──
-    lineas.push(`<div class="ct-fila"><span>SUB-TOTAL</span><span class="ct-monto">${formatearGuarani(subtotal)}</span></div>`);
-    lineas.push(`<div class="ct-fila"><span>IVA 10%</span><span class="ct-monto">${formatearGuarani(iva)}</span></div>`);
+    // ── Totales (discriminados como exige la factura) ──
+    if (gravada10 || iva10) {
+        lineas.push(`<div class="ct-fila"><span>GRAVADA 10%</span><span class="ct-monto">${formatearGuarani(gravada10)}</span></div>`);
+        lineas.push(`<div class="ct-fila"><span>IVA 10%</span><span class="ct-monto">${formatearGuarani(iva10)}</span></div>`);
+    }
+    if (gravada5 || iva5) {
+        lineas.push(`<div class="ct-fila"><span>GRAVADA 5%</span><span class="ct-monto">${formatearGuarani(gravada5)}</span></div>`);
+        lineas.push(`<div class="ct-fila"><span>IVA 5%</span><span class="ct-monto">${formatearGuarani(iva5)}</span></div>`);
+    }
+    if (exenta) {
+        lineas.push(`<div class="ct-fila"><span>EXENTA</span><span class="ct-monto">${formatearGuarani(exenta)}</span></div>`);
+    }
+    if (!gravada10 && !gravada5 && !exenta) {
+        // Compatibilidad con snapshots viejos (formato plano).
+        lineas.push(`<div class="ct-fila"><span>SUB-TOTAL</span><span class="ct-monto">${formatearGuarani(subtotal)}</span></div>`);
+        lineas.push(`<div class="ct-fila"><span>IVA</span><span class="ct-monto">${formatearGuarani(iva)}</span></div>`);
+    }
     lineas.push(`<div class="ct-fila ct-total"><span>TOTAL</span><span class="ct-monto">${formatearGuarani(total)}</span></div>`);
 
     if (montoRecibido > 0 || vuelto > 0) {
@@ -132,7 +176,9 @@ export function construirTicketHtml(datos, { anulada = false } = {}) {
     lineas.push('<hr class="ct-sep" />');
     lineas.push('<div class="ct-msg ct-center">¡Gracias por su compra!</div>');
     if (d.cajero) lineas.push(`<div class="ct-center ct-muted ct-mt4">Atendido por: ${esc(d.cajero)}</div>`);
-    lineas.push('<div class="ct-center ct-muted">Comprobante de venta no fiscal</div>');
+    if (!esFiscal) {
+        lineas.push('<div class="ct-center ct-muted">Comprobante de venta no fiscal</div>');
+    }
 
     return `<style>${CSS_TICKET}</style><div class="ct-ticket">${lineas.join('')}</div>`;
 }

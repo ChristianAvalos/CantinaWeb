@@ -38,7 +38,8 @@ class CreateTransaccionRequest extends FormRequest
                     return;
                 }
                 $tipo = \App\Models\TipoComprobante::find($value);
-                $permitidosVenta = ['factura', 'ticket', 'nota de crédito', 'nota de debito'];
+                // Las Notas de Crédito las genera el sistema al anular una factura.
+                $permitidosVenta = ['factura', 'ticket'];
                 if ($tipo && !in_array(strtolower(trim($tipo->nombre)), $permitidosVenta, true)) {
                     $fail('El tipo de comprobante seleccionado no es válido para ventas.');
                 }
@@ -53,6 +54,8 @@ class CreateTransaccionRequest extends FormRequest
                 : ['nullable', 'exists:tipo_comprobantes,id']);
 
         $esAdminSistema = (int) ($this->user()?->rol_id) === 1;
+        // El Administrador de Organización también elige sucursal (dentro de la suya).
+        $puedeElegirSucursal = in_array((int) ($this->user()?->rol_id), [1, 3], true);
         $idOrganizacionUsuario = $this->user()?->id_organizacion;
         $idSucursalUsuario = $this->user()?->id_sucursal;
         // El Administrador de Sistema elige la organización destino; para el
@@ -83,11 +86,11 @@ class CreateTransaccionRequest extends FormRequest
                     && Sucursal::where('id_organizacion', $idOrganizacionDestino)->count() > 1),
                 'nullable',
                 'exists:sucursales,id',
-                function ($attribute, $value, $fail) use ($esAdminSistema, $idOrganizacionDestino, $idSucursalUsuario) {
+                function ($attribute, $value, $fail) use ($puedeElegirSucursal, $idOrganizacionDestino, $idSucursalUsuario) {
                     if ($value === null) {
                         return;
                     }
-                    if (! $esAdminSistema && $idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
+                    if (! $puedeElegirSucursal && $idSucursalUsuario && (int) $value !== (int) $idSucursalUsuario) {
                         $fail('La sucursal seleccionada no es la tuya.');
                         return;
                     }

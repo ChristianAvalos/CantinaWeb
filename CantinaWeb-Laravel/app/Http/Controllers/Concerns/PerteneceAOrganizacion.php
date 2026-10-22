@@ -43,6 +43,18 @@ trait PerteneceAOrganizacion
     }
 
     /**
+     * ¿Puede elegir en qué sucursal opera?
+     *
+     * Sí para el Administrador de Sistema (cualquier sucursal) y para el
+     * Administrador de Organización (las de su organización). Un vendedor no
+     * elige: opera en la sucursal que le corresponde.
+     */
+    protected function puedeElegirSucursal(): bool
+    {
+        return in_array((int) (Auth::user()?->rol_id), [1, 3], true);
+    }
+
+    /**
      * ¿El registro pertenece al ámbito del usuario?
      * El Administrador de Sistema siempre pasa. Para el resto valida la
      * organización y, si `$conSucursal` es true y el usuario tiene sucursal

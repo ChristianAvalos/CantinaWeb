@@ -34,6 +34,12 @@ class Organizacion extends Model
             'UrevFechaHora',
     ];
     protected $appends = ['Telefono', 'Fax','UrevCalc'];
+
+    /** Datos fiscales versionados (el activo es con el que se emite). */
+    public function datosFacturacion()
+    {
+        return $this->hasMany(DatosFacturacion::class, 'id_organizacion');
+    }
     
     public function getUrevCalcAttribute()
     {

@@ -14,6 +14,10 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
     });
     const [lote, setLote] = useState(transaccionDetalle.lote || '');
     const [unidad_medida, setUnidadMedida] = useState(transaccionDetalle.producto?.unidad_medida || '');
+    // IVA de la línea. Se define acá (no en el producto) porque el precio cambia
+    // por organización/sucursal y la factura debe conservar el IVA aplicado.
+    const [tipoIva, setTipoIva] = useState(transaccionDetalle.tipo_iva || '10');
+
     const [precio_unitario, setPrecioUnitario] = useState(() => {
         const numero = Number(transaccionDetalle.precio_unitario);
         return Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || '');
@@ -49,6 +53,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
             setUnidadMedida(transaccionDetalle.unidad_medida || '');
             setSubTotal(transaccionDetalle.subtotal || '');
             {
+                setTipoIva(transaccionDetalle.tipo_iva || '10');
                 const numero = Number(transaccionDetalle.precio_unitario);
                 setPrecioUnitario(Number.isFinite(numero) && transaccionDetalle.precio_unitario !== '' ? String(numero) : (transaccionDetalle.precio_unitario || ''));
             }
@@ -134,6 +139,7 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                 lote: lote,
                 precio_unitario: precioUnitarioNumber,
                 subtotal: subtotalNumber,
+                tipo_iva: tipoIva,
                 fecha_vencimiento: fecha_vencimiento,
                 id_transaccion: id_transaccion
             };
@@ -268,6 +274,23 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                                     <p className="text-red-500 text-sm">{errores.precio_unitario[0]}</p>
                                 )}
                             </div>
+                            {/* IVA de la línea: lo que va a discriminar la factura */}
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">IVA</label>
+                                <select
+                                    value={tipoIva}
+                                    onChange={(e) => setTipoIva(e.target.value)}
+                                    className={`w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${(errores && errores.tipo_iva) ? 'border-red-500' : 'border-gray-300'}`}
+                                >
+                                    <option value="10">IVA 10%</option>
+                                    <option value="5">IVA 5%</option>
+                                    <option value="exenta">Exenta</option>
+                                </select>
+                                {errores && errores.tipo_iva && Array.isArray(errores.tipo_iva) && (
+                                    <p className="text-red-500 text-sm">{errores.tipo_iva[0]}</p>
+                                )}
+                            </div>
+
                             {/* Campo para cantidad */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">{tipoTransaccion === 'venta' ? 'Cantidad a vender' : 'Cantidad'}</label>

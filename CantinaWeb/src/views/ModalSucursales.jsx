@@ -11,7 +11,7 @@ import AlertaModal from "../components/AlertaModal";
 export default function ModalSucursales({ organizacion, onClose }) {
     const token = localStorage.getItem('AUTH_TOKEN');
     const [sucursales, setSucursales] = useState([]);
-    const [form, setForm] = useState({ id: null, nombre: '', direccion: '', telefono: '' });
+    const [form, setForm] = useState({ id: null, nombre: '', establecimiento: '001', punto_expedicion: '001', direccion: '', telefono: '' });
     const [guardando, setGuardando] = useState(false);
 
     // Alerta de confirmación (activar/desactivar o eliminar)
@@ -33,7 +33,7 @@ export default function ModalSucursales({ organizacion, onClose }) {
 
     useEffect(() => { fetchSucursales(); }, [fetchSucursales]);
 
-    const limpiar = () => setForm({ id: null, nombre: '', direccion: '', telefono: '' });
+    const limpiar = () => setForm({ id: null, nombre: '', establecimiento: '001', punto_expedicion: '001', direccion: '', telefono: '' });
 
     const handleGuardar = async (e) => {
         e.preventDefault();
@@ -46,6 +46,8 @@ export default function ModalSucursales({ organizacion, onClose }) {
             const payload = {
                 id_organizacion: organizacion.id,
                 nombre: form.nombre.trim(),
+                establecimiento: form.establecimiento,
+                punto_expedicion: form.punto_expedicion,
                 direccion: form.direccion,
                 telefono: form.telefono,
             };
@@ -142,6 +144,7 @@ export default function ModalSucursales({ organizacion, onClose }) {
                         <thead>
                             <tr className="bg-gray-50">
                                 <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Sucursal</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-gray-500">Expedición</th>
                                 <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Dirección</th>
                                 <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-gray-500">Estado</th>
                                 <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Acciones</th>
@@ -156,6 +159,9 @@ export default function ModalSucursales({ organizacion, onClose }) {
                                             <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
                                         )}
                                     </td>
+                                    <td className="px-3 py-2 text-center text-sm tabular-nums text-gray-600">
+                                        {s.establecimiento || '001'}-{s.punto_expedicion || '001'}
+                                    </td>
                                     <td className="px-3 py-2 text-sm text-gray-600">{s.direccion || '—'}</td>
                                     <td className="px-3 py-2 text-center">
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${Number(s.id_tipo_estado) === 1 ? 'bg-green-100 text-green-700 ring-green-200' : 'bg-red-100 text-red-700 ring-red-200'}`}>
@@ -165,7 +171,14 @@ export default function ModalSucursales({ organizacion, onClose }) {
                                     <td className="px-3 py-2 text-right">
                                         <button
                                             type="button"
-                                            onClick={() => setForm({ id: s.id, nombre: s.nombre, direccion: s.direccion || '', telefono: s.telefono || '' })}
+                                            onClick={() => setForm({
+                                            id: s.id,
+                                            nombre: s.nombre,
+                                            establecimiento: s.establecimiento || '001',
+                                            punto_expedicion: s.punto_expedicion || '001',
+                                            direccion: s.direccion || '',
+                                            telefono: s.telefono || '',
+                                        })}
                                             className="rounded p-1 hover:bg-gray-200"
                                             title="Editar"
                                         >
@@ -198,16 +211,16 @@ export default function ModalSucursales({ organizacion, onClose }) {
                             ))}
                             {sucursales.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="px-3 py-6 text-center text-sm text-gray-400">No hay sucursales.</td>
+                                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-400">No hay sucursales.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                <form onSubmit={handleGuardar} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Nombre</label>
+                <form onSubmit={handleGuardar} className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-12">
+                    <div className="sm:col-span-2 lg:col-span-4">
+                        <label className="mb-1 flex min-h-[2.25rem] items-end text-sm font-medium leading-tight text-gray-700">Nombre</label>
                         <input
                             type="text"
                             value={form.nombre}
@@ -216,18 +229,32 @@ export default function ModalSucursales({ organizacion, onClose }) {
                             placeholder="Sucursal Centro"
                         />
                     </div>
-                    <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Dirección</label>
+                    <div className="lg:col-span-2">
+                        <label className="mb-1 flex min-h-[2.25rem] items-end text-sm font-medium leading-tight text-gray-700" title="Primer bloque del número de factura">Establecimiento</label>
                         <input
                             type="text"
-                            value={form.direccion}
-                            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                            inputMode="numeric"
+                            maxLength={3}
+                            value={form.establecimiento}
+                            onChange={(e) => setForm({ ...form, establecimiento: e.target.value.replace(/\D/g, '').slice(0, 3) })}
                             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Dirección"
+                            placeholder="001"
                         />
                     </div>
-                    <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Teléfono</label>
+                    <div className="lg:col-span-3">
+                        <label className="mb-1 flex min-h-[2.25rem] items-end whitespace-nowrap text-sm font-medium leading-tight text-gray-700" title="Segundo bloque del número de factura">Punto de expedición</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={3}
+                            value={form.punto_expedicion}
+                            onChange={(e) => setForm({ ...form, punto_expedicion: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="001"
+                        />
+                    </div>
+                    <div className="lg:col-span-3">
+                        <label className="mb-1 flex min-h-[2.25rem] items-end text-sm font-medium leading-tight text-gray-700">Teléfono</label>
                         <input
                             type="text"
                             value={form.telefono}
@@ -236,13 +263,23 @@ export default function ModalSucursales({ organizacion, onClose }) {
                             placeholder="Teléfono"
                         />
                     </div>
+                    <div className="sm:col-span-2 lg:col-span-12">
+                        <label className="mb-1 flex min-h-[2.25rem] items-end text-sm font-medium leading-tight text-gray-700">Dirección</label>
+                        <input
+                            type="text"
+                            value={form.direccion}
+                            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Dirección"
+                        />
+                    </div>
 
-                    <div className="flex justify-end gap-3 border-t border-slate-200 pt-3 sm:col-span-3">
+                    <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-3 sm:col-span-2 lg:col-span-12">
                         {form.id && (
                             <button
                                 type="button"
                                 onClick={limpiar}
-                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                                className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
                             >
                                 Cancelar edición
                             </button>
@@ -250,7 +287,7 @@ export default function ModalSucursales({ organizacion, onClose }) {
                         <button
                             type="submit"
                             disabled={guardando}
-                            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                            className="whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
                         >
                             {guardando ? 'Guardando...' : (form.id ? 'Guardar cambios' : 'Agregar sucursal')}
                         </button>

@@ -102,6 +102,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
     // Determina si el tipo de comprobante seleccionado es una Factura, para
     // formatear el número de comprobante con guiones (001-002-0000001).
+    // En ventas el número de comprobante lo asigna el sistema al finalizar:
+    // no se carga a mano (solo compras lo piden, porque es el del proveedor).
+    const esVenta = tipoTransaccion === 'venta';
     const tipoComprobanteSeleccionado = tipoComprobante.find(tc => String(tc.id) === String(form.id_TipoComprobante));
     const esFactura = ['factura'].includes(String(tipoComprobanteSeleccionado?.nombre || '').trim().toLowerCase());
 
@@ -151,6 +154,10 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [organizaciones, setOrganizacion] = useState([]);
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
+    // El Administrador de Organización (rol 3) elige la sucursal dentro de la suya.
+    // Un vendedor (rol 2) no elige: opera en la sucursal que le corresponde.
+    const esAdminOrganizacion = Number(user?.rol_id) === 3;
+    const puedeElegirSucursal = esAdminSistema || esAdminOrganizacion;
 
     // El Administrador de Sistema puede operar en cualquier organización; el
     // resto queda fijo en la suya. Se autoselecciona la organización del usuario
@@ -213,6 +220,10 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         try {
             const formData = new FormData();
             Object.entries(form).forEach(([key, value]) => {
+                // En ventas el número es automático: no se envía.
+                if (key === 'nro_comprobante' && esVenta) {
+                    return;
+                }
                 formData.append(key, value);
             });
             if (finalizar) {
@@ -610,10 +621,11 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     }
                 }
 
-                // En ventas se permiten Factura, Ticket, Nota de Crédito y Nota de Débito
-                // (se excluye Boleta, que no es un comprobante fiscal).
+                // En ventas se emite Factura o Ticket. Las Notas de Crédito las genera
+                // el sistema al anular una factura (no se cargan a mano) y la Boleta
+                // no es un comprobante que use la organización.
                 if (tipoTransaccion === 'venta') {
-                    const permitidosVenta = ['factura', 'ticket', 'nota de crédito', 'nota de debito'];
+                    const permitidosVenta = ['factura', 'ticket'];
                     tiposComprobante = (tiposComprobante || []).filter(tc =>
                         permitidosVenta.includes(String(tc.nombre || '').trim().toLowerCase())
                     );
@@ -923,25 +935,48 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                 {errores.id_TipoComprobante && <p className="text-red-500 text-sm">{errores.id_TipoComprobante[0]}</p>}
                             </div>
 
-                            {/* Campo para comprobante numero */}
+                            {/* Número de comprobante.
+                                En VENTAS lo asigna el sistema al finalizar (timbrado +
+                                punto de expedición + secuencial). En COMPRAS lo trae la
+                                factura del proveedor, por eso se carga a mano. */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Nro Comprobante</label>
-                                <input
-                                    type="text"
-                                    disabled={esSoloLectura}
-                                    className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    placeholder={esFactura ? '001-002-0000001' : 'Introduce el comprobante'}
-                                    value={esFactura ? formatearNroFactura(form.nro_comprobante) : (form.nro_comprobante || '')}
-                                    onChange={(e) => {
-                                        if (esFactura) {
-                                            // En factura se guarda el número YA formateado con guiones (el campo es varchar)
-                                            setForm({ ...form, nro_comprobante: formatearNroFactura(e.target.value) });
-                                        } else {
-                                            setForm({ ...form, nro_comprobante: e.target.value });
-                                        }
-                                    }}
-                                />
-                                {errores.nro_comprobante && <p className="text-red-500 text-sm">{errores.nro_comprobante[0]}</p>}
+                                {esVenta ? (
+                                    <>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            disabled
+                                            className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm text-gray-600 tabular-nums"
+                                            value={form.nro_comprobante ? formatearNroFactura(form.nro_comprobante) : ''}
+                                            placeholder="Se asigna automáticamente"
+                                        />
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {form.nro_comprobante
+                                                ? 'Número asignado al emitir el comprobante.'
+                                                : 'Se asigna automáticamente al finalizar la venta.'}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <input
+                                            type="text"
+                                            disabled={esSoloLectura}
+                                            className={`w-full px-3 py-2 border ${errores.nro_comprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura ? 'bg-gray-100 text-gray-600' : ''}`}
+                                            placeholder={esFactura ? '001-002-0000001' : 'Introduce el comprobante'}
+                                            value={esFactura ? formatearNroFactura(form.nro_comprobante) : (form.nro_comprobante || '')}
+                                            onChange={(e) => {
+                                                if (esFactura) {
+                                                    // En factura se guarda el número YA formateado con guiones (el campo es varchar)
+                                                    setForm({ ...form, nro_comprobante: formatearNroFactura(e.target.value) });
+                                                } else {
+                                                    setForm({ ...form, nro_comprobante: e.target.value });
+                                                }
+                                            }}
+                                        />
+                                        {errores.nro_comprobante && <p className="text-red-500 text-sm">{errores.nro_comprobante[0]}</p>}
+                                    </>
+                                )}
                             </div>
 
                             {/* Forma de pago y Tipo de pago: no aplican a ajustes (no son documentos de pago) */}
@@ -1080,13 +1115,15 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             </div>
 
                             {/* Sucursal: solo se despliega si la organización tiene más de una.
-                                Con una sola, se usa automáticamente (principal). */}
+                                Con una sola, se usa automáticamente (principal).
+                                Solo el Administrador de Sistema u Organización puede cambiarla;
+                                el vendedor opera en la que le corresponde. */}
                             {sucursales.length > 1 && (
                                 <div className="col-span-2">
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Sucursal</label>
                                     <select
-                                        disabled={esBloqueado}
-                                        className={`w-full px-3 py-2 border ${errores.id_sucursal ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado ? 'bg-gray-100 text-gray-600' : ''}`}
+                                        disabled={esBloqueado || !puedeElegirSucursal}
+                                        className={`w-full px-3 py-2 border ${errores.id_sucursal ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esBloqueado || !puedeElegirSucursal ? 'bg-gray-100 text-gray-600' : ''}`}
                                         value={form.id_sucursal}
                                         onChange={(e) => setForm({ ...form, id_sucursal: e.target.value })}
                                     >
