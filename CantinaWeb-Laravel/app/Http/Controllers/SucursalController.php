@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sucursal;
 use App\Models\Transacciones;
 use App\Models\User;
+use App\Models\ComprobanteSecuencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,13 @@ class SucursalController extends Controller
 
     public function store(Request $request)
     {
+        // Default 001. Se normaliza ANTES de validar para que la unicidad del
+        // punto de expedición también se controle cuando no se envía.
+        $request->merge([
+            'establecimiento' => $request->input('establecimiento') ?: '001',
+            'punto_expedicion' => $request->input('punto_expedicion') ?: '001',
+        ]);
+
         $data = $request->validate([
             'id_organizacion' => 'required|exists:organizacion,id',
             'nombre'          => 'required|string|max:150',
@@ -93,6 +101,12 @@ class SucursalController extends Controller
             return response()->json(['message' => 'La sucursal no pertenece a tu organización.'], 403);
         }
 
+        // Mantener los valores actuales si no se envían (y validar su unicidad).
+        $request->merge([
+            'establecimiento' => $request->input('establecimiento') ?: $sucursal->establecimiento,
+            'punto_expedicion' => $request->input('punto_expedicion') ?: $sucursal->punto_expedicion,
+        ]);
+
         $data = $request->validate([
             'nombre'         => 'required|string|max:150',
             'establecimiento' => 'nullable|digits:3',
@@ -108,6 +122,18 @@ class SucursalController extends Controller
             'telefono'       => 'nullable|string',
             'id_tipo_estado' => 'nullable|exists:tipo_estados,id',
         ], $this->mensajesExpedicion());
+
+        // El prefijo EEE-PPP identifica el punto autorizado. Si la sucursal ya
+        // emitió comprobantes, cambiarlo rompería la serie del timbrado.
+        $cambiaExpedicion = (string) ($data['establecimiento'] ?? $sucursal->establecimiento) !== (string) $sucursal->establecimiento
+            || (string) ($data['punto_expedicion'] ?? $sucursal->punto_expedicion) !== (string) $sucursal->punto_expedicion;
+
+        if ($cambiaExpedicion && ComprobanteSecuencia::where('id_sucursal', $sucursal->id)
+            ->where('ultimo_numero', '>', 0)->exists()) {
+            return response()->json([
+                'errors' => ['punto_expedicion' => ['No se puede cambiar el establecimiento ni el punto de expedición: la sucursal ya emitió comprobantes.']],
+            ], 422);
+        }
 
         $sucursal->update([
             'nombre'         => $data['nombre'],

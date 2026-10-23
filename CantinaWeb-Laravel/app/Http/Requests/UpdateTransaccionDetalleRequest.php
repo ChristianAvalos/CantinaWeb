@@ -25,6 +25,7 @@ class UpdateTransaccionDetalleRequest extends FormRequest
                 'codigo_barras' => ['required', 'string', 'not_in:0', 'exists:productos,codigo_barras'],
                 'precio_unitario' => ['required', 'numeric', 'gt:0'],
                 'cantidad' => ['required', 'numeric', 'gt:0'],
+                'tipo_iva' => ['nullable', 'in:10,5,exenta'],
                 'lote' => ['nullable', 'string'],
                 'fecha_vencimiento' => ['nullable', 'date'],
                 
@@ -42,6 +43,7 @@ class UpdateTransaccionDetalleRequest extends FormRequest
                 'cantidad.required' => 'La cantidad es obligatoria',
                 'cantidad.numeric' => 'La cantidad debe ser numérica',
                 'cantidad.gt' => 'La cantidad debe ser mayor a 0',
+                'tipo_iva.in' => 'El IVA debe ser 10, 5 o exenta.',
                 'lote.string' => 'El lote debe ser una cadena de texto',
                 'fecha_vencimiento.date' => 'La fecha de vencimiento debe ser una fecha válida',
                 

@@ -12,6 +12,7 @@ use App\Http\Requests\CreateProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
 use App\Http\Controllers\Concerns\AplicaFiltrosDinamicos;
 use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
+use App\Services\PrecioVentaService;
 
 class ProductoController extends Controller
 {
@@ -150,6 +151,7 @@ class ProductoController extends Controller
             'id_TipoUnidadMedida' => $data['id_TipoUnidadMedida'],
             'precio_compra' => $data['precio_compra'],
             'precio_venta' => $data['precio_venta'],
+            'tipo_iva' => $data['tipo_iva'] ?? '10',
             'stock_minimo' => $data['stock_minimo'],
             'stock_actual' => $data['stock_actual'] ?? 0, // Inicialmente igual al stock mínimo
             'id_TipoEstado' => $data['id_TipoEstado'] ?? null,
@@ -252,6 +254,7 @@ class ProductoController extends Controller
             'id_TipoUnidadMedida' => $data['id_TipoUnidadMedida'],
             'precio_compra' => $data['precio_compra'],
             'precio_venta' => $data['precio_venta'],
+            'tipo_iva' => $data['tipo_iva'] ?? $producto->tipo_iva ?? '10',
             'stock_minimo' => $data['stock_minimo'],
             // stock_actual NO se actualiza aquí a propósito: el stock solo se
             // mueve mediante transacciones (compra/venta/ajuste) vía InventarioService,
@@ -392,26 +395,8 @@ class ProductoController extends Controller
      */
     private function aplicarPrecioPersonalizado(Producto $producto, ?int $idOrganizacion, ?int $idSucursal): Producto
     {
-        // Prioridad: precio de la SUCURSAL; si no hay, el de la organización.
-        $precio = null;
-
-        if ($idSucursal) {
-            $precio = \App\Models\PrecioVenta::where('id_producto', $producto->id)
-                ->where('id_sucursal', $idSucursal)
-                ->where('id_tipoestado', 1) // solo precios activos
-                ->first();
-        }
-
-        if (! $precio && $idOrganizacion) {
-            $precio = \App\Models\PrecioVenta::where('id_producto', $producto->id)
-                ->where('id_organizacion', $idOrganizacion)
-                ->where('id_tipoestado', 1)
-                ->first();
-        }
-
-        if ($precio) {
-            $producto->precio_venta = $precio->precio;
-        }
+        // Misma resolución que usa la venta: el precio mostrado es el cobrado.
+        $producto->precio_venta = PrecioVentaService::precioDe($producto, $idOrganizacion, $idSucursal);
 
         return $producto;
     }

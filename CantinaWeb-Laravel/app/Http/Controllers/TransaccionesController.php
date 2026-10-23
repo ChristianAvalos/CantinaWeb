@@ -16,7 +16,10 @@ use App\Http\Requests\UpdateTransaccionRequest;
 use App\Services\InventarioService;
 use App\Services\Comprobante\DocumentoFiscalService;
 use App\Services\NumeracionComprobanteService;
+use App\Services\IvaService;
+use App\Services\PrecioVentaService;
 use App\Models\DatosFacturacion;
+use App\Models\Persona;
 use App\Models\Producto;
 use App\Models\Sucursal;
 use App\Models\TipoMovimientos;
@@ -295,6 +298,17 @@ class TransaccionesController extends Controller
             'id_persona.exists' => 'El cliente seleccionado no existe.',
         ]);
 
+        // La Factura es un documento fiscal: el receptor debe estar identificado.
+        if ($esFactura) {
+            $documentoCliente = Persona::whereKey($data['id_persona'])->value('documento');
+
+            if (! $documentoCliente || trim((string) $documentoCliente) === '') {
+                return response()->json([
+                    'errors' => ['id_persona' => ['El cliente de la Factura debe tener RUC o documento.']],
+                ], 422);
+            }
+        }
+
         try {
             // La organización la elige el Administrador de Sistema; el resto usa
             // la suya, con su sucursal (o la principal de la organización).
@@ -326,7 +340,7 @@ class TransaccionesController extends Controller
                     'monto' => 0,
                     'monto_recibido' => $data['monto_recibido'] ?? null,
                     'vuelto' => $data['vuelto'] ?? null,
-                    'iva' => $data['iva'] ?? null,
+                    'iva' => 0,
                     'id_usuario' => Auth::user()->id,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
@@ -334,6 +348,7 @@ class TransaccionesController extends Controller
 
                 // 2) Detalles: validar stock y descontar
                 $montoTotal = 0;
+                $ivaTotal = 0;
                 foreach ($data['detalles'] as $detalle) {
                     $producto = Producto::where('codigo_barras', $detalle['codigo_barras'])
                         ->where('id_organizacion', $idOrganizacion)
@@ -343,7 +358,15 @@ class TransaccionesController extends Controller
                     }
 
                     $cantidad = (float) $detalle['cantidad'];
-                    $precioUnitario = (float) $detalle['precio_unitario'];
+                    // El precio que se cobra es SIEMPRE el vigente en el servidor
+                    // (sucursal y luego organización); el del request solo indica
+                    // qué producto se quiso vender.
+                    $precioUnitario = PrecioVentaService::precioDe($producto, (int) $idOrganizacion, (int) $idSucursal);
+
+                    if ($precioUnitario <= 0) {
+                        throw new \RuntimeException("El producto {$producto->nombre} no tiene precio de venta configurado.");
+                    }
+
                     $subtotal = $cantidad * $precioUnitario;
                     $stockActual = InventarioService::stockEnSucursal($producto->id, $idSucursal);
 
@@ -354,9 +377,9 @@ class TransaccionesController extends Controller
                         );
                     }
 
-                    // IVA de la línea: el POS cobra con IVA incluido y usa 10% por
-                    // defecto. Queda grabado para que la factura sea reproducible.
-                    $ivaLinea = \App\Services\IvaService::desglosar($subtotal, \App\Services\IvaService::TIPO_10);
+                    // IVA de la línea según la condición fiscal del producto
+                    // (10%, 5% o exenta) y el precio con IVA incluido.
+                    $ivaLinea = IvaService::desglosar($subtotal, $producto->tipo_iva ?: IvaService::TIPO_10);
 
                     $detalleCreado = TransaccionesDetalle::create([
                         'id_transaccion' => $cabecera->id,
@@ -383,12 +406,14 @@ class TransaccionesController extends Controller
                     );
 
                     $montoTotal += $subtotal;
+                    $ivaTotal += $ivaLinea['monto_iva'];
                 }
 
                 // 3) Recalcular el monto de la cabecera. El Ticket se identifica
                 //    con el número de transacción; la Factura ya trae su secuencial.
                 $cabecera->update([
                     'monto' => $montoTotal,
+                    'iva' => round($ivaTotal, 2),
                     'nro_comprobante' => $esFactura ? $nroComprobante : (string) $cabecera->id,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
@@ -471,10 +496,6 @@ class TransaccionesController extends Controller
     }
 
     /**
-     * Construye el snapshot estructurado del comprobante de una transacción.
-     * Centraliza los datos tal cual se imprimen (empresa, cliente, ítems, montos).
-     */
-    /**
      * Guarda el comprobante de un documento usando el documento fiscal canónico
      * y el emisor configurado. Es idempotente: si ya existe, no lo duplica.
      */
@@ -505,6 +526,33 @@ class TransaccionesController extends Controller
             'id_organizacion' => $transaccion->id_organizacion,
             'datos' => $documento,
             'id_usuario' => Auth::id(),
+            'UrevUsuario' => Auth::user()?->name,
+            'UrevFechaHora' => now(),
+        ]);
+    }
+
+    /**
+     * Regenera el snapshot de un comprobante ya emitido después de una
+     * corrección de cabecera, conservando el resultado de la emisión.
+     */
+    private function refrescarComprobante(Transacciones $transaccion): void
+    {
+        $comprobante = $transaccion->comprobante()->first();
+
+        if (! $comprobante) {
+            return;
+        }
+
+        $transaccion->refresh();
+        // loadMissing no recarga relaciones ya cargadas: forzamos las corregidas.
+        $transaccion->unsetRelation('persona')->unsetRelation('tipoComprobante');
+
+        $documento = DocumentoFiscalService::construir($transaccion);
+        $documento['emision'] = $comprobante->datos['emision']
+            ?? ['emisor' => 'impreso', 'estado' => 'impreso', 'referencia' => null];
+
+        $comprobante->update([
+            'datos' => $documento,
             'UrevUsuario' => Auth::user()?->name,
             'UrevFechaHora' => now(),
         ]);
@@ -584,6 +632,10 @@ class TransaccionesController extends Controller
         $tieneDetalles = $detalleQuery->exists();
         $montoDetalles = (float) $detalleQuery->sum('subtotal');
         $montoNormalizado = $tieneDetalles ? $montoDetalles : (float) ($data['monto'] ?? 0);
+        // El IVA de la cabecera se deriva de las líneas (no del cliente).
+        $ivaNormalizado = $tieneDetalles
+            ? round((float) $detalleQuery->sum('monto_iva'), 2)
+            : (float) ($data['iva'] ?? 0);
 
         $idTipoMovimiento = (int) ($data['id_TipoMovimiento'] ?? $transaccion->id_TipoMovimiento);
         $finalizar = (bool) $request->input('finalizar', false);
@@ -614,13 +666,31 @@ class TransaccionesController extends Controller
                     ], 422);
                 }
 
-                // La factura es un documento fiscal: lleva el cliente.
-                if (empty($data['id_persona'])) {
+                // La factura es un documento fiscal: lleva el cliente identificado.
+                $idPersonaFactura = $data['id_persona'] ?? $transaccion->id_persona;
+
+                if (empty($idPersonaFactura)) {
                     return response()->json([
                         'errors' => ['id_persona' => ['Para emitir Factura debe seleccionar el cliente.']],
                     ], 422);
                 }
+
+                $documentoCliente = Persona::whereKey($idPersonaFactura)->value('documento');
+
+                if (! $documentoCliente || trim((string) $documentoCliente) === '') {
+                    return response()->json([
+                        'errors' => ['id_persona' => ['El cliente de la Factura debe tener RUC o documento.']],
+                    ], 422);
+                }
             }
+        }
+
+        // Una venta finalizada siempre lleva comprobante: sin él quedaría sin
+        // numeración ni snapshot y no se podría reimprimir.
+        if ($esVenta && $finalizar && ! $tipoComprobanteVenta) {
+            return response()->json([
+                'errors' => ['id_TipoComprobante' => ['Seleccione Factura o Ticket para finalizar la venta.']],
+            ], 422);
         }
 
         // Finalizar = "postear": el documento deja de ser borrador y recién ahí se
@@ -649,7 +719,7 @@ class TransaccionesController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $idTipoEstado, $idTipoMovimiento, $request, $finalizar, $esVenta, $esFacturaVenta, $tipoComprobanteVenta) {
+            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $ivaNormalizado, $idTipoEstado, $idTipoMovimiento, $request, $finalizar, $esVenta, $esFacturaVenta, $tipoComprobanteVenta) {
                 // En VENTAS el número se asigna automáticamente una sola vez
                 // (no se toma el que venga del formulario). Compras y ajustes
                 // conservan el número que se carga a mano.
@@ -658,18 +728,16 @@ class TransaccionesController extends Controller
                     : ($data['nro_comprobante'] ?? null);
 
                 if ($esVenta && $finalizar && $tipoComprobanteVenta && ! $nroComprobante) {
-                    $datosFiscalesVenta = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
-
-                    if ($datosFiscalesVenta) {
-                        // Secuencial autorizado (EEE-PPP-NNNNNNN) por tipo.
+                    if ($esFacturaVenta) {
+                        // Secuencial autorizado (EEE-PPP-NNNNNNN).
                         $nroComprobante = NumeracionComprobanteService::siguiente(
                             (int) $transaccion->id_organizacion,
                             (int) ($data['id_sucursal'] ?? $transaccion->id_sucursal),
                             (int) $tipoComprobanteVenta->id
                         );
-                    } elseif (! $esFacturaVenta) {
-                        // Ticket sin datos fiscales: se identifica con la transacción,
-                        // igual que el POS.
+                    } else {
+                        // El Ticket no es fiscal: se identifica con la transacción,
+                        // igual que en el POS.
                         $nroComprobante = (string) $transaccion->id;
                     }
                 }
@@ -678,14 +746,14 @@ class TransaccionesController extends Controller
                     'descripcion' => $data['descripcion'] ?? null,
                     'fecha' => $data['fecha'],
                     'lote' => $data['lote'] ?? null,
-                    'id_persona' => $data['id_persona'] ?? null,
+                    'id_persona' => array_key_exists('id_persona', $data) ? $data['id_persona'] : $transaccion->id_persona,
                     'id_TipoEstado' => $idTipoEstado,
                     'id_sucursal' => (! $this->puedeElegirSucursal() && $this->sucursalDelUsuario())
                         ? $this->sucursalDelUsuario()
                         : ($data['id_sucursal'] ?? $transaccion->id_sucursal),
                     'id_MotivoAjuste' => $data['id_MotivoAjuste'] ?? null,
                     'direccion' => ($idTipoMovimiento === 3) ? ($data['direccion'] ?? null) : null,
-                    'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
+                    'id_TipoComprobante' => array_key_exists('id_TipoComprobante', $data) ? $data['id_TipoComprobante'] : $transaccion->id_TipoComprobante,
                     'nro_comprobante' => $nroComprobante,
                     'id_TipoPago' => $data['id_TipoPago'] ?? null,
                     'id_FormaPago' => $data['id_FormaPago'] ?? null,
@@ -697,7 +765,7 @@ class TransaccionesController extends Controller
                     'monto' => $montoNormalizado,
                     'monto_recibido' => $data['monto_recibido'] ?? null,
                     'vuelto' => $data['vuelto'] ?? null,
-                    'iva' => $data['iva'] ?? null,
+                    'iva' => $ivaNormalizado,
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
@@ -712,9 +780,9 @@ class TransaccionesController extends Controller
                     $transaccion->refresh();
                     $this->aplicarKardex($transaccion);
 
-                    // La Factura se emite al finalizar (queda imprimible/reimprimible).
-                    // El Ticket sigue saliendo solo por el POS.
-                    if ($esFacturaVenta) {
+                    // Toda venta finalizada guarda su snapshot: así el Ticket
+                    // también se puede reimprimir fielmente desde Ventas.
+                    if ($esVenta) {
                         $this->registrarComprobante($transaccion);
                     }
                 }
@@ -884,6 +952,14 @@ class TransaccionesController extends Controller
             return null;
         }
 
+        // La NC es un documento fiscal: necesita timbrado vigente igual que la
+        // factura que revierte.
+        $datosFiscales = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
+
+        if (! $datosFiscales || ! $datosFiscales->timbradoVigente()) {
+            throw new \RuntimeException('No se puede emitir la Nota de Crédito: la organización no tiene un timbrado vigente.');
+        }
+
         $numero = NumeracionComprobanteService::siguiente(
             (int) $transaccion->id_organizacion,
             (int) $transaccion->id_sucursal,
@@ -1035,9 +1111,12 @@ class TransaccionesController extends Controller
 
     /**
      * Corrige solo los datos de cabecera NO contables de una transacción
-     * (descripción, fecha, nro_comprobante, tipo de comprobante y persona).
+     * (descripción, fecha, número, tipo de comprobante y persona).
      * No modifica estado, movimiento, montos ni stock: permite arreglar un
      * error de tipeo (ej. número de factura) sin anular la operación.
+     *
+     * Si la venta ya tiene comprobante emitido, el snapshot se regenera para
+     * que la reimpresión muestre exactamente lo corregido.
      */
     public function corregirTransaccion(Request $request, $id)
     {
@@ -1056,19 +1135,83 @@ class TransaccionesController extends Controller
             'descripcion' => ['nullable', 'string'],
             'fecha' => ['required', 'date'],
             'nro_comprobante' => ['nullable', 'string', 'max:50'],
-            'id_TipoComprobante' => ['nullable', 'integer'],
-            'id_persona' => ['nullable', 'integer'],
+            'id_TipoComprobante' => ['nullable', 'integer', 'exists:tipo_comprobantes,id'],
+            'id_persona' => [
+                'nullable',
+                'integer',
+                function ($attribute, $value, $fail) use ($transaccion) {
+                    if ($value !== null && ! Persona::where('id', $value)
+                        ->where('id_organizacion', $transaccion->id_organizacion)->exists()) {
+                        $fail('La persona seleccionada no pertenece a la organización de la transacción.');
+                    }
+                },
+            ],
         ]);
+
+        $tieneComprobante = $transaccion->comprobante()->exists();
+        $nuevoTipoId = array_key_exists('id_TipoComprobante', $data)
+            ? $data['id_TipoComprobante']
+            : $transaccion->id_TipoComprobante;
+
+        // El tipo de comprobante define si el documento es fiscal, su número y
+        // su Nota de Crédito: en una venta ya emitida o finalizada no se cambia.
+        if ((int) $transaccion->id_TipoMovimiento === 2
+            && ($tieneComprobante || $transaccion->estaPosteada())
+            && (int) $nuevoTipoId !== (int) $transaccion->id_TipoComprobante) {
+            return response()->json([
+                'errors' => ['id_TipoComprobante' => ['El tipo de comprobante no se puede cambiar en una venta ya emitida. Anulá y volvé a emitir.']],
+            ], 422);
+        }
+
+        $nuevoTipo = $nuevoTipoId ? TipoComprobante::find($nuevoTipoId) : null;
+        $nombreTipo = $nuevoTipo ? mb_strtolower(trim((string) $nuevoTipo->nombre)) : '';
+
+        if ((int) $transaccion->id_TipoMovimiento === 2 && $nuevoTipo
+            && ! in_array($nombreTipo, ['factura', 'ticket'], true)) {
+            return response()->json([
+                'errors' => ['id_TipoComprobante' => ['En ventas solo se admite Factura o Ticket.']],
+            ], 422);
+        }
+
+        if ($nombreTipo === 'factura') {
+            $idPersonaFactura = array_key_exists('id_persona', $data)
+                ? $data['id_persona']
+                : $transaccion->id_persona;
+
+            if (empty($idPersonaFactura)) {
+                return response()->json([
+                    'errors' => ['id_persona' => ['Para emitir Factura debe seleccionar el cliente.']],
+                ], 422);
+            }
+
+            $documentoCliente = Persona::whereKey($idPersonaFactura)->value('documento');
+
+            if (! $documentoCliente || trim((string) $documentoCliente) === '') {
+                return response()->json([
+                    'errors' => ['id_persona' => ['El cliente de la Factura debe tener RUC o documento.']],
+                ], 422);
+            }
+
+            // El número de una Factura emitida está atado al secuencial autorizado.
+            if ($tieneComprobante && array_key_exists('nro_comprobante', $data)
+                && trim((string) $data['nro_comprobante']) !== trim((string) $transaccion->nro_comprobante)) {
+                return response()->json([
+                    'errors' => ['nro_comprobante' => ['El número de una Factura emitida no se puede modificar. Anulá con Nota de Crédito y emití una nueva.']],
+                ], 422);
+            }
+        }
 
         $transaccion->update([
             'descripcion' => $data['descripcion'] ?? null,
             'fecha' => $data['fecha'],
-            'nro_comprobante' => $data['nro_comprobante'] ?? null,
-            'id_TipoComprobante' => $data['id_TipoComprobante'] ?? null,
-            'id_persona' => $data['id_persona'] ?? null,
+            'nro_comprobante' => array_key_exists('nro_comprobante', $data) ? $data['nro_comprobante'] : $transaccion->nro_comprobante,
+            'id_TipoComprobante' => $nuevoTipoId,
+            'id_persona' => array_key_exists('id_persona', $data) ? $data['id_persona'] : $transaccion->id_persona,
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now(),
         ]);
+
+        $this->refrescarComprobante($transaccion);
 
         return response()->json([
             'message' => 'Transacción corregida correctamente.',

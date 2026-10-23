@@ -10,7 +10,7 @@ import FiltrosBar from "../components/FiltrosBar";
 import { useAuth } from "../hooks/useAuth";
 
 // Columnas base de la grilla (sin la de Organización, que solo ve el Administrador de Sistema).
-const COLUMNAS_BASE = 16;
+const COLUMNAS_BASE = 17;
 
 const FILTROS_PRODUCTOS = [
     {
@@ -196,6 +196,7 @@ export default function Productos() {
                                             <th>Tipo de medida</th>
                                             <th>Precio compra</th>
                                             <th>Precio venta</th>
+                                            <th>IVA</th>
                                             <th>Stock minimo</th>
                                             <th>Stock actual</th>
                                             <th>Estado</th>
@@ -232,6 +233,9 @@ export default function Productos() {
                                                     <td className="text-center">{producto.unidad_medida ? producto.unidad_medida.nombre : 'Sin unidad'}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_compra)}</td>
                                                     <td className="text-end">{formatearGuarani(producto.precio_venta)}</td>
+                                                    <td className="text-center">
+                                                        {producto.tipo_iva === 'exenta' ? 'Exenta' : `${producto.tipo_iva || '10'}%`}
+                                                    </td>
                                                     <td className="text-end">{formatearDecimalSinCeros(producto.stock_minimo)}</td>
                                                     <td className="text-end">{formatearDecimalSinCeros(producto.stock_actual)}</td>
                                                     <td className="text-center">{producto.tipo_estado ? producto.tipo_estado.descripcion : 'Sin estado'}</td>

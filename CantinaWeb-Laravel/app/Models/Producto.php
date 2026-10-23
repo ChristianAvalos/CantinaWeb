@@ -26,6 +26,7 @@ class Producto extends Model
         'id_TipoUnidadMedida',
         'precio_compra',
         'precio_venta',
+        'tipo_iva',
         'stock_minimo',
         'stock_actual',
         'id_TipoEstado',

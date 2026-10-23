@@ -22,9 +22,12 @@ class TransaccionesDetalleController extends Controller
     {
         $subtotal = TransaccionesDetalle::where('id_transaccion', $idTransaccion)->sum('subtotal');
         $subtotal = (float) $subtotal;
+        // La cabecera refleja el IVA contenido en sus líneas.
+        $iva = (float) TransaccionesDetalle::where('id_transaccion', $idTransaccion)->sum('monto_iva');
 
         Transacciones::where('id', $idTransaccion)->update([
             'monto' => $subtotal,
+            'iva' => round($iva, 2),
             'UrevUsuario' => Auth::user()->name,
             'UrevFechaHora' => now(),
         ]);
@@ -142,8 +145,12 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $request->precio_unitario;
         $subtotal = $cantidad * $precioUnitario;
 
-        // IVA contenido en el subtotal, según el tipo elegido para la línea.
-        $iva = \App\Services\IvaService::desglosar($subtotal, $data['tipo_iva'] ?? \App\Services\IvaService::TIPO_10);
+        // IVA contenido en el subtotal: el tipo elegido para la línea o, si no
+        // se envía, la condición fiscal configurada en el producto.
+        $iva = \App\Services\IvaService::desglosar(
+            $subtotal,
+            $data['tipo_iva'] ?? $producto->tipo_iva ?? \App\Services\IvaService::TIPO_10
+        );
 
         // El detalle se guarda SIN mover stock: el kardex se registra recién al
         // finalizar (postear) la transacción. Igual validamos temprano para avisar
@@ -235,6 +242,11 @@ class TransaccionesDetalleController extends Controller
         $precioUnitario = (float) $data['precio_unitario'];
         $subtotal = $cantidadNueva * $precioUnitario;
 
+        // El IVA se recalcula con la línea: si cambia la cantidad, el precio o
+        // el tipo, el monto guardado no puede quedar viejo.
+        $tipoIva = $data['tipo_iva'] ?? $detalle->tipo_iva ?? $producto->tipo_iva ?? \App\Services\IvaService::TIPO_10;
+        $iva = \App\Services\IvaService::desglosar($subtotal, $tipoIva);
+
         // El stock NO se mueve acá (se aplica al finalizar). Validación "suave"
         // para avisar temprano si una salida no tiene stock suficiente.
         if ($transaccion->direccionStock() === TipoMovimientos::DIRECCION_SALIDA) {
@@ -253,6 +265,8 @@ class TransaccionesDetalleController extends Controller
             'fecha_vencimiento' => isset($data['fecha_vencimiento']) ? $data['fecha_vencimiento'] : null,
             'precio_unitario' => $precioUnitario,
             'subtotal' => $subtotal,
+            'tipo_iva' => $iva['tipo_iva'],
+            'monto_iva' => $iva['monto_iva'],
             'UrevUsuario' => $usuario,
             'UrevFechaHora' => now(),
         ]);

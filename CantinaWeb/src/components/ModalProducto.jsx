@@ -17,6 +17,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
         id_TipoUnidadMedida: producto.id_TipoUnidadMedida || '',
         precio_compra: producto.precio_compra || '',
         precio_venta: producto.precio_venta || '',
+        tipo_iva: producto.tipo_iva || '10',
         stock_minimo: producto.stock_minimo || '',
         id_TipoEstado: producto.id_TipoEstado || '',
         UrevCalc: producto.UrevCalc || '',
@@ -88,6 +89,7 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                 id_TipoUnidadMedida: producto.id_TipoUnidadMedida || '',
                 precio_compra: producto.precio_compra || '',
                 precio_venta: producto.precio_venta || '',
+                tipo_iva: producto.tipo_iva || '10',
                 stock_minimo: producto.stock_minimo || '',
                 id_TipoEstado: producto.id_TipoEstado || '',
                 id_organizacion: producto.id_organizacion ? String(producto.id_organizacion) : '',
@@ -388,6 +390,21 @@ export default function ModalProducto({ onClose, modo, producto = {}, refrescarP
                                     }}
                                 />
                                 {errores.precio_venta && <p className="text-red-500 text-sm">{errores.precio_venta[0]}</p>}
+                            </div>
+
+                            {/* Condición de IVA del producto (precio con IVA incluido) */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+                                <select
+                                    className={`w-full px-3 py-2 border ${errores.tipo_iva ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    value={form.tipo_iva}
+                                    onChange={(e) => setForm({ ...form, tipo_iva: e.target.value })}
+                                >
+                                    <option value="10">10%</option>
+                                    <option value="5">5%</option>
+                                    <option value="exenta">Exenta</option>
+                                </select>
+                                {errores.tipo_iva && <p className="text-red-500 text-sm">{errores.tipo_iva[0]}</p>}
                             </div>
 
                             {/* Campo para stock minimo */}

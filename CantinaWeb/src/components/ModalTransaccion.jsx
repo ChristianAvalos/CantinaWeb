@@ -217,6 +217,10 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         if (!validarSucursal()) {
             return { success: false, message: 'Debe seleccionar una sucursal.' };
         }
+        if (esVenta && finalizar && !form.id_TipoComprobante) {
+            setErrores(prev => ({ ...prev, id_TipoComprobante: ['Seleccione Factura o Ticket para finalizar la venta.'] }));
+            return { success: false, message: 'Seleccione Factura o Ticket para finalizar la venta.' };
+        }
         try {
             const formData = new FormData();
             Object.entries(form).forEach(([key, value]) => {
@@ -920,8 +924,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Tipo de comprobante</label>
                                 <select
-                                    disabled={esSoloLectura || tipoTransaccion === 'compra'}
-                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura || tipoTransaccion === 'compra' ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    disabled={esSoloLectura || tipoTransaccion === 'compra' || (esCorreccion && Boolean(transaccion.comprobante))}
+                                    className={`w-full px-3 py-2 border ${errores.id_TipoComprobante ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${esSoloLectura || tipoTransaccion === 'compra' || (esCorreccion && Boolean(transaccion.comprobante)) ? 'bg-gray-100 text-gray-600' : ''}`}
                                     value={form.id_TipoComprobante}
                                     onChange={(e) => setForm({ ...form, id_TipoComprobante: e.target.value })}
                                 >

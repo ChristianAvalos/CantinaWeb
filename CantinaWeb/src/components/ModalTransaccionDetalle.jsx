@@ -78,6 +78,9 @@ export default function ModalTransaccion({ onClose, modo, transaccionDetalle = {
                         // - Venta: precio de venta (considera el precio personalizado de precio_ventas)
                         // - Compra/Ajuste: precio de compra
                         if (modo === 'crear') {
+                            // La línea hereda la condición de IVA del producto; el
+                            // usuario puede cambiarla antes de guardar.
+                            setTipoIva(data.producto.tipo_iva || '10');
                             if (tipoTransaccion === 'venta') {
                                 if (data.producto.precio_venta) {
                                     setPrecioUnitario(String(data.producto.precio_venta));

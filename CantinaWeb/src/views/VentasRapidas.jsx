@@ -128,7 +128,14 @@ export default function VentasRapidas() {
 
     // ─── Totales calculados (precios con IVA incluido) ──────────
     const total = cart.reduce((acc, item) => acc + item.subtotal, 0);
-    const iva = Math.round(total / 11);          // solo referencia: extraer IVA del total
+    // IVA contenido en cada línea, según la condición fiscal del producto.
+    const iva = Math.round(cart.reduce((acc, item) => {
+        const tipo = item.tipo_iva || '10';
+        if (tipo === 'exenta') return acc;
+        const alicuota = tipo === '5' ? 0.05 : 0.10;
+        const subtotal = Number(item.subtotal) || 0;
+        return acc + (subtotal - subtotal / (1 + alicuota));
+    }, 0));
     const isEfectivo = Number(selectedFormaPago) === 1;
     const pagoRecibidoNumero = isEfectivo ? (parseFloat(pagoRecibido) || 0) : total;
     const pagoInsuficiente = cart.length > 0 && pagoRecibidoNumero < total;
@@ -447,6 +454,7 @@ export default function VentasRapidas() {
                 codigo_barras: producto.codigo_barras || '',
                 nombre: producto.nombre,
                 precio_venta: precioVenta,
+                tipo_iva: producto.tipo_iva || '10',
                 cantidad: 1,
                 unidad_medida: producto.unidad_medida?.nombre || producto.unidad_medida || 'UN',
                 subtotal: precioVenta,
@@ -581,6 +589,10 @@ export default function VentasRapidas() {
                 toast.warning('Para Factura seleccioná el cliente (con RUC).');
                 return;
             }
+            if (!String(selectedCliente.documento || '').trim()) {
+                toast.warning('El cliente de la Factura debe tener RUC o documento.');
+                return;
+            }
         }
 
         setIsProcessing(true);
@@ -693,7 +705,7 @@ export default function VentasRapidas() {
 
     // ─── Seleccionar cliente ──────────────────────────────────────
     const selectCliente = (cliente) => {
-        setSelectedCliente({ id: cliente.id, nombre: cliente.nombre });
+        setSelectedCliente({ id: cliente.id, nombre: cliente.nombre, documento: cliente.documento || '' });
         setClienteSearch(cliente.nombre);
         setShowClienteDropdown(false);
     };
@@ -957,7 +969,7 @@ export default function VentasRapidas() {
                                         className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-slate-100 last:border-b-0 transition-colors"
                                     >
                                         <div className="font-medium text-slate-700">{c.nombre}</div>
-                                        {c.ruc && <div className="text-xs text-slate-400">RUC: {c.ruc}</div>}
+                                        {c.documento && <div className="text-xs text-slate-400">Doc.: {c.documento}</div>}
                                     </button>
                                 ))}
                             </div>

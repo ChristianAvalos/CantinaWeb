@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
+use App\Services\IvaService;
 
 class CreateProductoRequest extends FormRequest
 {
@@ -67,6 +68,7 @@ class CreateProductoRequest extends FormRequest
                 'id_TipoUnidadMedida' => ['required','integer'],
                 'precio_compra' => ['required','numeric'],
                 'precio_venta' => ['required','numeric'],
+                'tipo_iva' => ['nullable', Rule::in(IvaService::TIPOS)],
                 'stock_minimo' => ['required','integer'],
                 'id_TipoEstado' => ['required','nullable','integer'],
                 'imagen' => ['nullable','image','mimes:jpeg,png,jpg,gif,svg','max:2048'],
