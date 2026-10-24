@@ -74,7 +74,6 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/datos_facturacion', [DatosFacturacionController::class, 'index']);
     Route::post('/datos_facturacion', [DatosFacturacionController::class, 'store']);
     Route::put('/datos_facturacion/{id}', [DatosFacturacionController::class, 'update']);
-    Route::post('/datos_facturacion/{id}/activar', [DatosFacturacionController::class, 'activar']);
     Route::delete('/organizacion/{id}', [OrganizacionController::class, 'DeleteOrganizacion']);
     Route::post('/crear_organizacion',[OrganizacionController::class,'createOrganizacion']);
     Route::put('/update_organizacion/{id}',[OrganizacionController::class,'updateOrganizacion']);

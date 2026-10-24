@@ -24,6 +24,9 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('id_organizacion');
             $table->string('nombre', 150);
+            // Bloques EEE-PPP del número de factura: cada local tiene su punto autorizado.
+            $table->string('establecimiento', 3)->default('001');
+            $table->string('punto_expedicion', 3)->default('001');
             $table->string('direccion')->nullable();
             $table->unsignedBigInteger('ciudad_id')->nullable();
             $table->string('telefono')->nullable();
@@ -36,6 +39,13 @@ return new class extends Migration
             $table->foreign('id_organizacion')->references('id')->on('organizacion')->cascadeOnDelete();
             $table->foreign('ciudad_id')->references('id')->on('ciudad')->nullOnDelete();
             $table->foreign('id_tipo_estado')->references('id')->on('tipo_estados');
+
+            // Dos sucursales de la misma organización no pueden compartir punto,
+            // o emitirían los mismos números de factura.
+            $table->unique(
+                ['id_organizacion', 'establecimiento', 'punto_expedicion'],
+                'suc_punto_expedicion_unico'
+            );
         });
 
         Schema::table('users', function (Blueprint $table) {

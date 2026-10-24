@@ -226,7 +226,7 @@ class TransaccionesController extends Controller
 
         // Una Factura sin timbrado vigente no es un documento válido.
         if ($esFactura) {
-            $datosFiscales = DatosFacturacion::activoDe((int) $idOrganizacionDestino);
+            $datosFiscales = DatosFacturacion::vigenteDe((int) $idOrganizacionDestino);
 
             if (! $datosFiscales || ! $datosFiscales->timbradoVigente()) {
                 return response()->json([
@@ -509,7 +509,7 @@ class TransaccionesController extends Controller
 
         // El emisor se elige POR ORGANIZACIÓN (SaaS). Si está deshabilitado no se
         // emite, pero el documento igual queda guardado como snapshot.
-        $datosFiscales = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
+        $datosFiscales = DatosFacturacion::vigenteDe((int) $transaccion->id_organizacion);
         $emisor = \App\Services\Comprobante\EmisorComprobanteService::resolver($datosFiscales);
         $resultado = $emisor->habilitado()
             ? $emisor->emitir($documento, $transaccion)
@@ -659,7 +659,7 @@ class TransaccionesController extends Controller
             }
 
             if ($esFacturaVenta) {
-                $datosFiscales = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
+                $datosFiscales = DatosFacturacion::vigenteDe((int) $transaccion->id_organizacion);
                 if (! $datosFiscales || ! $datosFiscales->timbradoVigente()) {
                     return response()->json([
                         'errors' => ['id_TipoComprobante' => ['La organización no tiene un timbrado vigente: no se puede emitir Factura.']],
@@ -954,7 +954,7 @@ class TransaccionesController extends Controller
 
         // La NC es un documento fiscal: necesita timbrado vigente igual que la
         // factura que revierte.
-        $datosFiscales = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
+        $datosFiscales = DatosFacturacion::vigenteDe((int) $transaccion->id_organizacion);
 
         if (! $datosFiscales || ! $datosFiscales->timbradoVigente()) {
             throw new \RuntimeException('No se puede emitir la Nota de Crédito: la organización no tiene un timbrado vigente.');

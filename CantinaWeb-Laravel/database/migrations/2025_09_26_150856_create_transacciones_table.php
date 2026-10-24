@@ -27,6 +27,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_Caja')->nullable();
             $table->unsignedBigInteger('id_FormaPago')->nullable();
             $table->unsignedBigInteger('id_TipoComprobante')->nullable();
+            // Nota de Crédito que revierte una factura: no se borra la factura,
+            // se referencia para que el historial fiscal quede completo.
+            $table->unsignedBigInteger('id_transaccion_origen')->nullable();
             $table->unsignedBigInteger('id_Moneda')->nullable();
             $table->unsignedBigInteger('id_Banco')->nullable();
             $table->string('descripcion')->nullable();
@@ -48,6 +51,7 @@ return new class extends Migration
             $table->foreign('id_TipoComprobante')->references('id')->on('tipo_comprobantes');
             $table->foreign('id_Moneda')->references('id')->on('tipo_monedas');
             $table->foreign('id_Banco')->references('id')->on('bancos');
+            $table->foreign('id_transaccion_origen')->references('id')->on('transacciones')->nullOnDelete();
         });
 
 

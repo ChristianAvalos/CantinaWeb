@@ -9,14 +9,14 @@ import { useAuth } from '../hooks/useAuth';
 /**
  * Datos para facturación.
  *
- * Se versionan: cada organización tiene un registro activo (con el que se
- * emiten los comprobantes) y los anteriores quedan como histórico, para poder
- * explicar las facturas ya emitidas.
+ * Se versionan: se conservan todos los timbrados, para poder explicar las
+ * facturas ya emitidas. El que rige hoy es el que cubre la fecha actual; no se
+ * elige a mano.
  */
 export default function DatosFacturacion() {
     const token = localStorage.getItem('AUTH_TOKEN');
     const [registros, setRegistros] = useState([]);
-    const [activo, setActivo] = useState(null);
+    const [vigente, setVigente] = useState(null);
     const [cargando, setCargando] = useState(true);
 
     const [mostrarModal, setMostrarModal] = useState(false);
@@ -37,7 +37,7 @@ export default function DatosFacturacion() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setRegistros(Array.isArray(data?.data) ? data.data : []);
-            setActivo(data?.activo ?? null);
+            setVigente(data?.vigente ?? null);
         } catch (error) {
             console.error('Error al cargar los datos de facturación:', error);
             toast.error(error.response?.data?.message || 'No se pudieron cargar los datos de facturación.');
@@ -74,18 +74,6 @@ export default function DatosFacturacion() {
         setMostrarModal(true);
     };
 
-    const activar = async (registro) => {
-        try {
-            await clienteAxios.post(`api/datos_facturacion/${registro.id}/activar`, {}, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            toast.success('Datos de facturación activados.');
-            fetchDatos();
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'No se pudo activar.');
-        }
-    };
-
     const vigencia = (registro) => {
         if (!registro.TimbradoInicio && !registro.TimbradoVencimiento) {
             return 'Sin vigencia declarada';
@@ -94,6 +82,10 @@ export default function DatosFacturacion() {
         const hasta = registro.TimbradoVencimiento || '—';
         return `${desde} al ${hasta}`;
     };
+
+    // 'vigente' | 'vencido' | 'proximo'. Lo resuelve el backend para no duplicar
+    // la regla de fechas en el cliente.
+    const estadoVigencia = (registro) => registro.estado_vigencia || (registro.timbrado_vigente ? 'vigente' : 'vencido');
 
     return (
         <div>
@@ -135,17 +127,17 @@ export default function DatosFacturacion() {
                             </div>
                         </div>
 
-                        {!cargando && !activo && (
+                        {!cargando && registros.length === 0 && (
                             <div className="mx-4 mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 md:mx-6">
                                 <i className="fas fa-triangle-exclamation mr-2" aria-hidden="true" />
-                                No hay datos de facturación activos. Sin timbrado vigente no se puede emitir Factura.
+                                No hay datos de facturación cargados. Sin timbrado vigente no se puede emitir Factura.
                             </div>
                         )}
 
-                        {!cargando && activo && !activo.timbrado_vigente && (
+                        {!cargando && registros.length > 0 && !vigente && (
                             <div className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mx-6">
                                 <i className="fas fa-circle-exclamation mr-2" aria-hidden="true" />
-                                El timbrado activo no está vigente. Cargá uno nuevo para poder facturar.
+                                Ningún timbrado cubre la fecha de hoy. Cargá uno vigente para poder facturar.
                             </div>
                         )}
 
@@ -175,10 +167,20 @@ export default function DatosFacturacion() {
                                         registros.map((registro) => (
                                             <tr key={registro.id}>
                                                 <td className="text-center">
-                                                    {registro.activo ? (
-                                                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-200">Activo</span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200">Histórico</span>
+                                                    {estadoVigencia(registro) === 'vigente' && (
+                                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-200">
+                                                            <i className="fas fa-circle-check" aria-hidden="true" /> Vigente
+                                                        </span>
+                                                    )}
+                                                    {estadoVigencia(registro) === 'vencido' && (
+                                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+                                                            <i className="fas fa-circle-xmark" aria-hidden="true" /> Vencido
+                                                        </span>
+                                                    )}
+                                                    {estadoVigencia(registro) === 'proximo' && (
+                                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                                                            <i className="fas fa-clock" aria-hidden="true" /> Próximo
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="text-center tabular-nums">
@@ -196,12 +198,7 @@ export default function DatosFacturacion() {
                                                     )}
                                                 </td>
                                                 <td className="text-center tabular-nums">{registro.Timbrado}</td>
-                                                <td className="text-center">
-                                                    <div className="text-sm">{vigencia(registro)}</div>
-                                                    {!registro.timbrado_vigente && (
-                                                        <span className="text-xs font-semibold text-red-600">Vencido</span>
-                                                    )}
-                                                </td>
+                                                <td className="text-center text-sm">{vigencia(registro)}</td>
                                                 <td className="text-center capitalize">{registro.Ambiente}</td>
                                                 <td className="text-center">
                                                     {registro.Emisor === 'sifen' ? 'Electrónico' : 'Impreso'}
@@ -233,16 +230,6 @@ export default function DatosFacturacion() {
                                                         >
                                                             <i className="fas fa-pen-to-square text-blue-600" role="img" aria-label="Editar" title="Editar" />
                                                         </button>
-                                                        {!registro.activo && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => activar(registro)}
-                                                                title="Activar"
-                                                                className="rounded p-1 hover:bg-green-100 focus:outline-none"
-                                                            >
-                                                                <i className="fas fa-circle-check text-green-600" role="img" aria-label="Activar" title="Activar" />
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

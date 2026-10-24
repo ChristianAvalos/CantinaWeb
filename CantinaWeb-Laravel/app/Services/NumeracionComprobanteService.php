@@ -24,14 +24,14 @@ class NumeracionComprobanteService
     /**
      * Reserva el próximo número y devuelve el comprobante ya formateado.
      *
-     * @throws \RuntimeException si falta el dato de facturación o la sucursal.
+     * @throws \RuntimeException si no hay timbrado vigente o falta la sucursal.
      */
     public static function siguiente(int $idOrganizacion, int $idSucursal, int $idTipoComprobante): string
     {
-        $datos = DatosFacturacion::activoDe($idOrganizacion);
+        $datos = DatosFacturacion::vigenteDe($idOrganizacion);
 
         if (! $datos) {
-            throw new \RuntimeException('La organización no tiene datos de facturación cargados.');
+            throw new \RuntimeException('La organización no tiene un timbrado vigente a la fecha.');
         }
 
         $sucursal = Sucursal::find($idSucursal);

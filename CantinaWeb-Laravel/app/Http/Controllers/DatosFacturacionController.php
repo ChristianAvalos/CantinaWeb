@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ComprobanteSecuencia;
 use App\Models\DatosFacturacion;
+use App\Services\VigenciaTimbradoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -11,9 +13,9 @@ use App\Http\Controllers\Concerns\PerteneceAOrganizacion;
 /**
  * Datos para facturación.
  *
- * Versionado: cada organización tiene un registro activo y los anteriores se
- * conservan como histórico, porque las facturas ya emitidas deben poder
- * explicarse con los datos (timbrado, RUC) con los que se emitieron.
+ * Versionado: se conservan todos los timbrados, porque las facturas ya emitidas
+ * deben poder explicarse con los datos con los que se emitieron. El que rige es
+ * el que cubre la fecha de hoy; no hay que marcarlo a mano.
  */
 class DatosFacturacionController extends Controller
 {
@@ -27,19 +29,20 @@ class DatosFacturacionController extends Controller
             : $this->organizacionDelUsuario();
 
         if (! $idOrganizacion) {
-            return response()->json(['data' => [], 'activo' => null]);
+            return response()->json(['data' => [], 'vigente' => null]);
         }
 
         $registros = DatosFacturacion::with('organizacion', 'secuencias.sucursal', 'secuencias.tipoComprobante')
             ->where('id_organizacion', $idOrganizacion)
-            ->orderByDesc('activo')
+            ->orderByDesc('TimbradoInicio')
             ->orderByDesc('id')
             ->get()
             ->map(fn (DatosFacturacion $d) => $this->presentar($d));
 
         return response()->json([
             'data' => $registros,
-            'activo' => $registros->firstWhere('activo', true),
+            // El que rige hoy sale de las fechas, no de un flag.
+            'vigente' => $registros->firstWhere('estado_vigencia', 'vigente'),
             // Disponibilidad de la integración electrónica en esta instalación.
             'emisor_disponible' => (bool) config('facturacion.sifen.habilitado'),
         ]);
@@ -50,17 +53,15 @@ class DatosFacturacionController extends Controller
         $idOrganizacion = $this->organizacionDestino($request);
         $data = $this->validar($request);
 
+        if ($conflictos = VigenciaTimbradoService::conflictos($idOrganizacion, $data)) {
+            return $this->respuestaConflicto($conflictos);
+        }
+
         $registro = DatosFacturacion::create($data + [
             'id_organizacion' => $idOrganizacion,
-            'activo' => false,
             'UrevUsuario' => Auth::user()?->name,
             'UrevFechaHora' => now(),
         ]);
-
-        // El primero de la organización queda activo automáticamente.
-        if (! DatosFacturacion::where('id_organizacion', $idOrganizacion)->where('activo', true)->exists()) {
-            $registro->activar();
-        }
 
         return response()->json([
             'message' => 'Datos de facturación creados correctamente.',
@@ -77,6 +78,20 @@ class DatosFacturacionController extends Controller
         }
 
         $data = $this->validar($request);
+
+        if ($conflictos = VigenciaTimbradoService::conflictos((int) $registro->id_organizacion, $data, $registro->id)) {
+            return $this->respuestaConflicto($conflictos);
+        }
+
+        // Cambiar el número de timbrado de una serie ya usada seguiría numerando
+        // desde el último comprobante emitido. El timbrado nuevo va aparte.
+        if ((string) $registro->Timbrado !== (string) $data['Timbrado']
+            && ComprobanteSecuencia::where('id_datos_facturacion', $registro->id)->where('ultimo_numero', '>', 0)->exists()) {
+            return $this->respuestaConflicto([
+                'Timbrado' => "Este registro ya emitió comprobantes con el timbrado {$registro->Timbrado}. Cargá el timbrado {$data['Timbrado']} como un registro nuevo para que el correlativo arranque de cero.",
+            ]);
+        }
+
         $registro->update($data + [
             'UrevUsuario' => 'Actualizado - ' . Auth::user()?->name,
             'UrevFechaHora' => now(),
@@ -88,21 +103,29 @@ class DatosFacturacionController extends Controller
         ]);
     }
 
-    /** Deja este registro como el activo (los demás pasan a histórico). */
-    public function activar($id)
+    /** 'vigente' | 'vencido' | 'proximo' según la fecha de hoy. */
+    private function estadoVigencia(DatosFacturacion $registro): string
     {
-        $registro = DatosFacturacion::findOrFail($id);
+        $hoy = now()->startOfDay();
 
-        if (! $this->enAlcance($registro)) {
-            return response()->json(['message' => 'Los datos no pertenecen a tu organización.'], 403);
+        if ($registro->TimbradoInicio && $hoy->lt($registro->TimbradoInicio->copy()->startOfDay())) {
+            return 'proximo';
         }
 
-        $registro->activar();
+        if ($registro->TimbradoVencimiento && $hoy->gt($registro->TimbradoVencimiento->copy()->endOfDay())) {
+            return 'vencido';
+        }
 
+        return 'vigente';
+    }
+
+    /** 422 con el mismo formato que devuelve `$request->validate()`. */
+    private function respuestaConflicto(array $conflictos)
+    {
         return response()->json([
-            'message' => 'Datos de facturación activados.',
-            'data' => $this->presentar($registro->fresh()),
-        ]);
+            'message' => reset($conflictos),
+            'errors' => array_map(fn ($mensaje) => [$mensaje], $conflictos),
+        ], 422);
     }
 
     /** Organización destino: el admin de sistema puede indicarla; el resto usa la suya. */
@@ -125,8 +148,10 @@ class DatosFacturacionController extends Controller
             'ActividadEconomica' => ['nullable', 'string', 'max:255'],
             'ActividadEconomicaCodigo' => ['nullable', 'string', 'max:20'],
             'Timbrado' => ['required', 'string', 'max:20'],
-            'TimbradoInicio' => ['nullable', 'date'],
-            'TimbradoVencimiento' => ['nullable', 'date', 'after_or_equal:TimbradoInicio'],
+            // El timbrado siempre tiene vigencia autorizada por la SET: sin fechas
+            // valdría para siempre y se solaparía con el resto del historial.
+            'TimbradoInicio' => ['required', 'date'],
+            'TimbradoVencimiento' => ['required', 'date', 'after_or_equal:TimbradoInicio'],
             'Ambiente' => ['nullable', Rule::in([DatosFacturacion::AMBIENTE_TEST, DatosFacturacion::AMBIENTE_PRODUCCION])],
             'Emisor' => [
                 'nullable',
@@ -141,6 +166,8 @@ class DatosFacturacionController extends Controller
             ],
         ], [
             'Timbrado.required' => 'El número de timbrado es obligatorio.',
+            'TimbradoInicio.required' => 'La fecha de inicio de la vigencia es obligatoria.',
+            'TimbradoVencimiento.required' => 'La fecha de vencimiento es obligatoria.',
             'TimbradoVencimiento.after_or_equal' => 'El vencimiento no puede ser anterior al inicio del timbrado.',
         ]);
 
@@ -176,7 +203,6 @@ class DatosFacturacionController extends Controller
                     'Email' => ! $registro->Email,
                 ],
             ],
-            'activo' => (bool) $registro->activo,
             'RUC' => $registro->RUC,
             'RazonSocial' => $registro->RazonSocial,
             'DireccionFiscal' => $registro->DireccionFiscal,
@@ -188,6 +214,9 @@ class DatosFacturacionController extends Controller
             'TimbradoInicio' => $registro->TimbradoInicio?->format('Y-m-d'),
             'TimbradoVencimiento' => $registro->TimbradoVencimiento?->format('Y-m-d'),
             'timbrado_vigente' => $registro->timbradoVigente(),
+            // Distingue vencido de "todavía no empieza": la pantalla no debe
+            // decir "Vencido" en un timbrado que aún no rige.
+            'estado_vigencia' => $this->estadoVigencia($registro),
             'Ambiente' => $registro->Ambiente,
             'Emisor' => $registro->Emisor ?: DatosFacturacion::EMISOR_IMPRESO,
             'emisor_disponible' => (bool) config('facturacion.sifen.habilitado'),

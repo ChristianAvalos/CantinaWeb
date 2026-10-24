@@ -187,13 +187,13 @@ export default function ModalDatosFacturacion({ registro, idOrganizacion = '', o
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Vigencia desde</label>
-                        <input type="date" value={form.TimbradoInicio} onChange={(e) => handleChange('TimbradoInicio', e.target.value)} className={inputClass('TimbradoInicio')} />
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Vigencia desde <span className="text-red-500">*</span></label>
+                        <input type="date" required value={form.TimbradoInicio} onChange={(e) => handleChange('TimbradoInicio', e.target.value)} className={inputClass('TimbradoInicio')} />
                         {errorDe('TimbradoInicio')}
                     </div>
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Vigencia hasta</label>
-                        <input type="date" value={form.TimbradoVencimiento} onChange={(e) => handleChange('TimbradoVencimiento', e.target.value)} className={inputClass('TimbradoVencimiento')} />
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Vigencia hasta <span className="text-red-500">*</span></label>
+                        <input type="date" required value={form.TimbradoVencimiento} onChange={(e) => handleChange('TimbradoVencimiento', e.target.value)} className={inputClass('TimbradoVencimiento')} />
                         {errorDe('TimbradoVencimiento')}
                     </div>
 

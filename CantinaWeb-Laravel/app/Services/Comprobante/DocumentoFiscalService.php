@@ -36,7 +36,7 @@ class DocumentoFiscalService
 
         // Datos fiscales con los que se emitió. Si el documento ya tiene
         // snapshot, este servicio no se usa (se reimprime el guardado).
-        $datosFiscales = DatosFacturacion::activoDe((int) $transaccion->id_organizacion);
+        $datosFiscales = DatosFacturacion::vigenteDe((int) $transaccion->id_organizacion);
 
         $detalles = $transaccion->transacionDetalles()->with('producto')->get();
 

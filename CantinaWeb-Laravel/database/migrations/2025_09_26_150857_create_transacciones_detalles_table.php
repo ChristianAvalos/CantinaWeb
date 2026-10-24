@@ -20,6 +20,10 @@ return new class extends Migration
             $table->date('fecha_vencimiento')->nullable();
             $table->decimal('precio_unitario',19,4);
             $table->decimal('subtotal',19,4);
+            // IVA queda grabado en la línea: el precio cambia por organización y
+            // sucursal, y la factura debe poder reproducirse igual más adelante.
+            $table->string('tipo_iva', 10)->default('10');
+            $table->decimal('monto_iva', 19, 4)->default(0);
             $table->string('UrevUsuario')->nullable();
             $table->dateTime('UrevFechaHora')->nullable();
             $table->timestamps();

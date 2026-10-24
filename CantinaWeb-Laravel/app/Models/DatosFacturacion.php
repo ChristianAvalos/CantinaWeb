@@ -26,7 +26,6 @@ class DatosFacturacion extends Model
 
     protected $fillable = [
         'id_organizacion',
-        'activo',
         'RUC',
         'RazonSocial',
         'DireccionFiscal',
@@ -44,7 +43,6 @@ class DatosFacturacion extends Model
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
         'TimbradoInicio' => 'date',
         'TimbradoVencimiento' => 'date',
         'UrevFechaHora' => 'datetime',
@@ -60,16 +58,23 @@ class DatosFacturacion extends Model
         return $this->hasMany(ComprobanteSecuencia::class, 'id_datos_facturacion');
     }
 
-    /** El registro fiscal vigente de una organización. */
-    public static function activoDe(?int $idOrganizacion): ?self
+    /**
+     * El registro fiscal que cubre la fecha indicada (hoy por defecto).
+     *
+     * La vigencia no se solapa (constraint `df_vigencia_sin_solape`), así que hay
+     * a lo sumo uno por organización: no hace falta marcar ninguno como activo.
+     */
+    public static function vigenteDe(?int $idOrganizacion, ?Carbon $fecha = null): ?self
     {
         if (! $idOrganizacion) {
             return null;
         }
 
+        $fecha = ($fecha ?? Carbon::now())->toDateString();
+
         return static::where('id_organizacion', $idOrganizacion)
-            ->where('activo', true)
-            ->latest('id')
+            ->whereDate('TimbradoInicio', '<=', $fecha)
+            ->whereDate('TimbradoVencimiento', '>=', $fecha)
             ->first();
     }
 
@@ -91,16 +96,5 @@ class DatosFacturacion extends Model
         }
 
         return true;
-    }
-
-    /** Deja este registro como el único activo de su organización. */
-    public function activar(): void
-    {
-        static::where('id_organizacion', $this->id_organizacion)
-            ->where('id', '!=', $this->id)
-            ->update(['activo' => false]);
-
-        $this->activo = true;
-        $this->save();
     }
 }
