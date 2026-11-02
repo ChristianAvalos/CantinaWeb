@@ -5,6 +5,7 @@ import { formatearGuarani,formatearMiles, formatearDecimalSinCeros } from '../he
 import { useAuth } from '../hooks/useAuth';
 import AlertaModal from '../components/AlertaModal';
 import ModalComprobante from '../components/ModalComprobante';
+import ModalPersona from '../components/ModalPersona';
 
 // ─── Debounce helper ────────────────────────────────────────────────
 function useDebounce(value, delay = 300) {
@@ -106,6 +107,12 @@ export default function VentasRapidas() {
     const [selectedCliente, setSelectedCliente] = useState({ id: '', nombre: 'Consumidor Final' });
     const [showClienteDropdown, setShowClienteDropdown] = useState(false);
     const clienteContainerRef = useRef(null);
+
+    // ─── Alta rápida de cliente desde el POS ──────────────────────
+    // El vendedor no tiene el módulo Personas: si el cliente no existe, se crea
+    // aquí y queda seleccionado para la venta (Factura).
+    const [mostrarModalPersona, setMostrarModalPersona] = useState(false);
+    const [personaInicialPOS, setPersonaInicialPOS] = useState({});
 
     // ─── Estados de alerta ────────────────────────────────────────
     const [mostrarAlerta, setMostrarAlerta] = useState(false);
@@ -710,6 +717,32 @@ export default function VentasRapidas() {
         setShowClienteDropdown(false);
     };
 
+    // ─── Alta rápida de cliente ───────────────────────────────────
+    const abrirModalPersona = (datosIniciales = {}) => {
+        setShowClienteDropdown(false);
+        setPersonaInicialPOS(datosIniciales);
+        setMostrarModalPersona(true);
+    };
+
+    // Si lo buscado es solo un número (C.I./RUC) se precarga como documento;
+    // si no, como nombre.
+    const abrirModalPersonaDesdeBusqueda = () => {
+        const term = clienteSearch.trim();
+        const esDocumento = /^[\d.\-\s]+$/.test(term);
+        abrirModalPersona(term ? (esDocumento ? { documento: term } : { nombre: term }) : {});
+    };
+
+    const cerrarModalPersona = () => {
+        setMostrarModalPersona(false);
+        setPersonaInicialPOS({});
+    };
+
+    // Al crear la persona se selecciona de inmediato como cliente de la venta.
+    const handlePersonaCreada = (persona) => {
+        if (!persona?.id) return;
+        selectCliente(persona);
+    };
+
     // ─── Render ────────────────────────────────────────────────────
     return (
         <div
@@ -931,9 +964,21 @@ export default function VentasRapidas() {
             <div data-panel="derecho" className="w-full lg:w-[30%] lg:min-w-[340px] lg:max-w-[460px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto max-h-[42%] lg:max-h-none">
                 {/* ── Cliente ── */}
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4" ref={clienteContainerRef}>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                        <span className="flex items-center gap-1.5"><IconUser /> Cliente</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <span className="flex items-center gap-1.5"><IconUser /> Cliente</span>
+                        </label>
+                        <button
+                            type="button"
+                            onClick={abrirModalPersonaDesdeBusqueda}
+                            disabled={isProcessing}
+                            title="Crear un cliente nuevo y seleccionarlo"
+                            className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <i className="fas fa-user-plus text-[0.7rem]" aria-hidden="true" />
+                            Agregar cliente
+                        </button>
+                    </div>
                     <div className="relative">
                         <input
                             type="text"
@@ -959,7 +1004,7 @@ export default function VentasRapidas() {
                                 ×
                             </button>
                         )}
-                        {showClienteDropdown && clientes.length > 0 && (
+                        {showClienteDropdown && (
                             <div className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-44 overflow-y-auto">
                                 {clientes.slice(0, 10).map(c => (
                                     <button
@@ -972,6 +1017,21 @@ export default function VentasRapidas() {
                                         {c.documento && <div className="text-xs text-slate-400">Doc.: {c.documento}</div>}
                                     </button>
                                 ))}
+                                {clientes.length === 0 && (
+                                    <div className="px-3 py-2 text-xs text-slate-500">
+                                        {clienteSearch.trim()
+                                            ? 'No se encontró ese cliente.'
+                                            : 'No hay clientes cargados.'}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={abrirModalPersonaDesdeBusqueda}
+                                    className="w-full text-left px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border-t border-slate-100 transition-colors"
+                                >
+                                    <i className="fas fa-user-plus mr-2 text-[0.7rem]" aria-hidden="true" />
+                                    Crear cliente{clienteSearch.trim() ? ` «${clienteSearch.trim()}»` : ' nuevo'}
+                                </button>
                             </div>
                         )}
                     </div>
@@ -1097,6 +1157,19 @@ export default function VentasRapidas() {
                     datos={comprobanteDatos}
                     modo="cobro"
                     onClose={cerrarComprobante}
+                />
+            )}
+
+            {/* ═══════════════ ALTA RÁPIDA DE CLIENTE ═══════════════ */}
+            {mostrarModalPersona && (
+                <ModalPersona
+                    modo="crear"
+                    persona={personaInicialPOS}
+                    tipoPersonaPredeterminada="Cliente"
+                    idOrganizacionPredeterminada={organizacionSeleccionada}
+                    refrescarPersonas={buscarClientes}
+                    onCreada={handlePersonaCreada}
+                    onClose={cerrarModalPersona}
                 />
             )}
 

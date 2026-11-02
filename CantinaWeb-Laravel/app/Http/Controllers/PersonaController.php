@@ -100,9 +100,16 @@ class PersonaController extends Controller
     {
         $data = $request->validated();
         // La organización la elige el Administrador de Sistema; el resto, la suya.
-        $data['id_organizacion'] = $this->esAdminSistema()
+        $idOrganizacion = $this->esAdminSistema()
             ? ($data['id_organizacion'] ?? $this->organizacionDelUsuario())
             : $this->organizacionDelUsuario();
+
+        // Sin organización la persona quedaría huérfana e invisible para todos.
+        if (! $idOrganizacion) {
+            return response()->json(['message' => 'Tu usuario no tiene una organización asignada.'], 403);
+        }
+
+        $data['id_organizacion'] = $idOrganizacion;
         //Asigno el urev de usuario
         $data['UrevUsuario'] = 'Creado - ' . Auth::user()->name;
         $data['UrevFechaHora'] = Carbon::now();

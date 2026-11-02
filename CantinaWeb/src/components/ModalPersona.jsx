@@ -4,7 +4,20 @@ import { toast } from "react-toastify";
 import { formatearPorFormato, calcularDigitoVerificadorRuc, esFormatoRuc } from '../helpers/HelpersNumeros';
 import { useAuth } from "../hooks/useAuth";
 
-export default function ModalPersona({ onClose, modo, persona = {}, refrescarPersonas }) {
+export default function ModalPersona({
+    onClose,
+    modo,
+    persona = {},
+    refrescarPersonas,
+    // Se usa desde el POS: la persona creada se devuelve al llamador para
+    // seleccionarla como cliente de la venta en curso.
+    onCreada,
+    // Organización donde debe crearse la persona (p. ej. la sucursal de venta
+    // elegida por el Administrador de Sistema). Sin esto se usa la del usuario.
+    idOrganizacionPredeterminada,
+    // Fija y bloquea el tipo de persona (el POS siempre crea "Cliente").
+    tipoPersonaPredeterminada,
+}) {
     const [form, setForm] = useState({
         nombre: persona.nombre || '',
         documento: persona.documento || '',
@@ -26,6 +39,7 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     const [errores, setErrores] = useState({});
     const [organizaciones, setOrganizaciones] = useState([]);
     const id_tipo_personaRef = useRef(null);
+    const nombreRef = useRef(null);
     // Los datos por defecto y la carga de la persona se aplican UNA sola vez por
     // apertura: el usuario (SWR) y la persona (listado) pueden llegar con otra
     // referencia y no deben pisar lo que el usuario ya eligió o escribió.
@@ -33,6 +47,10 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     const formularioSincronizadoRef = useRef(false);
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
+    // En el POS el tipo de persona viene fijado (Cliente). Solo el
+    // Administrador de Sistema puede cambiarlo; para el resto ni se muestra.
+    const tipoPersonaFijado = modo === 'crear' && Boolean(tipoPersonaPredeterminada);
+    const mostrarTipoPersona = !tipoPersonaFijado || esAdminSistema;
 
     // Solo el Administrador de Sistema elige organización al crear.
     useEffect(() => {
@@ -46,12 +64,14 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
     }, [esAdminSistema]);
 
     useEffect(() => {
-        if (modo === 'crear' && esAdminSistema && user?.id_organizacion
-            && !organizacionPredeterminadaRef.current) {
+        if (modo === 'crear' && esAdminSistema && !organizacionPredeterminadaRef.current) {
+            const idOrganizacion = idOrganizacionPredeterminada || user?.id_organizacion;
+            if (!idOrganizacion) return;
+
             organizacionPredeterminadaRef.current = true;
-            setForm((prev) => ({ ...prev, id_organizacion: String(user.id_organizacion) }));
+            setForm((prev) => ({ ...prev, id_organizacion: String(idOrganizacion) }));
         }
-    }, [modo, esAdminSistema, user]);
+    }, [modo, esAdminSistema, user, idOrganizacionPredeterminada]);
 
     // Si el tipo de persona es Proveedor, el documento siempre es un RUC
     const tipoPersonaSeleccionada = tipoPersona.find(
@@ -71,6 +91,10 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
     const idTipoDocumentoPorNombre = (nombre) => tiposDocumento.find(
         (tipo) => (tipo.nombre || '').trim().toLowerCase() === nombre.trim().toLowerCase()
+    )?.id;
+
+    const idTipoPersonaPorNombre = (nombre) => tipoPersona.find(
+        (tipo) => (tipo.nombre || '').trim().toLowerCase() === (nombre || '').trim().toLowerCase()
     )?.id;
 
     // El RUC se compone de la base (lo que se escribe) + el dígito verificador calculado
@@ -110,12 +134,12 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
     const token = localStorage.getItem('AUTH_TOKEN');
 
-    // Enfocar el campo de nombre cuando el modal se abra
+    // Enfocar el primer campo visible: el tipo de persona (o el nombre si el
+    // combo está oculto, como en el POS).
     useEffect(() => {
-        if (id_tipo_personaRef.current) {
-            id_tipo_personaRef.current.focus();
-        }
-    }, []);
+        const campo = mostrarTipoPersona ? id_tipo_personaRef.current : nombreRef.current;
+        campo?.focus();
+    }, [mostrarTipoPersona]);
 
     // Actualizar el estado del formulario cuando cambie la persona
     useEffect(() => {
@@ -160,6 +184,18 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
         if (idSugerido) setForm((prev) => ({ ...prev, id_tipo_documento: idSugerido }));
     }, [tiposDocumento, esProveedor, persona]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Cuando el llamador fija el tipo de persona (POS => Cliente) se aplica una
+    // sola vez, en cuanto llega el catálogo. El Administrador de Sistema puede
+    // cambiarlo después.
+    useEffect(() => {
+        if (!tipoPersonaFijado || form.id_tipo_persona || tipoPersona.length === 0) return;
+
+        const idTipoPersona = idTipoPersonaPorNombre(tipoPersonaPredeterminada);
+        if (idTipoPersona) {
+            setForm((prev) => (prev.id_tipo_persona ? prev : { ...prev, id_tipo_persona: idTipoPersona }));
+        }
+    }, [tipoPersonaFijado, tipoPersonaPredeterminada, tipoPersona, form.id_tipo_persona]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Función para manejar la creación o edición de la persona
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevenir el comportamiento por defecto del formulario
@@ -167,7 +203,15 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
         try {
             const formData = new FormData();
+            // Si el combo no se muestra (POS para no-sistema), el tipo es el fijado.
+            const idTipoPersonaEfectivo = form.id_tipo_persona
+                || (!mostrarTipoPersona ? idTipoPersonaPorNombre(tipoPersonaPredeterminada) : '');
             Object.entries(form).forEach(([key, value]) => {
+                // El tipo de persona enviado puede venir fijado por el llamador
+                if (key === 'id_tipo_persona') {
+                    formData.append(key, idTipoPersonaEfectivo ?? '');
+                    return;
+                }
                 // El tipo de documento enviado es el que muestra el combo (catálogo de la BD)
                 if (key === 'id_tipo_documento') {
                     formData.append(key, idTipoDocumento);
@@ -187,12 +231,16 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
 
                 // Crear una nueva persona
 
-                await clienteAxios.post('api/crear_persona', formData, {
+                const { data: respuesta } = await clienteAxios.post('api/crear_persona', formData, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
+                const personaCreada = respuesta?.data ?? null;
                 toast.success('Persona creada exitosamente.');
+                if (typeof onCreada === 'function') {
+                    onCreada(personaCreada);
+                }
             } else {
                 // Editar persona existente
                 await clienteAxios.post(`api/update_persona/${persona.id}`, formData, {
@@ -281,29 +329,33 @@ export default function ModalPersona({ onClose, modo, persona = {}, refrescarPer
                                 {errores.id_organizacion && <p className="text-red-500 text-sm">{errores.id_organizacion[0]}</p>}
                             </div>
                         )}
-                        {/* Tipo de persona */}
-                        <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Tipo de persona</label>
-                            <select
-                                className={`w-full px-3 py-2 border ${errores.id_tipo_persona ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                value={form.id_tipo_persona}
-                                ref={id_tipo_personaRef}
-                                onChange={handleTipoPersonaChange}
-                            >
-                                <option value="">Seleccione el tipo de persona</option>
-                                {tipoPersona.map((tipoPersona) => (
-                                    <option key={tipoPersona.id} value={tipoPersona.id}>
-                                        {tipoPersona.nombre}
-                                    </option>
-                                ))}
-                            </select>
-                            {errores.id_tipo_persona && <p className="text-red-500 text-sm">{errores.id_tipo_persona[0]}</p>}
-                        </div>
+                        {/* Tipo de persona (en el POS queda fijado a Cliente;
+                            solo el Administrador de Sistema lo ve) */}
+                        {mostrarTipoPersona && (
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Tipo de persona</label>
+                                <select
+                                    className={`w-full px-3 py-2 border ${errores.id_tipo_persona ? 'border-red-500' : 'border-gray-300'} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    value={form.id_tipo_persona}
+                                    ref={id_tipo_personaRef}
+                                    onChange={handleTipoPersonaChange}
+                                >
+                                    <option value="">Seleccione el tipo de persona</option>
+                                    {tipoPersona.map((tipoPersona) => (
+                                        <option key={tipoPersona.id} value={tipoPersona.id}>
+                                            {tipoPersona.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errores.id_tipo_persona && <p className="text-red-500 text-sm">{errores.id_tipo_persona[0]}</p>}
+                            </div>
+                        )}
                         {/* Campo para Nombre */}
                         <div className="mb-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                             <input
                                 type="text"
+                                ref={nombreRef}
                                 className={`w-full px-3 py-2 border ${errores.nombre ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                 placeholder="Introduce el nombre"
                                 value={form.nombre}
