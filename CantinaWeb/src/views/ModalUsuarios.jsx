@@ -239,11 +239,18 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
                                     onChange={(e) => setRolSeleccionado(e.target.value)}
                                 >
                                     <option value="">Seleccione un rol</option>
-                                    {roles.map((rol) => (
-                                        <option key={rol.id} value={rol.id}>
-                                            {rol.name}
-                                        </option>
-                                    ))}
+                                    {roles
+                                        // Las cuentas del portal se crean desde Personas > Alumno > Tutores.
+                                        // Solo se muestra Familia si el usuario ya tiene ese rol.
+                                        .filter((rol) => (
+                                            (rol.name || '').trim().toLowerCase() !== 'familia'
+                                            || Number(usuario.rol_id) === Number(rol.id)
+                                        ))
+                                        .map((rol) => (
+                                            <option key={rol.id} value={rol.id}>
+                                                {rol.name}
+                                            </option>
+                                        ))}
                                 </select>
                                 {errores.rol_id && <p className="text-red-500 text-sm">{errores.rol_id[0]}</p>}
                             </div>

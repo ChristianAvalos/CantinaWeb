@@ -173,6 +173,14 @@ class PersonaController extends Controller
             return response()->json(['message' => 'La persona no pertenece a tu organización.'], 403);
         }
 
+        // El historial financiero no se borra en cascada: primero hay que anular
+        // o conciliar la cuenta del alumno.
+        if ($persona->cuentaMovimientos()->exists()) {
+            return response()->json([
+                'message' => 'La persona tiene movimientos de cuenta: no se puede eliminar.',
+            ], 422);
+        }
+
         $persona->delete();
 
         return response()->json(['message' => 'Persona eliminada correctamente.'], 200);

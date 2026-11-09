@@ -28,6 +28,12 @@ return new class extends Migration
             $table->foreign('id_tipo_persona')->references('id')->on('tipo_persona');
             $table->foreign('id_tipoestado')->references('id')->on('tipo_estados');
         });
+
+        // La columna existe desde la creación de `users`; la FK recién se puede
+        // declarar acá, cuando la tabla `personas` ya existe.
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreign('id_persona')->references('id')->on('personas')->nullOnDelete();
+        });
         //DB::statement('ALTER TABLE personas ADD UrevCalc AS (ISNULL(UrevUsuario, \'\') + \' - \' + ISNULL(FORMAT(UrevFechaHora, \'dd/MM/yyyy HH:mm\'), \'\'))');
     }
 
@@ -36,6 +42,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['id_persona']);
+        });
+
         Schema::dropIfExists('personas');
     }
 };

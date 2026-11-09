@@ -46,7 +46,7 @@ export default function Login() {
                 <form onSubmit={handleSubmit} noValidate>
                     {errores && errores.map((error, i) => <Alerta key={i}>{error}</Alerta>)}
                     <div className="mb-4">
-                        <label className="sr-only" htmlFor="nameUser">Usuario</label>
+                        <label className="sr-only" htmlFor="nameUser">Usuario o documento</label>
                         <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                 {/* Heroicon: Envelope */}
@@ -59,7 +59,7 @@ export default function Login() {
                                 id="nameUser"
                                 className="w-full rounded-lg border border-gray-300 bg-gray-50 pl-10 pr-3 py-3 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 name="nameUser"
-                                placeholder="Usuario"
+                                placeholder="Usuario o documento"
                                 ref={nameUserRef}
                             />
                         </div>

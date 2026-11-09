@@ -22,18 +22,17 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nameUser' => ['required','string','exists:users,nameUser'],
-            'password' => 'required'
+            // Puede ser el nombre de usuario o el documento (con o sin puntos).
+            'nameUser' => ['required','string'],
+            'password' => ['required','string'],
         ];
     }
 
     public function messages(){
         return[
-            'nameUser.required'=> 'El nombre de usuario es obligatorio',
-            'nameUser.string'=> 'El nombre de usuario no es valido',
-            'nameUser.exists' => 'La cuenta no existe',
-            'password' => 'La contraseña es obligatoria'
-
+            'nameUser.required'=> 'El usuario o documento es obligatorio',
+            'nameUser.string'=> 'El usuario o documento no es válido',
+            'password.required' => 'La contraseña es obligatoria',
         ];
     }
 }

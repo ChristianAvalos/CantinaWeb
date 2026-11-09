@@ -18,6 +18,9 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
+            // Persona a la que representa esta cuenta (alumno/tutor). La FK se
+            // agrega en la migración de `personas`, que se crea después.
+            $table->unsignedBigInteger('id_persona')->nullable()->index();
             $table->timestamps();
         });
     }

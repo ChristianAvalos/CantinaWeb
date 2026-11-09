@@ -12,6 +12,10 @@ use App\Http\Controllers\DatosFacturacionController;
 use App\Http\Controllers\PaisController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\PersonaVinculoController;
+use App\Http\Controllers\CuentaAlumnoController;
+use App\Http\Controllers\PortalFamiliaController;
+use App\Http\Controllers\PortalAccesoController;
 use App\Http\Controllers\PrecioVentaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ReportController;
@@ -43,7 +47,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->group(function() {
+// Rutas compartidas por backoffice y portal de familias.
+Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         $user = $request->user();
 
@@ -52,15 +57,28 @@ Route::middleware('auth:sanctum')->group(function() {
             return response()->json(['message' => 'Acceso bloqueado.'], 401);
         }
 
-        return $user;
+        // El rol y la persona se usan en el frontend para decidir el portal.
+        return $user->load('role', 'persona');
     });
 
+    Route::post('/logout',[AuthController::class,'logout']);
+
+    // El guard del frontend consulta los permisos incluso en el portal.
+    Route::get('/usuarios/permisos', [AuthController::class, 'ObtenerPermisosUsuario']);
+
+    // Portal de familias (alumno/tutor autenticado).
+    Route::get('/portal/resumen', [PortalFamiliaController::class, 'resumen']);
+    Route::get('/portal/alumnos/{id}', [PortalFamiliaController::class, 'alumno']);
+    Route::post('/portal/alumnos/{id}/pagos', [PortalFamiliaController::class, 'registrarPago']);
+    Route::post('/portal/pagos/{id}/cancelar', [PortalFamiliaController::class, 'cancelarPago']);
+});
+
+// Backoffice: las cuentas del portal (rol Familia) no pueden entrar.
+Route::middleware(['auth:sanctum', 'no.portal'])->group(function() {
     // Endpoint único para dashboard contadores
     Route::get('/dashboard/contadores', [DashboardController::class, 'contadores']);
 
-    Route::post('/logout',[AuthController::class,'logout']);
     Route::get('/usuarios',[AuthController::class,'index']);
-    Route::get('/usuarios/permisos', [AuthController::class, 'ObtenerPermisosUsuario']);
     Route::post('/crearusuarios',[AuthController::class,'createUser']);
     Route::delete('/usuario/{id}', [AuthController::class, 'DeleteUser']);
     Route::put('/usuarioUpdate/{id}', [AuthController::class, 'updateUser'])->name('usuario.update');
@@ -144,6 +162,26 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::post('/crear_persona',[PersonaController::class,'createPersona']);
     Route::put('/update_persona/{id}',[PersonaController::class,'updatePersona']);
     Route::post('/persona_estado/{id}', [PersonaController::class, 'estadoPersona']);
+
+    // Vínculos alumno–tutor (backoffice)
+    Route::get('/vinculos', [PersonaVinculoController::class, 'index']);
+    Route::post('/crear_vinculo', [PersonaVinculoController::class, 'store']);
+    Route::put('/update_vinculo/{id}', [PersonaVinculoController::class, 'update']);
+    Route::delete('/vinculos/{id}', [PersonaVinculoController::class, 'destroy']);
+
+    // Cuentas corrientes de alumnos (backoffice)
+    Route::get('/cuentas_alumnos', [CuentaAlumnoController::class, 'index']);
+    Route::get('/cuentas_alumnos/{id}/movimientos', [CuentaAlumnoController::class, 'movimientos']);
+    Route::post('/cuentas_alumnos/movimientos', [CuentaAlumnoController::class, 'storeMovimiento']);
+    Route::post('/cuentas_alumnos/movimientos/{id}/confirmar', [CuentaAlumnoController::class, 'confirmar']);
+    Route::post('/cuentas_alumnos/movimientos/{id}/anular', [CuentaAlumnoController::class, 'anular']);
+
+    // Accesos al portal de familias (los crea la escuela)
+    Route::get('/portal_accesos', [PortalAccesoController::class, 'index']);
+    Route::post('/portal_accesos', [PortalAccesoController::class, 'store']);
+    Route::put('/portal_accesos/{id}', [PortalAccesoController::class, 'update']);
+    Route::post('/portal_accesos/{id}/reset-password', [PortalAccesoController::class, 'resetPassword']);
+    Route::post('/portal_accesos/{id}/estado', [PortalAccesoController::class, 'estado']);
 
     //Tipo de personas
     Route::get('/tipo_personas',[TipoPersonaController::class,'index']);

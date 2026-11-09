@@ -152,6 +152,12 @@ export const useAuth = ({middleware,url}) =>{
             return;
         }
 
+        // Las cuentas del portal de familias (rol Familia) van directo a su portal.
+        if (middleware === 'guest' && user && user.role?.name === 'Familia'){
+            safeNavigate('/familia');
+            return;
+        }
+
         //Si es un usuario y su rol es diferente de su rol administrador ingresa a la vista general 
         if (middleware === 'guest' && user && Number(user.rol_id) !== 1){
             safeNavigate('/iniciousuarios');

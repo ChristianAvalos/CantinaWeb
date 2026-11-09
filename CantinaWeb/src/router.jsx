@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { createBrowserRouter, Navigate } from "react-router";
 import Layout from "./layouts/Layout";
 import AuthLayout from "./layouts/AuthLayout";
+import PortalLayout from "./layouts/PortalLayout";
 import ProtectedRoute from "./hooks/ProtectedRoute";
 import Spinner from './components/Spinner';
 import RouteError from './components/RouteError';
@@ -29,6 +30,8 @@ const PagosProveedores = lazy(() => import("./views/PagosProveedores"));
 const Ajustes = lazy(() => import("./views/Ajustes"));
 const PrecioVentas = lazy(() => import("./views/PrecioVentas"));
 const HistorialInventario = lazy(() => import("./views/HistorialInventario"));
+const CuentasAlumnos = lazy(() => import("./views/CuentasAlumnos"));
+const PortalFamilia = lazy(() => import("./views/PortalFamilia"));
 
 function withSuspense(element) {
     return <Suspense fallback={<Spinner />}>{element}</Suspense>;
@@ -194,6 +197,30 @@ const router = createBrowserRouter ([
                 </ProtectedRoute>
                 )
             },
+            {
+                path:'/cuentas-alumnos',
+                element: withSuspense(
+                <ProtectedRoute permission="Cuentas_Alumnos">
+                    <CuentasAlumnos/>
+                </ProtectedRoute>
+                )
+            },
+        ]
+    },
+    {
+        // Portal de alumnos y tutores: layout propio, sin menú del backoffice.
+        path: '/familia',
+        element: <PortalLayout />,
+        errorElement: <RouteError />,
+        children: [
+            {
+                index: true,
+                element: withSuspense(
+                    <ProtectedRoute permission="Portal_Familia">
+                        <PortalFamilia />
+                    </ProtectedRoute>
+                )
+            }
         ]
     },
     {

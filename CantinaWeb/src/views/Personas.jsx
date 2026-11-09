@@ -1,6 +1,7 @@
 import clienteAxios from "../config/axios";
 import { useCallback, useEffect, useState } from 'react';
 import ModalPersona from "../components/ModalPersona";
+import ModalVinculos from "../components/ModalVinculos";
 import { toast } from "react-toastify";
 import AlertaModal from "../components/AlertaModal"
 import { obtenerPersonas } from '../helpers/HelperPersonas';
@@ -29,6 +30,12 @@ const FILTROS_PERSONAS_INICIALES = {
 // El formato del documento del listado sale del catálogo `tipo_documentos`
 // (ruc, miles, libre). En datos antiguos sin tipo de documento se deduce:
 // un RUC siempre se guarda con el guion del dígito verificador.
+// Solo un alumno puede tener tutores vinculados; clientes, proveedores y
+// tutores no muestran la opción.
+const esPersonaAlumno = (persona) => (
+    (persona?.tipo_persona?.nombre || '').trim().toLowerCase() === 'alumno'
+);
+
 const formatearDocumentoPersona = (persona) => {
     const formato = persona?.tipo_documento?.formato
         ?? ((persona?.documento || '').toString().includes('-') ? 'ruc' : 'miles');
@@ -71,6 +78,9 @@ export default function Personas() {
     //apertura del modal
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('crear');
+
+    // Gestión de tutores/alumnos vinculados a la persona seleccionada.
+    const [personaVinculos, setPersonaVinculos] = useState(null);
 
     // Obtener el token de autenticación
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -262,6 +272,15 @@ export default function Personas() {
                                                         <button onClick={() => handleDelete(persona.id)} className="flex items-center rounded hover:bg-gray-200 focus:outline-none">
                                                             <i className="fas fa-trash-can text-rose-600" role="img" aria-label="Delete" title="Delete" />
                                                         </button>
+                                                        {esPersonaAlumno(persona) && (
+                                                            <button
+                                                                onClick={() => setPersonaVinculos(persona)}
+                                                                className="flex items-center rounded hover:bg-gray-200 focus:outline-none"
+                                                                title="Tutores y acceso al portal"
+                                                            >
+                                                                <i className="fas fa-user-group text-indigo-600" role="img" aria-label="Vínculos" />
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => handlePersonaActive(persona.id, persona.id_tipoestado)}>
                                                             {persona.id_tipoestado === 1 ? (
                                                                 <i className="fas fa-toggle-on w-5 h-5 mr-2 text-[1.15rem] text-center text-emerald-600" role="img" aria-label="Edit User" title="Edit User" />
@@ -339,6 +358,13 @@ export default function Personas() {
                     persona={personaSeleccionado}
                     modo={modalMode}
                     onClose={closeModal}
+                />
+            )}
+
+            {personaVinculos && (
+                <ModalVinculos
+                    alumno={personaVinculos}
+                    onClose={() => setPersonaVinculos(null)}
                 />
             )}
 

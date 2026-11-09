@@ -18,7 +18,9 @@ class RolesSeeder extends Seeder
         $now = Carbon::now();
 
         // updateOrInsert por name: re-ejecutar no duplica roles.
-        foreach (['Administrador - Sistema','Administrador - Organizacion', 'Usuario'] as $nombre) {
+        // El orden importa: el código asume Administrador de Sistema = id 1 y
+        // Administrador de Organización = id 3 (ver PerteneceAOrganizacion).
+        foreach (['Administrador - Sistema', 'Usuario', 'Administrador - Organizacion', 'Familia'] as $nombre) {
             DB::table('roles')->updateOrInsert(
                 ['name' => $nombre],
                 [

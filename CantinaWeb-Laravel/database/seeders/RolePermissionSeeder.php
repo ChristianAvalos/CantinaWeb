@@ -35,12 +35,21 @@ class RolePermissionSeeder extends Seeder
             'Precio_Ventas',
             'Cobranzas',
             'Pagos_Proveedores',
-            'Historial_Inventario'
+            'Historial_Inventario',
+            // Portal de familias (alumnos y tutores).
+            'Cuentas_Alumnos',
+            'Vinculos_Personas',
+            'Portal_Familia'
         ];
 
+        // El portal es exclusivo del rol Familia: ningún rol de backoffice debe
+        // poder entrar a /familia.
+        $excluidosAdminSistema = ['Portal_Familia'];
+
         // El Administrador de Organización administra la suya —por eso SÍ tiene
-        // el permiso Organizacion—, pero NO gestiona usuarios del sistema.
-        $excluidosAdminOrganizacion = ['Herraminetas_usuarios'];
+        // el permiso Organizacion—, pero NO gestiona usuarios del sistema ni
+        // entra al portal de familias.
+        $excluidosAdminOrganizacion = ['Herraminetas_usuarios', 'Portal_Familia'];
 
         // Datos de la tabla pivote role_permission.
         $pivote = fn (): array => [
@@ -61,8 +70,8 @@ class RolePermissionSeeder extends Seeder
                 ]
             );
 
-            // Administrador de Sistema: todos los permisos.
-            if ($adminSRole) {
+            // Administrador de Sistema: todos los permisos del backoffice.
+            if ($adminSRole && ! in_array($permission, $excluidosAdminSistema, true)) {
                 $adminSRole->permissions()->syncWithoutDetaching([$perm->id => $pivote()]);
             }
 
@@ -72,11 +81,24 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
-        // Refuerzo: quita de Administrador de Organización cualquier permiso
-        // excluido que hubiera quedado asociado por error.
+        // Refuerzo: quita de los roles de backoffice cualquier permiso excluido
+        // que hubiera quedado asociado por error.
+        if ($adminSRole) {
+            $adminSRole->permissions()->detach(
+                Permission::whereIn('name', $excluidosAdminSistema)->pluck('id')
+            );
+        }
+
         if ($adminORole) {
             $idsExcluidos = Permission::whereIn('name', $excluidosAdminOrganizacion)->pluck('id');
             $adminORole->permissions()->detach($idsExcluidos);
+        }
+
+        // El rol Familia SOLO accede al portal (no al backoffice).
+        $familiaRole = Role::where('name', 'Familia')->first();
+        $portal = Permission::where('name', 'Portal_Familia')->first();
+        if ($familiaRole && $portal) {
+            $familiaRole->permissions()->syncWithoutDetaching([$portal->id => $pivote()]);
         }
 
         // // Asocia permisos específicos con el rol de usuario

@@ -100,6 +100,8 @@ export default function VentasRapidas() {
     // El POS solo cobra al contado: selectedTipoPago se fija al id de "Contado"
     const [selectedTipoPago, setSelectedTipoPago] = useState('');
     const [selectedFormaPago, setSelectedFormaPago] = useState('');
+    // Venta a cuenta corriente: queda como deuda del alumno seleccionado.
+    const [cargarACuenta, setCargarACuenta] = useState(false);
 
     // ─── Estados de cliente ───────────────────────────────────────
     const [clientes, setClientes] = useState([]);
@@ -145,7 +147,7 @@ export default function VentasRapidas() {
     }, 0));
     const isEfectivo = Number(selectedFormaPago) === 1;
     const pagoRecibidoNumero = isEfectivo ? (parseFloat(pagoRecibido) || 0) : total;
-    const pagoInsuficiente = cart.length > 0 && pagoRecibidoNumero < total;
+    const pagoInsuficiente = cart.length > 0 && !cargarACuenta && pagoRecibidoNumero < total;
 
     // ─── Enfocar siempre el input de búsqueda ─────────────────────
     useEffect(() => {
@@ -555,6 +557,7 @@ export default function VentasRapidas() {
         setSearchTerm('');
         setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
         setClienteSearch('');
+        setCargarACuenta(false);
         setComprobanteDatos(null);
         setMostrarComprobante(false);
         resetFormaPagoAEfectivo();
@@ -571,7 +574,11 @@ export default function VentasRapidas() {
             toast.warning('No hay productos en el carrito');
             return;
         }
-        if (pagoRecibidoNumero < total) {
+        if (cargarACuenta && !selectedCliente.id) {
+            toast.warning('Seleccioná el alumno para cargar la venta a su cuenta.');
+            return;
+        }
+        if (!cargarACuenta && pagoRecibidoNumero < total) {
             toast.warning('El pago recibido no puede ser menor al total');
             return;
         }
@@ -617,8 +624,9 @@ export default function VentasRapidas() {
                 id_TipoComprobante: tipoComprobante || '',
                 id_TipoPago: selectedTipoPago,
                 id_FormaPago: selectedFormaPago,
-                monto_recibido: pagoRecibidoNumero,
-                vuelto: vuelto,
+                cargar_a_cuenta: cargarACuenta,
+                monto_recibido: cargarACuenta ? 0 : pagoRecibidoNumero,
+                vuelto: cargarACuenta ? 0 : vuelto,
                 iva: iva,
                 detalles: cart.map((item) => ({
                     codigo_barras: item.codigo_barras,
@@ -997,6 +1005,7 @@ export default function VentasRapidas() {
                                 onClick={() => {
                                     setSelectedCliente({ id: '', nombre: 'Consumidor Final' });
                                     setClienteSearch('');
+                                    setCargarACuenta(false);
                                 }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
                                 title="Quitar cliente"
@@ -1063,6 +1072,24 @@ export default function VentasRapidas() {
                                 <option key={fp.id} value={fp.id}>{fp.nombre || fp.descripcion}</option>
                             ))}
                         </select>
+
+                        <label className={`mt-2 flex items-start gap-2 rounded-xl border p-2 text-xs ${selectedCliente.id ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+                            <input
+                                type="checkbox"
+                                checked={cargarACuenta}
+                                disabled={!selectedCliente.id || isProcessing}
+                                onChange={(e) => setCargarACuenta(e.target.checked)}
+                                className="mt-0.5"
+                            />
+                            <span>
+                                <span className="block font-semibold">Cargar a cuenta corriente</span>
+                                <span>
+                                    {selectedCliente.id
+                                        ? `La venta quedará como deuda de ${selectedCliente.nombre}.`
+                                        : 'Seleccioná un alumno para habilitar esta opción.'}
+                                </span>
+                            </span>
+                        </label>
                     </div>
                 </div>
 

@@ -29,6 +29,7 @@ class User extends Authenticatable
         'rol_id',
         'id_organizacion',
         'id_sucursal',
+        'id_persona',
         'id_tipoestado',
         'UrevUsuario',
         'UrevFechaHora'
@@ -76,6 +77,22 @@ class User extends Authenticatable
     public function sucursal()
     {
         return $this->belongsTo(Sucursal::class, 'id_sucursal');
+    }
+
+    /**
+     * Persona que representa esta cuenta (alumno o tutor del portal).
+     */
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'id_persona');
+    }
+
+    /**
+     * ¿Es una cuenta de portal de familias? No debe entrar al backoffice.
+     */
+    public function esFamilia(): bool
+    {
+        return $this->role && $this->role->name === 'Familia';
     }
 
     /**

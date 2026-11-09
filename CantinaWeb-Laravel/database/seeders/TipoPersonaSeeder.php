@@ -20,6 +20,9 @@ class TipoPersonaSeeder extends Seeder
         $registros = [
             'Cliente',
             'Proveedor',
+            // Tipos educativos del portal de familias.
+            'Alumno',
+            'Tutor',
         ];
 
         $now = Carbon::now();

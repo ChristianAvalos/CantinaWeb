@@ -62,6 +62,38 @@ class Persona extends Model
     {
         return $this->hasMany(Transacciones::class, 'id_persona');
     }
+
+    // Alumnos vinculados cuando esta persona es tutor.
+    public function alumnos()
+    {
+        return $this->belongsToMany(Persona::class, 'persona_vinculos', 'id_tutor', 'id_alumno')
+            ->withPivot(['parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
+            ->withTimestamps();
+    }
+
+    // Tutores vinculados cuando esta persona es alumno.
+    public function tutores()
+    {
+        return $this->belongsToMany(Persona::class, 'persona_vinculos', 'id_alumno', 'id_tutor')
+            ->withPivot(['parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
+            ->withTimestamps();
+    }
+
+    public function vinculosComoAlumno()
+    {
+        return $this->hasMany(PersonaVinculo::class, 'id_alumno');
+    }
+
+    public function vinculosComoTutor()
+    {
+        return $this->hasMany(PersonaVinculo::class, 'id_tutor');
+    }
+
+    // Libro de cuenta corriente del alumno.
+    public function cuentaMovimientos()
+    {
+        return $this->hasMany(CuentaMovimiento::class, 'id_persona');
+    }
     //realcion con tipo estado
     public function tipoEstado()
     {

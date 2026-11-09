@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use Log;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Models\Role;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\RegistroRequest;
 use App\Http\Requests\CreateUserRequest;
@@ -54,6 +56,9 @@ class AuthController extends Controller
 
         $data = $request->validated();
 
+        // El rol se resuelve por nombre: los ids pueden variar entre entornos.
+        $rolUsuario = DB::table('roles')->where('name', 'Usuario')->value('id') ?? 2;
+
         //crear usuario
         $user = User::create(
             [
@@ -61,7 +66,7 @@ class AuthController extends Controller
                 'nameUser' => $data['nameUser'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'rol_id' => 2, //por defecto se crea como usuario
+                'rol_id' => $rolUsuario, //por defecto se crea como usuario
                 'id_tipoestado' => 1, //por defecto se crea con estado Activo
                 'UrevUsuario' => 'Registrado - ' . $data['name'],
                 'UrevFechaHora' => Carbon::now()
@@ -80,6 +85,14 @@ class AuthController extends Controller
         //validar el registro 
 
         $data = $request->validated();
+
+        // Las cuentas del portal necesitan una persona vinculada: se crean
+        // únicamente desde Personas > Alumno > Tutores.
+        if (Role::whereKey($data['rol_id'])->where('name', 'Familia')->exists()) {
+            return response()->json([
+                'message' => 'Las cuentas del portal se crean desde la ficha del alumno (Tutores).',
+            ], 422);
+        }
 
         //crear usuario
         $user = User::create(
@@ -139,16 +152,31 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
         $data = $request->validated();
+        $identificador = trim((string) $data['nameUser']);
 
-        //Revisar el password 
-        if (!Auth::attempt($data)) {
+        // Se puede ingresar con el nombre de usuario o con el documento
+        // (4.545.544 y 4545544 son equivalentes).
+        $user = User::where('nameUser', $identificador)->first();
+
+        if (! $user && $this->pareceDocumento($identificador)) {
+            $candidatos = $this->usuariosPorDocumento($identificador);
+
+            if ($candidatos->count() > 1) {
+                return response([
+                    'errors' => ['El documento está asociado a más de una cuenta. Ingresá con tu usuario.'],
+                ], 422);
+            }
+
+            $user = $candidatos->first();
+        }
+
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             return response([
-                'errors' => ['El nombre de usuario o la contraseña no son correctas']
+                'errors' => ['El usuario/documento o la contraseña no son correctos']
             ], 422);
         }
 
-        //Autenticar al usuario
-        $user = Auth::user();
+        Auth::login($user);
 
         // El usuario no accede si él, su organización o su sucursal están inactivos.
         $motivo = $user->motivoBloqueo();
@@ -160,8 +188,43 @@ class AuthController extends Controller
         //retorna una respuesta
         return [
             'token' => $user->createToken('token')->plainTextToken,
-            'user' => $user
+            // El frontend usa el rol para decidir entre backoffice y portal.
+            'user' => $user->load('role', 'persona'),
         ];
+    }
+
+    /** ¿El valor ingresado parece un documento (solo dígitos y separadores)? */
+    private function pareceDocumento(string $valor): bool
+    {
+        return $valor !== '' && preg_match('/^[\d.\-\s]+$/', $valor) === 1;
+    }
+
+    /**
+     * Usuarios cuya persona tiene ese documento, comparando solo los dígitos.
+     * Se usa una expresión por motor para ignorar puntos, guiones y espacios.
+     */
+    private function usuariosPorDocumento(string $documento)
+    {
+        $digitos = preg_replace('/\D+/', '', $documento);
+
+        if ($digitos === '') {
+            return collect();
+        }
+
+        $driver = DB::getDriverName();
+        $expresion = $driver === 'pgsql'
+            ? "regexp_replace(COALESCE(documento, ''), '\\D', '', 'g')"
+            : "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(documento, ''), '.', ''), '-', ''), ' ', ''), '/', ''), '(', ''), ')', '')";
+
+        $idsPersonas = DB::table('personas')
+            ->whereRaw("{$expresion} = ?", [$digitos])
+            ->pluck('id');
+
+        if ($idsPersonas->isEmpty()) {
+            return collect();
+        }
+
+        return User::whereIn('id_persona', $idsPersonas)->get();
     }
 
     public function logout(Request $request)

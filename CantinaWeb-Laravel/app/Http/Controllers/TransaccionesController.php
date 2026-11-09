@@ -18,6 +18,7 @@ use App\Services\Comprobante\DocumentoFiscalService;
 use App\Services\NumeracionComprobanteService;
 use App\Services\IvaService;
 use App\Services\PrecioVentaService;
+use App\Services\CuentaAlumnoService;
 use App\Models\DatosFacturacion;
 use App\Models\Persona;
 use App\Models\Producto;
@@ -289,6 +290,8 @@ class TransaccionesController extends Controller
             'monto_recibido' => 'nullable|numeric',
             'vuelto' => 'nullable|numeric',
             'iva' => 'nullable|numeric',
+            // Venta a cuenta corriente del alumno (queda como deuda).
+            'cargar_a_cuenta' => 'sometimes|boolean',
             'detalles' => 'required|array|min:1',
             'detalles.*.codigo_barras' => 'required|string',
             'detalles.*.cantidad' => 'required|numeric|min:0.0001',
@@ -309,6 +312,32 @@ class TransaccionesController extends Controller
             }
         }
 
+        $cargarACuenta = (bool) ($data['cargar_a_cuenta'] ?? false);
+        $idTipoPagoVenta = (int) $data['id_TipoPago'];
+        $montoRecibidoVenta = $data['monto_recibido'] ?? null;
+        $vueltoVenta = $data['vuelto'] ?? null;
+
+        if ($cargarACuenta) {
+            if (empty($data['id_persona'])) {
+                return response()->json([
+                    'errors' => ['id_persona' => ['Para cargar a cuenta debés seleccionar al alumno.']],
+                ], 422);
+            }
+
+            $idCredito = TipoPago::whereRaw('LOWER(nombre) = ?', ['crédito'])->value('id');
+
+            if (! $idCredito) {
+                return response()->json([
+                    'errors' => ['id_TipoPago' => ['No está configurado el tipo de pago Crédito.']],
+                ], 422);
+            }
+
+            // La venta queda impaga: no hay efectivo recibido ni vuelto.
+            $idTipoPagoVenta = (int) $idCredito;
+            $montoRecibidoVenta = null;
+            $vueltoVenta = null;
+        }
+
         try {
             // La organización la elige el Administrador de Sistema; el resto usa
             // la suya, con su sucursal (o la principal de la organización).
@@ -317,7 +346,17 @@ class TransaccionesController extends Controller
                 ?? ((! $puedeElegirSucursal && $idSucursalUsuario) ? (int) $idSucursalUsuario : null)
                 ?? Sucursal::principalDeOCrear((int) $idOrganizacion)->id;
 
-            $venta = DB::transaction(function () use ($data, $tipoComprobante, $esFactura, $idOrganizacion, $idSucursal) {
+            $venta = DB::transaction(function () use (
+                $data,
+                $tipoComprobante,
+                $esFactura,
+                $idOrganizacion,
+                $idSucursal,
+                $cargarACuenta,
+                $idTipoPagoVenta,
+                $montoRecibidoVenta,
+                $vueltoVenta
+            ) {
                 // La Factura toma su número del secuencial autorizado (EEE-PPP-NNNNNNN)
                 // DENTRO de la transacción: si la venta falla, el número se revierte.
                 $nroComprobante = $esFactura
@@ -333,13 +372,13 @@ class TransaccionesController extends Controller
                     'id_persona' => $data['id_persona'] ?? null,
                     'id_TipoEstado' => EstadoTransaccion::FINALIZADO,
                     'id_TipoMovimiento' => 2,        // Venta
-                    'id_TipoPago' => $data['id_TipoPago'],
+                    'id_TipoPago' => $idTipoPagoVenta,
                     'id_FormaPago' => $data['id_FormaPago'],
                     'id_TipoComprobante' => $tipoComprobante->id,
                     'nro_comprobante' => $nroComprobante,
                     'monto' => 0,
-                    'monto_recibido' => $data['monto_recibido'] ?? null,
-                    'vuelto' => $data['vuelto'] ?? null,
+                    'monto_recibido' => $montoRecibidoVenta,
+                    'vuelto' => $vueltoVenta,
                     'iva' => 0,
                     'id_usuario' => Auth::user()->id,
                     'UrevUsuario' => Auth::user()->name,
@@ -424,6 +463,11 @@ class TransaccionesController extends Controller
                 //    tabla Ventas se muestre SIEMPRE lo mismo (aunque los productos,
                 //    clientes u organización cambien después).
                 $this->registrarComprobante($cabecera);
+
+                // 5) Venta a cuenta corriente: la deuda nace en el libro del alumno.
+                if ($cargarACuenta) {
+                    CuentaAlumnoService::registrarCompra($cabecera, (float) $montoTotal);
+                }
 
                 return $cabecera->load([
                     'persona',
@@ -1089,6 +1133,10 @@ class TransaccionesController extends Controller
                     'UrevUsuario' => Auth::user()->name,
                     'UrevFechaHora' => now(),
                 ]);
+
+                // 5) Si la venta se había cargado a la cuenta del alumno, se
+                //    revierte la deuda con un abono (no se borra el cargo).
+                CuentaAlumnoService::revertirCompra($transaccion);
             });
         } catch (\InvalidArgumentException | \RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

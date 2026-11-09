@@ -15,6 +15,10 @@ class UserAdministrador extends Seeder
      */
     public function run(): void
     {
+        // Se resuelve por nombre, no por id fijo: el catálogo de roles puede
+        // haberse ampliado (por ejemplo, con el rol Familia).
+        $rolAdmin = DB::table('roles')->where('name', 'Administrador - Sistema')->value('id') ?? 1;
+
         DB::table('users')->updateOrInsert(
             ['email' => 'admin@admin.com.py'],
             [
@@ -23,7 +27,7 @@ class UserAdministrador extends Seeder
                 'password' => Hash::make('#admin#'),
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
-                'rol_id' => 1,
+                'rol_id' => $rolAdmin,
                 'id_tipoestado' => 1,
                 'id_organizacion' => 1,
                 'UrevUsuario' => 'Admin',

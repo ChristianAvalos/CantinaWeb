@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { colorIconoParaFondos } from '../helpers/coloresIconos';
 
 const sectionRoutes = {
-  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/pagos-proveedores', '/ajustes', '/transacciones', '/precio-ventas', '/historial-inventario'],
+  operaciones: ['/compras', '/ventas', '/ventas-rapidas', '/cobranzas', '/cuentas-alumnos', '/pagos-proveedores', '/ajustes', '/transacciones', '/precio-ventas', '/historial-inventario'],
   definiciones: ['/productos', '/categorias', '/personas'],
   herramientas: ['/organizacion', '/usuarios', '/usuarios/roles'],
   reportes: ['/usuarios/reporte'],
@@ -236,6 +236,7 @@ export default function SideNav() {
             {(hasPermission('Transacciones') || hasPermission('Categorias')  
                 || hasPermission('Compras') || hasPermission('Ventas') || hasPermission('Ajustes')
                 || hasPermission('Precio_Ventas') || hasPermission('Historial_Inventario')         
+                || hasPermission('Cuentas_Alumnos')
               )
             && (
 
@@ -277,6 +278,15 @@ export default function SideNav() {
                       <Link to="/cobranzas" className={getItemLinkClasses('/cobranzas')}>
                         <i className={`fas fa-money-check-dollar h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('cobranzas')}`} style={estiloIcono} aria-hidden="true" />
                         <span>Cobranzas</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {hasPermission('Cuentas_Alumnos') && (
+                    <li>
+                      <Link to="/cuentas-alumnos" className={getItemLinkClasses('/cuentas-alumnos')}>
+                        <i className={`fas fa-wallet h-5 w-5 shrink-0 text-center text-[1.15rem] ${colorIcono('cobranzas')}`} style={estiloIcono} aria-hidden="true" />
+                        <span>Cuentas de Alumnos</span>
                       </Link>
                     </li>
                   )}
