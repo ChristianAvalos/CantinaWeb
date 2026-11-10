@@ -67,7 +67,7 @@ class Persona extends Model
     public function alumnos()
     {
         return $this->belongsToMany(Persona::class, 'persona_vinculos', 'id_tutor', 'id_alumno')
-            ->withPivot(['parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
+            ->withPivot(['id_tipo_parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
             ->withTimestamps();
     }
 
@@ -75,7 +75,7 @@ class Persona extends Model
     public function tutores()
     {
         return $this->belongsToMany(Persona::class, 'persona_vinculos', 'id_alumno', 'id_tutor')
-            ->withPivot(['parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
+            ->withPivot(['id_tipo_parentesco', 'puede_ver_compras', 'puede_ver_saldo', 'puede_pagar', 'id_tipoestado', 'fecha_inicio', 'fecha_fin'])
             ->withTimestamps();
     }
 

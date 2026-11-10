@@ -28,7 +28,7 @@ class PersonaVinculoController extends Controller
 
         $search = trim((string) $request->input('search'));
 
-        $query = PersonaVinculo::with(['alumno', 'tutor', 'tipoEstado'])
+        $query = PersonaVinculo::with(['alumno', 'tutor', 'tipoEstado', 'tipoParentesco'])
             ->when($idOrganizacion, fn ($q) => $q->where('id_organizacion', $idOrganizacion))
             ->when($request->input('id_alumno'), fn ($q, $id) => $q->where('id_alumno', $id))
             ->when($request->input('id_tutor'), fn ($q, $id) => $q->where('id_tutor', $id))
@@ -53,7 +53,7 @@ class PersonaVinculoController extends Controller
         $data = $request->validate([
             'id_alumno' => ['required', 'exists:personas,id'],
             'id_tutor' => ['required', 'exists:personas,id', 'different:id_alumno'],
-            'parentesco' => ['nullable', 'string', 'max:50'],
+            'id_tipo_parentesco' => ['nullable', 'exists:tipo_parentescos,id'],
             'puede_ver_compras' => ['nullable', 'boolean'],
             'puede_ver_saldo' => ['nullable', 'boolean'],
             'puede_pagar' => ['nullable', 'boolean'],
@@ -62,6 +62,7 @@ class PersonaVinculoController extends Controller
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
         ], [
             'id_tutor.different' => 'El alumno y el tutor deben ser personas distintas.',
+            'id_tipo_parentesco.exists' => 'El parentesco seleccionado no es válido.',
         ]);
 
         $alumno = Persona::findOrFail($data['id_alumno']);
@@ -110,7 +111,7 @@ class PersonaVinculoController extends Controller
             'id_organizacion' => $idOrganizacion,
             'id_alumno' => $alumno->id,
             'id_tutor' => $tutor->id,
-            'parentesco' => $data['parentesco'] ?? null,
+            'id_tipo_parentesco' => $data['id_tipo_parentesco'] ?? null,
             'puede_ver_compras' => $data['puede_ver_compras'] ?? true,
             'puede_ver_saldo' => $data['puede_ver_saldo'] ?? true,
             'puede_pagar' => $data['puede_pagar'] ?? true,
@@ -123,7 +124,7 @@ class PersonaVinculoController extends Controller
 
         return response()->json([
             'message' => 'Tutor vinculado correctamente.',
-            'data' => $vinculo->load(['alumno', 'tutor', 'tipoEstado']),
+            'data' => $vinculo->load(['alumno', 'tutor', 'tipoEstado', 'tipoParentesco']),
         ], 201);
     }
 
@@ -136,13 +137,15 @@ class PersonaVinculoController extends Controller
         }
 
         $data = $request->validate([
-            'parentesco' => ['nullable', 'string', 'max:50'],
+            'id_tipo_parentesco' => ['nullable', 'exists:tipo_parentescos,id'],
             'puede_ver_compras' => ['nullable', 'boolean'],
             'puede_ver_saldo' => ['nullable', 'boolean'],
             'puede_pagar' => ['nullable', 'boolean'],
             'id_tipoestado' => ['nullable', 'exists:tipo_estados,id'],
             'fecha_inicio' => ['nullable', 'date'],
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+        ], [
+            'id_tipo_parentesco.exists' => 'El parentesco seleccionado no es válido.',
         ]);
 
         $data['UrevUsuario'] = 'Actualizado - ' . Auth::user()->name;
@@ -151,7 +154,7 @@ class PersonaVinculoController extends Controller
 
         return response()->json([
             'message' => 'Vínculo actualizado correctamente.',
-            'data' => $vinculo->load(['alumno', 'tutor', 'tipoEstado']),
+            'data' => $vinculo->load(['alumno', 'tutor', 'tipoEstado', 'tipoParentesco']),
         ]);
     }
 

@@ -22,7 +22,7 @@ class PersonaVinculo extends Model
         'id_organizacion',
         'id_alumno',
         'id_tutor',
-        'parentesco',
+        'id_tipo_parentesco',
         'puede_ver_compras',
         'puede_ver_saldo',
         'puede_pagar',
@@ -70,6 +70,12 @@ class PersonaVinculo extends Model
     public function tipoEstado()
     {
         return $this->belongsTo(TipoEstado::class, 'id_tipoestado');
+    }
+
+    /** Parentesco del catálogo `tipo_parentescos`. */
+    public function tipoParentesco()
+    {
+        return $this->belongsTo(TipoParentesco::class, 'id_tipo_parentesco');
     }
 
     /** Vínculo vigente: activo y sin fecha de fin vencida. */

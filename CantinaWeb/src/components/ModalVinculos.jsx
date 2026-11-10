@@ -6,7 +6,7 @@ import AlertaModal from './AlertaModal';
 
 const VINCULO_INICIAL = {
     tutorSeleccionado: null,
-    parentesco: '',
+    idTipoParentesco: '',
     puede_ver_compras: true,
     puede_ver_saldo: true,
     puede_pagar: true,
@@ -29,6 +29,7 @@ export default function ModalVinculos({ alumno, onClose }) {
     const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
     const [vinculos, setVinculos] = useState([]);
+    const [tiposParentesco, setTiposParentesco] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [buscarTutor, setBuscarTutor] = useState('');
     const [resultados, setResultados] = useState([]);
@@ -83,6 +84,13 @@ export default function ModalVinculos({ alumno, onClose }) {
         cargarVinculos();
     }, [cargarVinculos]);
 
+    // El parentesco sale del catálogo de la base (`tipo_parentescos`).
+    useEffect(() => {
+        clienteAxios.get('api/tipo_parentescos', { headers })
+            .then(({ data }) => setTiposParentesco(Array.isArray(data) ? data : (data?.data ?? [])))
+            .catch(() => setTiposParentesco([]));
+    }, [headers]);
+
     const buscarPersonas = async (texto) => {
         setBuscarTutor(texto);
         if (texto.trim().length < 2) {
@@ -123,12 +131,17 @@ export default function ModalVinculos({ alumno, onClose }) {
             return;
         }
 
+        if (!nuevo.idTipoParentesco) {
+            toast.warning('Seleccioná el parentesco.');
+            return;
+        }
+
         setGuardando(true);
         try {
             await clienteAxios.post('api/crear_vinculo', {
                 id_alumno: alumno.id,
                 id_tutor: nuevo.tutorSeleccionado.id,
-                parentesco: nuevo.parentesco || null,
+                id_tipo_parentesco: nuevo.idTipoParentesco || null,
                 puede_ver_compras: nuevo.puede_ver_compras,
                 puede_ver_saldo: nuevo.puede_ver_saldo,
                 puede_pagar: nuevo.puede_pagar,
@@ -295,7 +308,7 @@ export default function ModalVinculos({ alumno, onClose }) {
                                                 <div>
                                                     <p className="font-semibold text-slate-800">{vinculo.tutor?.nombre}</p>
                                                     <p className="text-xs text-slate-500">
-                                                        {vinculo.parentesco || 'Sin parentesco'} ·
+                                                        {vinculo.tipo_parentesco?.nombre || 'Sin parentesco'} ·
                                                         {vinculo.tutor?.documento ? ` Doc. ${vinculo.tutor.documento}` : ' Sin documento'}
                                                     </p>
                                                 </div>
@@ -508,13 +521,19 @@ export default function ModalVinculos({ alumno, onClose }) {
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <label className="block">
                                         <span className="mb-1 block text-xs font-semibold text-slate-600">Parentesco</span>
-                                        <input
-                                            type="text"
-                                            value={nuevo.parentesco}
-                                            onChange={(e) => setNuevo({ ...nuevo, parentesco: e.target.value })}
-                                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                                            placeholder="Madre, padre, tutor legal..."
-                                        />
+                                        <select
+                                            value={nuevo.idTipoParentesco}
+                                            onChange={(e) => setNuevo({ ...nuevo, idTipoParentesco: e.target.value })}
+                                            className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                                            required
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {tiposParentesco.map((tipo) => (
+                                                <option key={tipo.id} value={tipo.id}>
+                                                    {tipo.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </label>
                                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
                                         {[

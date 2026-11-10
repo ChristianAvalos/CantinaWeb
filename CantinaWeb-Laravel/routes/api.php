@@ -28,6 +28,7 @@ use App\Http\Controllers\TipoMonedaController;
 use App\Http\Controllers\TipoMovimientosController;
 use App\Http\Controllers\TipoPagoController;
 use App\Http\Controllers\TipoPersonaController;
+use App\Http\Controllers\TipoParentescoController;
 use App\Http\Controllers\TipoUnidadMedidaController;
 use App\Http\Controllers\TransaccionesController;
 use App\Http\Controllers\TransaccionesDetalleController;
@@ -185,6 +186,9 @@ Route::middleware(['auth:sanctum', 'no.portal'])->group(function() {
 
     //Tipo de personas
     Route::get('/tipo_personas',[TipoPersonaController::class,'index']);
+
+    //Catálogo de parentescos del grupo familiar
+    Route::get('/tipo_parentescos',[TipoParentescoController::class,'index']);
 
     //Tipo de documentos
     Route::get('/tipo_documentos',[TipoDocumentoController::class,'index']);

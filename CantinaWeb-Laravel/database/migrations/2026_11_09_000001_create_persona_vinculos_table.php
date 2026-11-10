@@ -20,7 +20,8 @@ return new class extends Migration
             $table->unsignedBigInteger('id_organizacion');
             $table->unsignedBigInteger('id_alumno');
             $table->unsignedBigInteger('id_tutor');
-            $table->string('parentesco', 50)->nullable();
+            // Catálogo `tipo_parentescos` (Papá, Mamá, Tutor, ...).
+            $table->unsignedBigInteger('id_tipo_parentesco')->nullable();
             $table->boolean('puede_ver_compras')->default(true);
             $table->boolean('puede_ver_saldo')->default(true);
             $table->boolean('puede_pagar')->default(true);
@@ -40,6 +41,7 @@ return new class extends Migration
             $table->foreign('id_alumno')->references('id')->on('personas')->cascadeOnDelete();
             $table->foreign('id_tutor')->references('id')->on('personas')->cascadeOnDelete();
             $table->foreign('id_tipoestado')->references('id')->on('tipo_estados');
+            $table->foreign('id_tipo_parentesco')->references('id')->on('tipo_parentescos')->nullOnDelete();
         });
     }
 

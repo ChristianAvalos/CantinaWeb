@@ -194,7 +194,7 @@ class CuentaAlumnoService
             ];
         }
 
-        $vinculos = PersonaVinculo::with('alumno')
+        $vinculos = PersonaVinculo::with(['alumno', 'tipoParentesco'])
             ->vigentes()
             ->where('id_tutor', $user->id_persona)
             ->where('id_organizacion', $user->id_organizacion)
@@ -224,7 +224,7 @@ class CuentaAlumnoService
 
             $accesos[$alumno->id] = [
                 'persona' => $alumno,
-                'parentesco' => $vinculo->parentesco ?: 'Tutor',
+                'parentesco' => $vinculo->tipoParentesco?->nombre ?? 'Tutor',
                 'permisos' => $permisos,
             ];
         }
