@@ -9,6 +9,9 @@ import ModalPersona from './ModalPersona';
 import { obtenerTransaccionesDetalle } from '../helpers/HelpersTransacciones';
 import { useAuth } from "../hooks/useAuth";
 
+// Solo el alumno tiene cuenta corriente; un tutor o cliente es venta común.
+const esTipoAlumno = (tipo) => (tipo || '').trim().toLowerCase() === 'alumno';
+
 // Suma días a una fecha 'YYYY-MM-DD' (o a hoy si es null) y devuelve 'YYYY-MM-DD' local
 function sumarDiasLocal(fecha, dias) {
     const base = fecha ? new Date(`${fecha}T00:00:00`) : new Date();
@@ -124,8 +127,13 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const [personas, setPersonas] = useState([]);
     const [personaSeleccionada, setPersonaSeleccionada] = useState({
         id: transaccion.id_persona || '',
-        nombre: transaccion.persona?.nombre || ''
+        nombre: transaccion.persona?.nombre || '',
+        tipoPersona: transaccion.persona?.tipo_persona?.nombre || '',
     });
+    // Venta cargada a la cuenta corriente del alumno.
+    const [cargarACuenta, setCargarACuenta] = useState(
+        Boolean(transaccion.cuenta_cargo || transaccion.cuentaCargo)
+    );
     const [busquedaPersona, setBusquedaPersona] = useState(transaccion.persona?.nombre || '');
     // Alta rápida de la persona desde el mismo formulario (proveedor/cliente).
     const [mostrarModalPersona, setMostrarModalPersona] = useState(false);
@@ -244,6 +252,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
             if (finalizar) {
                 formData.append('finalizar', '1');
             }
+            if (esVenta) {
+                formData.append('cargar_a_cuenta', cargarACuenta ? '1' : '0');
+            }
             if (incluirCuotas && cuotas.length > 0) {
                 formData.append('cuotas', JSON.stringify(cuotas));
             }
@@ -295,6 +306,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     };
 
     const token = localStorage.getItem('AUTH_TOKEN');
+    const personaEsAlumno = esTipoAlumno(personaSeleccionada.tipoPersona);
     const etiquetaPersona = tipoTransaccion === 'compra'
         ? 'Proveedor'
         : tipoTransaccion === 'venta'
@@ -368,18 +380,25 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         if (modo === 'editar' && transaccion.persona) {
             setPersonaSeleccionada({
                 id: transaccion.id_persona ?? transaccion.id_Persona,
-                nombre: transaccion.persona.nombre
+                nombre: transaccion.persona.nombre,
+                tipoPersona: transaccion.persona?.tipo_persona?.nombre || '',
             });
             setBusquedaPersona(transaccion.persona.nombre);
+            setCargarACuenta(Boolean(transaccion.cuenta_cargo || transaccion.cuentaCargo));
         }
     }, [transaccion, modo]);
 
     // Función para seleccionar una persona
     const seleccionarPersona = (persona) => {
+        const tipoPersona = persona.tipo_persona?.nombre || persona.tipoPersona || '';
+
         setPersonaSeleccionada({
             id: persona.id,
-            nombre: persona.nombre
+            nombre: persona.nombre,
+            tipoPersona,
         });
+        // Al alumno se le carga a cuenta por defecto; el operador puede desmarcar.
+        setCargarACuenta(esVenta && esTipoAlumno(tipoPersona));
         setBusquedaPersona(persona.nombre);
         setMostrarSugerencias(false);
 
@@ -392,7 +411,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
     // Función para limpiar selección
     const limpiarPersona = () => {
-        setPersonaSeleccionada({ id: '', nombre: '' });
+        setPersonaSeleccionada({ id: '', nombre: '', tipoPersona: '' });
+        setCargarACuenta(false);
         setBusquedaPersona('');
         setPersonas([]);
         setMostrarSugerencias(false);
@@ -1264,6 +1284,27 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
 
                                 {errores.id_persona && (
                                     <p className="text-red-500 text-sm">{errores.id_persona[0]}</p>
+                                )}
+
+                                {/* Cuenta corriente: solo alumnos */}
+                                {esVenta && personaEsAlumno && (
+                                    <label className={`mt-2 flex items-start gap-2 rounded-md border p-2 text-sm ${cargarACuenta ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={cargarACuenta}
+                                            disabled={esSoloLectura || esCorreccion}
+                                            onChange={(e) => setCargarACuenta(e.target.checked)}
+                                            className="mt-1"
+                                        />
+                                        <span>
+                                            <span className="block font-medium">Cargar a cuenta corriente</span>
+                                            <span className="block text-xs">
+                                                {cargarACuenta
+                                                    ? `La venta quedará como deuda de ${personaSeleccionada.nombre}.`
+                                                    : 'Desmarcado: será una venta normal (cobrada ahora).'}
+                                            </span>
+                                        </span>
+                                    </label>
                                 )}
                             </div>
 

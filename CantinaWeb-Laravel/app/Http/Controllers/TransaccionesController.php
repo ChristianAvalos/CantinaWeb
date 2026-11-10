@@ -65,6 +65,8 @@ class TransaccionesController extends Controller
         $transacciones = Transacciones::with([
             'tipoMovimiento',
             'persona',
+            'persona.tipoPersona',
+            'cuentaCargo',
             'tipoEstado',
             'motivoAjuste',
             'tipoPago',
@@ -321,6 +323,13 @@ class TransaccionesController extends Controller
             if (empty($data['id_persona'])) {
                 return response()->json([
                     'errors' => ['id_persona' => ['Para cargar a cuenta debés seleccionar al alumno.']],
+                ], 422);
+            }
+
+            // La cuenta corriente es solo del alumno; un tutor es una venta común.
+            if (! CuentaAlumnoService::esAlumno((int) $data['id_persona'])) {
+                return response()->json([
+                    'errors' => ['id_persona' => ['Solo se puede cargar a la cuenta de un alumno.']],
                 ], 422);
             }
 
@@ -688,6 +697,39 @@ class TransaccionesController extends Controller
         // automático: no se acepta uno cargado a mano. La Factura exige timbrado
         // vigente y cliente; el Ticket no necesita timbrado.
         $esVenta = $idTipoMovimiento === 2;
+
+        // Venta cargada a la cuenta corriente del alumno (queda como deuda).
+        $cargarACuenta = $esVenta && $request->boolean('cargar_a_cuenta');
+        if ($cargarACuenta) {
+            $idPersonaCuenta = array_key_exists('id_persona', $data)
+                ? $data['id_persona']
+                : $transaccion->id_persona;
+
+            if (empty($idPersonaCuenta)) {
+                return response()->json([
+                    'errors' => ['id_persona' => ['Para cargar a cuenta debés seleccionar al alumno.']],
+                ], 422);
+            }
+
+            if (! CuentaAlumnoService::esAlumno((int) $idPersonaCuenta)) {
+                return response()->json([
+                    'errors' => ['id_persona' => ['Solo se puede cargar a la cuenta de un alumno.']],
+                ], 422);
+            }
+
+            $idCredito = TipoPago::whereRaw('LOWER(nombre) = ?', ['crédito'])->value('id');
+            if (! $idCredito) {
+                return response()->json([
+                    'errors' => ['id_TipoPago' => ['No está configurado el tipo de pago Crédito.']],
+                ], 422);
+            }
+
+            // La venta queda impaga: no hay efectivo recibido ni vuelto.
+            $data['id_TipoPago'] = $idCredito;
+            $data['monto_recibido'] = null;
+            $data['vuelto'] = null;
+        }
+
         $tipoComprobanteVenta = null;
         $esFacturaVenta = false;
         $nombreComprobanteVenta = '';
@@ -763,7 +805,7 @@ class TransaccionesController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $ivaNormalizado, $idTipoEstado, $idTipoMovimiento, $request, $finalizar, $esVenta, $esFacturaVenta, $tipoComprobanteVenta) {
+            DB::transaction(function () use ($transaccion, $data, $montoNormalizado, $ivaNormalizado, $idTipoEstado, $idTipoMovimiento, $request, $finalizar, $esVenta, $esFacturaVenta, $tipoComprobanteVenta, $cargarACuenta) {
                 // En VENTAS el número se asigna automáticamente una sola vez
                 // (no se toma el que venga del formulario). Compras y ajustes
                 // conservan el número que se carga a mano.
@@ -828,6 +870,11 @@ class TransaccionesController extends Controller
                     // también se puede reimprimir fielmente desde Ventas.
                     if ($esVenta) {
                         $this->registrarComprobante($transaccion);
+                    }
+
+                    // Venta a cuenta corriente: la deuda nace en el libro del alumno.
+                    if ($esVenta && $cargarACuenta) {
+                        CuentaAlumnoService::registrarCompra($transaccion, (float) $montoNormalizado);
                     }
                 }
             });

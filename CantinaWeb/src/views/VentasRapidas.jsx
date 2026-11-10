@@ -7,6 +7,9 @@ import AlertaModal from '../components/AlertaModal';
 import ModalComprobante from '../components/ModalComprobante';
 import ModalPersona from '../components/ModalPersona';
 
+// Solo el alumno tiene cuenta corriente; un tutor o cliente es venta común.
+const esTipoAlumno = (tipo) => (tipo || '').trim().toLowerCase() === 'alumno';
+
 // ─── Debounce helper ────────────────────────────────────────────────
 function useDebounce(value, delay = 300) {
     const [debounced, setDebounced] = useState(value);
@@ -147,6 +150,7 @@ export default function VentasRapidas() {
     }, 0));
     const isEfectivo = Number(selectedFormaPago) === 1;
     const pagoRecibidoNumero = isEfectivo ? (parseFloat(pagoRecibido) || 0) : total;
+    const clienteEsAlumno = Boolean(selectedCliente.id) && esTipoAlumno(selectedCliente.tipoPersona);
     const pagoInsuficiente = cart.length > 0 && !cargarACuenta && pagoRecibidoNumero < total;
 
     // ─── Enfocar siempre el input de búsqueda ─────────────────────
@@ -723,7 +727,15 @@ export default function VentasRapidas() {
 
     // ─── Seleccionar cliente ──────────────────────────────────────
     const selectCliente = (cliente) => {
-        setSelectedCliente({ id: cliente.id, nombre: cliente.nombre, documento: cliente.documento || '' });
+        const tipoPersona = cliente.tipo_persona?.nombre || cliente.tipoPersona || '';
+        setSelectedCliente({
+            id: cliente.id,
+            nombre: cliente.nombre,
+            documento: cliente.documento || '',
+            tipoPersona,
+        });
+        // Al alumno se le carga a cuenta por defecto; el operador puede desmarcar.
+        setCargarACuenta(esTipoAlumno(tipoPersona));
         setClienteSearch(cliente.nombre);
         setShowClienteDropdown(false);
     };
@@ -1076,23 +1088,25 @@ export default function VentasRapidas() {
                             ))}
                         </select>
 
-                        <label className={`mt-2 flex items-start gap-2 rounded-xl border p-2 text-xs ${selectedCliente.id ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
-                            <input
-                                type="checkbox"
-                                checked={cargarACuenta}
-                                disabled={!selectedCliente.id || isProcessing}
-                                onChange={(e) => setCargarACuenta(e.target.checked)}
-                                className="mt-0.5"
-                            />
-                            <span>
-                                <span className="block font-semibold">Cargar a cuenta corriente</span>
+                        {clienteEsAlumno && (
+                            <label className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                                <input
+                                    type="checkbox"
+                                    checked={cargarACuenta}
+                                    disabled={isProcessing}
+                                    onChange={(e) => setCargarACuenta(e.target.checked)}
+                                    className="mt-0.5"
+                                />
                                 <span>
-                                    {selectedCliente.id
-                                        ? `La venta quedará como deuda de ${selectedCliente.nombre}.`
-                                        : 'Seleccioná un alumno para habilitar esta opción.'}
+                                    <span className="block font-semibold">Cargar a cuenta corriente</span>
+                                    <span>
+                                        {cargarACuenta
+                                            ? `La venta quedará como deuda de ${selectedCliente.nombre}.`
+                                            : 'Desmarcado: será una venta normal (cobrada ahora).'}
+                                    </span>
                                 </span>
-                            </span>
-                        </label>
+                            </label>
+                        )}
                     </div>
                 </div>
 

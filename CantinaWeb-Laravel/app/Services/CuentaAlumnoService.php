@@ -232,6 +232,19 @@ class CuentaAlumnoService
         return array_values($accesos);
     }
 
+    /** ¿La persona es de tipo Alumno? Solo ellos pueden tener cuenta corriente. */
+    public static function esAlumno(?int $idPersona): bool
+    {
+        if (! $idPersona) {
+            return false;
+        }
+
+        $persona = Persona::with('tipoPersona')->find($idPersona);
+
+        return (bool) $persona
+            && mb_strtolower(trim((string) $persona->tipoPersona?->nombre)) === 'alumno';
+    }
+
     /** ¿La persona tiene señales de ser alumno (tipo, movimientos o vínculos)? */
     private static function esCuentaDeAlumno(Persona $persona): bool
     {

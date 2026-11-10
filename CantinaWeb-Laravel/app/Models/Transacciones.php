@@ -94,6 +94,16 @@ class Transacciones extends Model
         return $this->hasMany(Cuota::class, 'id_transaccion');
     }
 
+    /**
+     * Cargo en la cuenta corriente del alumno generado por esta venta.
+     * Su existencia indica que la venta se cargó a cuenta.
+     */
+    public function cuentaCargo()
+    {
+        return $this->hasOne(CuentaMovimiento::class, 'id_transaccion')
+            ->where('tipo', CuentaMovimiento::TIPO_COMPRA);
+    }
+
     //relacion con el movimientosHistorial: movimientos de stock que genero esta transaccion
     public function movimientosHistorial()
     {

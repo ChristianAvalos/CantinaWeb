@@ -130,6 +130,9 @@ class PersonaController extends Controller
         $data['UrevUsuario'] = 'Creado - ' . Auth::user()->name;
         $data['UrevFechaHora'] = Carbon::now();
         $persona = Persona::create($data);
+        // Se devuelven las relaciones para que el POS sepa, por ejemplo, si la
+        // persona recién creada es un alumno (cuenta corriente).
+        $persona->load('TipoPersona', 'tipoDocumento', 'organizacion');
 
         return response()->json(['message' => 'Persona creada exitosamente', 'data' => $persona], 201);
     }
