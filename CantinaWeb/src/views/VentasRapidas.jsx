@@ -419,7 +419,10 @@ export default function VentasRapidas() {
     // ─── Buscar clientes ──────────────────────────────────────────
     const buscarClientes = useCallback(async (term = '') => {
         try {
-            const params = new URLSearchParams({ all: '1', tipo_persona: 'Cliente', id_tipoestado: '1' });
+            // En una cantina escolar compra un cliente, un alumno o su tutor;
+            // nunca un proveedor.
+            const params = new URLSearchParams({ all: '1', id_tipoestado: '1' });
+            ['Cliente', 'Alumno', 'Tutor'].forEach((tipo) => params.append('tipos_persona[]', tipo));
             if (term) params.append('search', term);
             // Los clientes se buscan en la organización de venta elegida.
             if (esAdminSistema && organizacionSeleccionada) params.append('id_organizacion', organizacionSeleccionada);
@@ -997,7 +1000,7 @@ export default function VentasRapidas() {
                                 buscarClientes(e.target.value);
                             }}
                             onFocus={() => { buscarClientes(); setShowClienteDropdown(true); }}
-                            placeholder="Buscar cliente..."
+                            placeholder="Buscar cliente o alumno..."
                             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none bg-slate-50"
                         />
                         {selectedCliente.id && (
@@ -1039,14 +1042,14 @@ export default function VentasRapidas() {
                                     className="w-full text-left px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border-t border-slate-100 transition-colors"
                                 >
                                     <i className="fas fa-user-plus mr-2 text-[0.7rem]" aria-hidden="true" />
-                                    Crear cliente{clienteSearch.trim() ? ` «${clienteSearch.trim()}»` : ' nuevo'}
+                                    Crear cliente o alumno{clienteSearch.trim() ? ` «${clienteSearch.trim()}»` : ' nuevo'}
                                 </button>
                             </div>
                         )}
                     </div>
                     {selectedCliente.id ? (
                         <p className="text-xs text-green-600 mt-1 font-medium">
-                            Cliente: {selectedCliente.nombre}
+                            Cliente / Alumno: {selectedCliente.nombre}
                         </p>
                     ) : (
                         <p className="text-xs text-slate-400 mt-1">Consumidor Final</p>
@@ -1193,6 +1196,7 @@ export default function VentasRapidas() {
                     modo="crear"
                     persona={personaInicialPOS}
                     tipoPersonaPredeterminada="Cliente"
+                    tiposPersonaPermitidos={['Cliente', 'Alumno', 'Tutor']}
                     idOrganizacionPredeterminada={organizacionSeleccionada}
                     refrescarPersonas={buscarClientes}
                     onCreada={handlePersonaCreada}

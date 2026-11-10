@@ -5,6 +5,7 @@ import AlertaModal from "../components/AlertaModal";
 import { formatearMiles, formatearGuarani, limpiarFormato } from '../helpers/HelpersNumeros';
 import { formatDateToInput } from '../helpers/HelpersFechas';
 import ModalTransaccionDetalle from './ModalTransaccionDetalle';
+import ModalPersona from './ModalPersona';
 import { obtenerTransaccionesDetalle } from '../helpers/HelpersTransacciones';
 import { useAuth } from "../hooks/useAuth";
 
@@ -31,11 +32,18 @@ function formatearNroFactura(valor) {
 }
 
 export default function ModalTransaccion({ onClose, modo, setModo, transaccion = {}, refrescarTransacciones, refrescarGastos, tipoTransaccion = '' }) {
-    const tipoPersonaFiltro = tipoTransaccion === 'compra'
+    // Compra: solo proveedores. Venta: cliente, alumno o tutor. Ajuste: todos.
+    const tiposPersonaPermitidos = tipoTransaccion === 'compra'
+        ? ['Proveedor']
+        : tipoTransaccion === 'venta'
+            ? ['Cliente', 'Alumno', 'Tutor']
+            : [];
+    // En la compra el proveedor queda fijo; en la venta se puede elegir.
+    const tipoPersonaPredeterminada = tipoTransaccion === 'compra'
         ? 'Proveedor'
         : tipoTransaccion === 'venta'
             ? 'Cliente'
-            : null;
+            : undefined;
 
     // Modo solo lectura: deshabilita toda la edición (se usa para "Ver")
     const esSoloLectura = modo === 'ver';
@@ -119,6 +127,9 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         nombre: transaccion.persona?.nombre || ''
     });
     const [busquedaPersona, setBusquedaPersona] = useState(transaccion.persona?.nombre || '');
+    // Alta rápida de la persona desde el mismo formulario (proveedor/cliente).
+    const [mostrarModalPersona, setMostrarModalPersona] = useState(false);
+    const [personaInicialTransaccion, setPersonaInicialTransaccion] = useState({});
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const comboPersonaRef = useRef(null);
 
@@ -307,8 +318,8 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     params.append('search', term);
                 }
 
-                if (tipoPersonaFiltro !== null) {
-                    params.append('tipo_persona', tipoPersonaFiltro);
+                if (tiposPersonaPermitidos.length > 0) {
+                    tiposPersonaPermitidos.forEach((tipo) => params.append('tipos_persona[]', tipo));
                 }
 
                 // El Administrador de Sistema acota a la organización elegida.
@@ -338,7 +349,7 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
         }, 300); // Debounce de 300ms
 
         return () => clearTimeout(delayDebounceFn);
-    }, [busquedaPersona, mostrarSugerencias, tipoPersonaFiltro, token, esAdminSistema, organizacionSeleccionada]);
+    }, [busquedaPersona, mostrarSugerencias, tipoTransaccion, token, esAdminSistema, organizacionSeleccionada]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -395,6 +406,31 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
     const abrirComboPersona = () => {
         setBusquedaPersona('');
         setMostrarSugerencias(true);
+    };
+
+    // Si lo buscado es solo un número (C.I./RUC) se precarga como documento;
+    // si no, como nombre.
+    const abrirModalPersonaDesdeBusqueda = () => {
+        const term = (busquedaPersona || '').trim();
+        const esDocumento = /^[\d.\-\s]+$/.test(term);
+
+        setMostrarSugerencias(false);
+        setPersonaInicialTransaccion(term ? (esDocumento ? { documento: term } : { nombre: term }) : {});
+        setMostrarModalPersona(true);
+    };
+
+    const cerrarModalPersona = () => {
+        setMostrarModalPersona(false);
+        setPersonaInicialTransaccion({});
+    };
+
+    // Al crear la persona se selecciona de inmediato en la transacción.
+    const handlePersonaCreada = (persona) => {
+        if (persona?.id) {
+            seleccionarPersona(persona);
+        }
+        setMostrarModalPersona(false);
+        setPersonaInicialTransaccion({});
     };
 
     //funcion para obtener las transacciones detalle
@@ -1213,6 +1249,15 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                                                     </li>
                                                 )}
                                             </ul>
+
+                                            <button
+                                                type="button"
+                                                onClick={abrirModalPersonaDesdeBusqueda}
+                                                className="w-full border-t border-gray-200 bg-blue-50 px-3 py-2 text-left text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                                            >
+                                                + Crear {etiquetaPersona.toLowerCase()}
+                                                {busquedaPersona.trim() ? ` «${busquedaPersona.trim()}»` : ' nuevo'}
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -1639,6 +1684,18 @@ export default function ModalTransaccion({ onClose, modo, setModo, transaccion =
                     onClose={closeModal}
                     id_transaccion={transaccion.id}
                     tipoTransaccion={tipoTransaccion}
+                />
+            )}
+
+            {mostrarModalPersona && (
+                <ModalPersona
+                    modo="crear"
+                    persona={personaInicialTransaccion}
+                    tipoPersonaPredeterminada={tipoPersonaPredeterminada}
+                    tiposPersonaPermitidos={tiposPersonaPermitidos}
+                    idOrganizacionPredeterminada={esAdminSistema ? organizacionSeleccionada : undefined}
+                    onCreada={handlePersonaCreada}
+                    onClose={cerrarModalPersona}
                 />
             )}
 

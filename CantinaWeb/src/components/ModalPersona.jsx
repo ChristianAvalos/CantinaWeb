@@ -17,6 +17,9 @@ export default function ModalPersona({
     idOrganizacionPredeterminada,
     // Fija y bloquea el tipo de persona (el POS siempre crea "Cliente").
     tipoPersonaPredeterminada,
+    // Restringe las opciones del combo de tipo de persona. Con un solo valor
+    // queda fijo; con varios, el usuario elige entre ellos.
+    tiposPersonaPermitidos,
 }) {
     const [form, setForm] = useState({
         nombre: persona.nombre || '',
@@ -47,10 +50,26 @@ export default function ModalPersona({
     const formularioSincronizadoRef = useRef(false);
     const { user } = useAuth({ middleware: 'auth' });
     const esAdminSistema = Number(user?.rol_id) === 1;
-    // En el POS el tipo de persona viene fijado (Cliente). Solo el
-    // Administrador de Sistema puede cambiarlo; para el resto ni se muestra.
-    const tipoPersonaFijado = modo === 'crear' && Boolean(tipoPersonaPredeterminada);
+    const tieneListaPermitida = Array.isArray(tiposPersonaPermitidos) && tiposPersonaPermitidos.length > 0;
+
+    // Con una sola opción permitida el tipo queda fijo (p. ej. Proveedor en una
+    // compra). Con varias, el usuario elige dentro de esa lista.
+    const tipoPersonaFijado = modo === 'crear' && (
+        tieneListaPermitida
+            ? tiposPersonaPermitidos.length === 1
+            : Boolean(tipoPersonaPredeterminada)
+    );
+    const tipoPersonaFijaNombre = tieneListaPermitida && tiposPersonaPermitidos.length === 1
+        ? tiposPersonaPermitidos[0]
+        : tipoPersonaPredeterminada;
     const mostrarTipoPersona = !tipoPersonaFijado || esAdminSistema;
+
+    // Opciones visibles en el combo de tipo de persona.
+    const tiposPersonaVisibles = tieneListaPermitida
+        ? tipoPersona.filter((tipo) => tiposPersonaPermitidos.some(
+            (nombre) => (nombre || '').trim().toLowerCase() === (tipo.nombre || '').trim().toLowerCase()
+        ))
+        : tipoPersona;
 
     // Solo el Administrador de Sistema elige organización al crear.
     useEffect(() => {
@@ -190,11 +209,20 @@ export default function ModalPersona({
     useEffect(() => {
         if (!tipoPersonaFijado || form.id_tipo_persona || tipoPersona.length === 0) return;
 
-        const idTipoPersona = idTipoPersonaPorNombre(tipoPersonaPredeterminada);
+        const idTipoPersona = idTipoPersonaPorNombre(tipoPersonaFijaNombre);
         if (idTipoPersona) {
             setForm((prev) => (prev.id_tipo_persona ? prev : { ...prev, id_tipo_persona: idTipoPersona }));
         }
-    }, [tipoPersonaFijado, tipoPersonaPredeterminada, tipoPersona, form.id_tipo_persona]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [tipoPersonaFijado, tipoPersonaFijaNombre, tipoPersona, form.id_tipo_persona]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Con varias opciones permitidas se preselecciona la primera (p. ej.
+    // Cliente en una venta) sin bloquear el combo.
+    useEffect(() => {
+        if (modo !== 'crear' || form.id_tipo_persona) return;
+        if (!tieneListaPermitida || tiposPersonaVisibles.length === 0) return;
+
+        setForm((prev) => (prev.id_tipo_persona ? prev : { ...prev, id_tipo_persona: tiposPersonaVisibles[0].id }));
+    }, [modo, tieneListaPermitida, tipoPersona.length, form.id_tipo_persona]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Función para manejar la creación o edición de la persona
     const handleSubmit = async (e) => {
@@ -205,7 +233,7 @@ export default function ModalPersona({
             const formData = new FormData();
             // Si el combo no se muestra (POS para no-sistema), el tipo es el fijado.
             const idTipoPersonaEfectivo = form.id_tipo_persona
-                || (!mostrarTipoPersona ? idTipoPersonaPorNombre(tipoPersonaPredeterminada) : '');
+                || (!mostrarTipoPersona ? idTipoPersonaPorNombre(tipoPersonaFijaNombre) : '');
             Object.entries(form).forEach(([key, value]) => {
                 // El tipo de persona enviado puede venir fijado por el llamador
                 if (key === 'id_tipo_persona') {
@@ -297,8 +325,10 @@ export default function ModalPersona({
     }, []);
 
 
+    // z-[1040]: por encima del modal de transacción (z-[1035]/[1036]) para
+    // poder crear la persona sin cerrar el documento en curso.
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-[1040]">
             {/* Fondo oscuro semi-transparente */}
             <div className="bg-gray-800 opacity-75 absolute inset-0" onClick={onClose}></div>
 
@@ -341,7 +371,7 @@ export default function ModalPersona({
                                     onChange={handleTipoPersonaChange}
                                 >
                                     <option value="">Seleccione el tipo de persona</option>
-                                    {tipoPersona.map((tipoPersona) => (
+                                    {tiposPersonaVisibles.map((tipoPersona) => (
                                         <option key={tipoPersona.id} value={tipoPersona.id}>
                                             {tipoPersona.nombre}
                                         </option>

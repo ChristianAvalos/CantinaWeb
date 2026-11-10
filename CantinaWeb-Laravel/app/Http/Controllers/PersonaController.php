@@ -31,6 +31,15 @@ class PersonaController extends Controller
         $all = $request->boolean('all');
         $idTipoPersona = $request->input('id_tipo_persona');
         $tipoPersona = $request->input('tipo_persona');
+        // Varios tipos a la vez (p. ej. venta: Cliente, Alumno, Tutor).
+        $tiposPersona = $request->input('tipos_persona', []);
+        if (is_string($tiposPersona)) {
+            $tiposPersona = explode(',', $tiposPersona);
+        }
+        $tiposPersona = array_values(array_filter(
+            array_map(fn ($t) => is_string($t) ? mb_strtolower(trim($t)) : '', (array) $tiposPersona),
+            fn ($t) => $t !== ''
+        ));
         $idTipoEstado = $request->input('id_tipoestado');
         $filtros = $this->normalizarFiltros($request->input('filtros', []));
 
@@ -54,6 +63,13 @@ class PersonaController extends Controller
                 $query->whereHas('TipoPersona', function ($tipoPersonaQuery) use ($tipoPersonaLower) {
                     $tipoPersonaQuery->whereRaw('LOWER(nombre) = ?', [$tipoPersonaLower]);
                 });  
+            })
+            ->when(! empty($tiposPersona), function ($query) use ($tiposPersona) {
+                $placeholders = implode(',', array_fill(0, count($tiposPersona), '?'));
+
+                $query->whereHas('TipoPersona', function ($tipoPersonaQuery) use ($placeholders, $tiposPersona) {
+                    $tipoPersonaQuery->whereRaw("LOWER(nombre) IN ({$placeholders})", $tiposPersona);
+                });
             })
             ->when(is_numeric($idTipoEstado), function ($query) use ($idTipoEstado) {
                 $query->where('id_tipoestado', (int) $idTipoEstado);
@@ -81,7 +97,7 @@ class PersonaController extends Controller
                 });
             })
             ->when(!empty($filtros), function ($query) use ($filtros) {
-                return $this->aplicarFiltrosDinamicos($query, $filtros, ['search', 'all', 'id_tipo_persona', 'tipo_persona', 'id_tipoestado']);
+                return $this->aplicarFiltrosDinamicos($query, $filtros, ['search', 'all', 'id_tipo_persona', 'tipo_persona', 'tipos_persona', 'id_tipoestado']);
             })
         ->orderBy('id', 'desc');
         if ($all) {
