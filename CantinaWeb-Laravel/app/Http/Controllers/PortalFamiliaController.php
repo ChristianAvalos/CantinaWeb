@@ -165,9 +165,15 @@ class PortalFamiliaController extends Controller
 
         $data = $request->validate([
             'monto' => ['required', 'numeric', 'min:1'],
-            'id_forma_pago' => ['nullable', 'exists:forma_pagos,id'],
+            'id_forma_pago' => ['required', 'exists:forma_pagos,id'],
             'referencia' => ['nullable', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string', 'max:255'],
+        ], [
+            'monto.required' => 'Ingresá el monto.',
+            'monto.numeric' => 'El monto debe ser un número.',
+            'monto.min' => 'El monto debe ser mayor a cero.',
+            'id_forma_pago.required' => 'Seleccioná la forma de pago.',
+            'id_forma_pago.exists' => 'La forma de pago seleccionada no es válida.',
         ]);
 
         $persona = $acceso['persona'];
@@ -180,7 +186,7 @@ class PortalFamiliaController extends Controller
             'direccion' => CuentaMovimiento::DIRECCION_ABONO,
             'monto' => $data['monto'],
             'id_persona_pagador' => $request->user()->id_persona,
-            'id_forma_pago' => $data['id_forma_pago'] ?? null,
+            'id_forma_pago' => $data['id_forma_pago'],
             'estado' => CuentaMovimiento::ESTADO_PENDIENTE,
             'referencia_externa' => $data['referencia'] ?? null,
             'descripcion' => $data['descripcion'] ?? 'Pago informado desde el portal',

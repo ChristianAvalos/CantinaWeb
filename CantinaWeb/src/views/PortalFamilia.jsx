@@ -40,6 +40,8 @@ export default function PortalFamilia() {
     const [tab, setTab] = useState('compras');
     const [formPago, setFormPago] = useState(PAGO_INICIAL);
     const [enviandoPago, setEnviandoPago] = useState(false);
+    const [errorMonto, setErrorMonto] = useState('');
+    const [errorFormaPago, setErrorFormaPago] = useState('');
 
     const cargarResumen = useCallback(async () => {
         setCargando(true);
@@ -88,7 +90,12 @@ export default function PortalFamilia() {
         const monto = Number(formPago.monto);
 
         if (!monto || monto <= 0) {
-            toast.warning('Ingresá un monto mayor a cero.');
+            setErrorMonto('Ingresá un monto mayor a cero.');
+            return;
+        }
+
+        if (!formPago.id_forma_pago) {
+            setErrorFormaPago('Seleccioná la forma de pago.');
             return;
         }
 
@@ -106,6 +113,8 @@ export default function PortalFamilia() {
             );
             toast.success(data?.message || 'Pago informado.');
             setFormPago(PAGO_INICIAL);
+            setErrorMonto('');
+            setErrorFormaPago('');
             await Promise.all([cargarDetalle(seleccionado), cargarResumen()]);
         } catch (error) {
             toast.error(error.response?.data?.message || 'No se pudo informar el pago.');
@@ -154,13 +163,16 @@ export default function PortalFamilia() {
                             key={a.id}
                             type="button"
                             onClick={() => setSeleccionado(a.id)}
-                            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                            className={`rounded-xl border px-4 py-2 text-left text-sm font-semibold transition ${
                                 seleccionado === a.id
                                     ? 'border-blue-600 bg-blue-600 text-white shadow'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
                             }`}
                         >
-                            {a.nombre}
+                            <span className="block">{a.nombre}</span>
+                            <span className={`block text-[0.7rem] font-normal ${seleccionado === a.id ? 'text-blue-100' : 'text-slate-500'}`}>
+                                {a.parentesco === 'Titular' ? 'Mi cuenta' : `Tu vínculo: ${a.parentesco || 'Tutor'}`}
+                            </span>
                         </button>
                     ))}
                 </div>
@@ -179,8 +191,13 @@ export default function PortalFamilia() {
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900">{alumno.nombre}</h3>
                                 <p className="text-xs text-slate-500">
-                                    {alumno.documento || 'Sin documento'} · {alumno.parentesco}
+                                    {alumno.documento || 'Sin documento'} · Alumno
                                 </p>
+                                <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-600">
+                                    {alumno.parentesco === 'Titular'
+                                        ? 'Mi cuenta'
+                                        : `Tu vínculo: ${alumno.parentesco || 'Tutor'}`}
+                                </span>
                             </div>
                             {permisos.puede_ver_saldo && resumen && (
                                 <div className="text-right">
@@ -320,42 +337,55 @@ export default function PortalFamilia() {
                     </div>
 
                     {permisos.puede_pagar && (
-                        <form onSubmit={informarPago} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <form onSubmit={informarPago} noValidate className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-base font-bold text-slate-800">Informar un pago</h3>
                             <p className="mt-1 text-xs text-slate-500">
                                 El pago queda pendiente hasta que la cantina lo confirme.
                             </p>
                             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <label className="block">
-                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Monto</span>
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                        Monto <span className="text-red-600">*</span>
+                                    </span>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         value={formatearMiles(formPago.monto)}
-                                        onChange={(e) => setFormPago({
-                                            ...formPago,
-                                            monto: e.target.value.replace(/\D/g, ''),
-                                        })}
-                                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                        onChange={(e) => {
+                                            setErrorMonto('');
+                                            setFormPago({
+                                                ...formPago,
+                                                monto: e.target.value.replace(/\D/g, ''),
+                                            });
+                                        }}
+                                        className={`w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100 ${errorMonto ? 'border-red-500' : 'border-slate-300 focus:border-blue-400'}`}
                                         placeholder="0"
-                                        required
                                     />
+                                    {errorMonto && <p className="mt-1 text-xs text-red-600">{errorMonto}</p>}
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Forma de pago</span>
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                        Forma de pago <span className="text-red-600">*</span>
+                                    </span>
                                     <select
                                         value={formPago.id_forma_pago}
-                                        onChange={(e) => setFormPago({ ...formPago, id_forma_pago: e.target.value })}
-                                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                        onChange={(e) => {
+                                            setErrorFormaPago('');
+                                            setFormPago({ ...formPago, id_forma_pago: e.target.value });
+                                        }}
+                                        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100 ${errorFormaPago ? 'border-red-500' : 'border-slate-300 focus:border-blue-400'}`}
                                     >
                                         <option value="">Seleccionar...</option>
                                         {(detalle.formas_pago || []).map((fp) => (
                                             <option key={fp.id} value={fp.id}>{fp.nombre}</option>
                                         ))}
                                     </select>
+                                    {errorFormaPago && <p className="mt-1 text-xs text-red-600">{errorFormaPago}</p>}
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Referencia</span>
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                        Referencia <span className="font-normal text-slate-400">(opcional)</span>
+                                    </span>
                                     <input
                                         type="text"
                                         value={formPago.referencia}
@@ -365,7 +395,9 @@ export default function PortalFamilia() {
                                     />
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Descripción</span>
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                        Descripción <span className="font-normal text-slate-400">(opcional)</span>
+                                    </span>
                                     <input
                                         type="text"
                                         value={formPago.descripcion}

@@ -5,7 +5,7 @@ import AlertaModal from '../components/AlertaModal';
 import FiltrosBar from '../components/FiltrosBar';
 import NoExistenDatos from '../components/NoExistenDatos';
 import Spinner from '../components/Spinner';
-import { formatearGuarani } from '../helpers/HelpersNumeros';
+import { formatearGuarani, formatearMiles } from '../helpers/HelpersNumeros';
 
 const FILTROS = [
     {
@@ -14,9 +14,19 @@ const FILTROS = [
         type: 'text',
         placeholder: 'Nombre o documento...',
     },
+    {
+        key: 'estado_pagos',
+        label: 'Estado de pagos',
+        type: 'select',
+        options: [
+            { key: 'Todos', value: '' },
+            { key: 'Pendientes', value: 'pendiente' },
+            { key: 'Aprobados', value: 'aprobado' },
+        ],
+    },
 ];
 
-const FILTROS_INICIALES = { search: '' };
+const FILTROS_INICIALES = { search: '', estado_pagos: '' };
 
 const TIPOS_MOVIMIENTO = {
     compra: 'Compra',
@@ -55,6 +65,8 @@ export default function CuentasAlumnos() {
     const [alumnoMovimiento, setAlumnoMovimiento] = useState(null);
     const [formPago, setFormPago] = useState(PAGO_INICIAL);
     const [guardando, setGuardando] = useState(false);
+    const [errorMonto, setErrorMonto] = useState('');
+    const [errorFormaPago, setErrorFormaPago] = useState('');
 
     const [alerta, setAlerta] = useState(null);
 
@@ -62,6 +74,7 @@ export default function CuentasAlumnos() {
         try {
             const params = new URLSearchParams({ page: String(page) });
             if (filtrosAplicados.search) params.append('search', filtrosAplicados.search);
+            if (filtrosAplicados.estado_pagos) params.append('estado_pagos', filtrosAplicados.estado_pagos);
 
             const { data } = await clienteAxios.get(`api/cuentas_alumnos?${params.toString()}`, { headers });
             setAlumnos(data.data || []);
@@ -105,6 +118,8 @@ export default function CuentasAlumnos() {
     const abrirMovimiento = (alumno) => {
         setAlumnoMovimiento(alumno);
         setFormPago(PAGO_INICIAL);
+        setErrorMonto('');
+        setErrorFormaPago('');
     };
 
     const guardarMovimiento = async (event) => {
@@ -114,7 +129,13 @@ export default function CuentasAlumnos() {
 
         const monto = Number(formPago.monto);
         if (!monto || monto <= 0) {
-            toast.warning('Ingresá un monto mayor a cero.');
+            setErrorMonto('Ingresá un monto mayor a cero.');
+            return;
+        }
+
+        // El ajuste es una corrección interna: no lleva forma de pago.
+        if (formPago.tipo !== 'ajuste' && !formPago.id_forma_pago) {
+            setErrorFormaPago('Seleccioná la forma de pago.');
             return;
         }
 
@@ -132,6 +153,8 @@ export default function CuentasAlumnos() {
             toast.success('Movimiento registrado.');
             setAlumnoMovimiento(null);
             setFormPago(PAGO_INICIAL);
+            setErrorMonto('');
+            setErrorFormaPago('');
             await cargarAlumnos(paginaActual, filtros);
             if (detalle?.persona?.id === alumnoMovimiento.id) {
                 await abrirDetalle(alumnoMovimiento);
@@ -370,12 +393,22 @@ export default function CuentasAlumnos() {
 
             {alumnoMovimiento && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-                    <form onSubmit={guardarMovimiento} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+                    <form onSubmit={guardarMovimiento} noValidate className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-slate-800">
                                 Registrar movimiento · {alumnoMovimiento.nombre}
                             </h3>
-                            <button type="button" onClick={() => setAlumnoMovimiento(null)} className="text-2xl text-slate-400 hover:text-slate-700">×</button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAlumnoMovimiento(null);
+                                    setErrorMonto('');
+                                    setErrorFormaPago('');
+                                }}
+                                className="text-2xl text-slate-400 hover:text-slate-700"
+                            >
+                                ×
+                            </button>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -408,34 +441,52 @@ export default function CuentasAlumnos() {
                             )}
 
                             <label className="block">
-                                <span className="mb-1 block text-xs font-semibold text-slate-600">Monto</span>
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                    Monto <span className="text-red-600">*</span>
+                                </span>
                                 <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={formPago.monto}
-                                    onChange={(e) => setFormPago({ ...formPago, monto: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                                    required
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formatearMiles(formPago.monto)}
+                                    onChange={(e) => {
+                                        setErrorMonto('');
+                                        setFormPago({
+                                            ...formPago,
+                                            monto: e.target.value.replace(/\D/g, ''),
+                                        });
+                                    }}
+                                    className={`w-full rounded-xl border px-3 py-2 text-sm ${errorMonto ? 'border-red-500' : 'border-slate-300'}`}
+                                    placeholder="0"
                                 />
+                                {errorMonto && <p className="mt-1 text-xs text-red-600">{errorMonto}</p>}
                             </label>
 
-                            <label className="block">
-                                <span className="mb-1 block text-xs font-semibold text-slate-600">Forma de pago</span>
-                                <select
-                                    value={formPago.id_forma_pago}
-                                    onChange={(e) => setFormPago({ ...formPago, id_forma_pago: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    {formasPago.map((fp) => (
-                                        <option key={fp.id} value={fp.id}>{fp.nombre}</option>
-                                    ))}
-                                </select>
-                            </label>
+                            {formPago.tipo !== 'ajuste' && (
+                                <label className="block">
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                        Forma de pago <span className="text-red-600">*</span>
+                                    </span>
+                                    <select
+                                        value={formPago.id_forma_pago}
+                                        onChange={(e) => {
+                                            setErrorFormaPago('');
+                                            setFormPago({ ...formPago, id_forma_pago: e.target.value });
+                                        }}
+                                        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm ${errorFormaPago ? 'border-red-500' : 'border-slate-300'}`}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {formasPago.map((fp) => (
+                                            <option key={fp.id} value={fp.id}>{fp.nombre}</option>
+                                        ))}
+                                    </select>
+                                    {errorFormaPago && <p className="mt-1 text-xs text-red-600">{errorFormaPago}</p>}
+                                </label>
+                            )}
 
                             <label className="block sm:col-span-2">
-                                <span className="mb-1 block text-xs font-semibold text-slate-600">Descripción</span>
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">
+                                    Descripción <span className="font-normal text-slate-400">(opcional)</span>
+                                </span>
                                 <input
                                     type="text"
                                     value={formPago.descripcion}
@@ -449,7 +500,11 @@ export default function CuentasAlumnos() {
                         <div className="mt-5 flex justify-end gap-2">
                             <button
                                 type="button"
-                                onClick={() => setAlumnoMovimiento(null)}
+                                onClick={() => {
+                                    setAlumnoMovimiento(null);
+                                    setErrorMonto('');
+                                    setErrorFormaPago('');
+                                }}
                                 className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600"
                             >
                                 Cancelar

@@ -32,6 +32,8 @@ class CuentaAlumnoController extends Controller
 
         $search = trim((string) $request->input('search'));
         $searchLower = mb_strtolower($search);
+        // pendiente: tiene pagos sin confirmar; aprobado: tiene pagos confirmados.
+        $estadoPagos = $request->input('estado_pagos');
 
         $query = Persona::query()
             ->with(['tipoPersona', 'organizacion'])
@@ -62,6 +64,15 @@ class CuentaAlumnoController extends Controller
                     $sub->whereRaw('LOWER(nombre) LIKE ?', [$like])
                         ->orWhereRaw('LOWER(COALESCE(documento, \'\')) LIKE ?', [$like]);
                 });
+            })
+            ->when($estadoPagos === 'pendiente', function ($q) {
+                $q->whereHas('cuentaMovimientos', fn ($c) => $c
+                    ->where('estado', CuentaMovimiento::ESTADO_PENDIENTE));
+            })
+            ->when($estadoPagos === 'aprobado', function ($q) {
+                $q->whereHas('cuentaMovimientos', fn ($c) => $c
+                    ->where('estado', CuentaMovimiento::ESTADO_CONFIRMADO)
+                    ->where('direccion', CuentaMovimiento::DIRECCION_ABONO));
             })
             ->orderBy('nombre');
 
@@ -117,13 +128,25 @@ class CuentaAlumnoController extends Controller
                 CuentaMovimiento::DIRECCION_CARGO,
                 CuentaMovimiento::DIRECCION_ABONO,
             ]), 'required_if:tipo,' . CuentaMovimiento::TIPO_AJUSTE],
-            'id_forma_pago' => ['nullable', 'exists:forma_pagos,id'],
+            // El ajuste es una corrección interna y no tiene medio de pago.
+            'id_forma_pago' => [
+                'required_unless:tipo,' . CuentaMovimiento::TIPO_AJUSTE,
+                'nullable',
+                'exists:forma_pagos,id',
+            ],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'fecha_hora' => ['nullable', 'date'],
             'estado' => ['nullable', Rule::in([
                 CuentaMovimiento::ESTADO_PENDIENTE,
                 CuentaMovimiento::ESTADO_CONFIRMADO,
             ])],
+        ], [
+            'monto.required' => 'Ingresá el monto.',
+            'monto.numeric' => 'El monto debe ser un número.',
+            'monto.min' => 'El monto debe ser mayor a cero.',
+            'id_forma_pago.required_unless' => 'Seleccioná la forma de pago.',
+            'id_forma_pago.exists' => 'La forma de pago seleccionada no es válida.',
+            'direccion.required_if' => 'Seleccioná la dirección del ajuste.',
         ]);
 
         $persona = Persona::findOrFail($data['id_persona']);
