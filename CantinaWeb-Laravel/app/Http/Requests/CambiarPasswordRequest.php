@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password as PasswordRules;
 
 class CambiarPasswordRequest extends FormRequest
@@ -23,7 +24,12 @@ class CambiarPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'currentPassword' => ['required'],
+            // Con la contraseña por defecto no se pide la actual: se conoce.
+            'currentPassword' => [
+                Rule::requiredIf(fn () => ! $this->user()?->debe_cambiar_password),
+                'nullable',
+                'string',
+            ],
             'newPassword' => [
                 'required',
                 'confirmed',

@@ -30,6 +30,7 @@ class User extends Authenticatable
         'id_organizacion',
         'id_sucursal',
         'id_persona',
+        'debe_cambiar_password',
         'id_tipoestado',
         'UrevUsuario',
         'UrevFechaHora'

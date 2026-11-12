@@ -21,6 +21,9 @@ return new class extends Migration
             // Persona a la que representa esta cuenta (alumno/tutor). La FK se
             // agrega en la migración de `personas`, que se crea después.
             $table->unsignedBigInteger('id_persona')->nullable()->index();
+            // Se activa al crear/restablecer con la contraseña por defecto: el
+            // usuario debe cambiarla al iniciar sesión.
+            $table->boolean('debe_cambiar_password')->default(false);
             $table->timestamps();
         });
     }

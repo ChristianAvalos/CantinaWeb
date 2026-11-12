@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "../hooks/useAuth";
 import ModalUsuarios from "../views/ModalUsuarios";
 import ChangePasswordModal from "../views/ModalPassword";
+import CambioPasswordObligatorio from "../components/CambioPasswordObligatorio";
 
 /**
  * Layout del portal de familias: sin menú administrativo ni acceso al POS.
@@ -121,6 +122,7 @@ export default function PortalLayout() {
             />
 
             <ToastContainer />
+            <CambioPasswordObligatorio />
         </div>
     );
 }

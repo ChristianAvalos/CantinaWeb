@@ -6,6 +6,7 @@ import Header from "../components/Header"
 import SideNav from "../components/SideNav"
 import Footer from "../components/Footer"
 import { useTheme } from '../context/ThemeContext';
+import CambioPasswordObligatorio from '../components/CambioPasswordObligatorio';
 
 export default function Layout() {
     const { theme } = useTheme();
@@ -60,6 +61,7 @@ export default function Layout() {
                 <Footer />
             </div>
             <ToastContainer />
+            <CambioPasswordObligatorio />
         </div>
     )
 }

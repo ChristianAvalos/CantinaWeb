@@ -69,6 +69,8 @@ class PortalAccesoController extends Controller
             'nameUser' => $data['nameUser'],
             'email' => $data['email'],
             'password' => Hash::make($password),
+            // Se entrega la clave inicial: debe cambiarla al ingresar.
+            'debe_cambiar_password' => true,
             'rol_id' => $rolFamilia->id,
             'id_organizacion' => $persona->id_organizacion,
             // Las cuentas de portal no pertenecen a una sucursal: ven las compras
@@ -138,6 +140,7 @@ class PortalAccesoController extends Controller
         // define ni conoce la contraseña del tutor.
         $user->update([
             'password' => Hash::make('123456'),
+            'debe_cambiar_password' => true,
             'UrevUsuario' => 'Reset - ' . Auth::user()->name,
             'UrevFechaHora' => now(),
         ]);

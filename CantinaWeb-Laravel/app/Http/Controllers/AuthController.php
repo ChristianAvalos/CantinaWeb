@@ -66,6 +66,7 @@ class AuthController extends Controller
                 'nameUser' => $data['nameUser'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
+                'debe_cambiar_password' => false,
                 'rol_id' => $rolUsuario, //por defecto se crea como usuario
                 'id_tipoestado' => 1, //por defecto se crea con estado Activo
                 'UrevUsuario' => 'Registrado - ' . $data['name'],
@@ -101,6 +102,8 @@ class AuthController extends Controller
                 'nameUser' => $data['nameUser'],
                 'email' => $data['email'],
                 'password' => Hash::make('123456'),
+                // Contraseña por defecto: se exige cambiarla al ingresar.
+                'debe_cambiar_password' => true,
                 'rol_id' => $data['rol_id'],
                 'id_organizacion' => $data['id_organizacion'],
                 'id_sucursal' => $data['id_sucursal'] ?? Sucursal::principalDeOCrear((int) $data['id_organizacion'])->id,
@@ -295,8 +298,10 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Verificar si la contraseña actual es correcta
-            if (!Hash::check($request->currentPassword, $user->password)) {
+            // La contraseña actual solo se exige cuando NO es la inicial: si el
+            // usuario debe cambiarla, ya conocemos la clave por defecto.
+            if (! $user->debe_cambiar_password
+                && ! Hash::check((string) $request->currentPassword, $user->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'La contraseña actual no es correcta',
@@ -305,6 +310,7 @@ class AuthController extends Controller
 
             // Actualizar la contraseña
             $user->password = Hash::make($request->newPassword);
+            $user->debe_cambiar_password = false;
             $user->UrevUsuario = 'Actualizado - ' . Auth::user()->name;
             $user->UrevFechaHora = Carbon::now();
             $user->save();
@@ -333,6 +339,8 @@ class AuthController extends Controller
 
         // Asignar la contraseña por defecto y encriptarla
         $usuario->password = Hash::make('123456');
+        // Deberá cambiarla en el próximo inicio de sesión.
+        $usuario->debe_cambiar_password = true;
 
         // Guardar los cambios en la base de datos
         $usuario->save();
