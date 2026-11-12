@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -24,7 +25,7 @@ class UpdateUserRequest extends FormRequest
         $userId = $this->route('id'); 
         return [
             'name' => ['required','string'],
-            'nameUser' => ['required','string'],
+            'nameUser' => ['required','string', Rule::unique('users','nameUser')->ignore($userId)],
             'email' => ['required', 'email', 'unique:users,email,' . $userId],
             'rol_id' => ['required', 'exists:roles,id'],
             'id_organizacion' => ['required', 'exists:organizacion,id'],
@@ -37,6 +38,7 @@ class UpdateUserRequest extends FormRequest
             'name' => 'El nombre es obligatorio',
             'name.required' => 'El nombre es obligatorio',
             'nameUser.required' => 'El nombre de usuario es obligatorio',
+            'nameUser.unique' => 'Ese nombre de usuario ya existe',
             'email.required' => 'El correo es obligatorio',
             'email.email' => 'El correo no es valido',
             'email.unique' => 'El correo ingresado ya existe',

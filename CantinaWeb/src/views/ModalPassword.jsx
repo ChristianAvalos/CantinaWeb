@@ -30,7 +30,6 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                 newPassword_confirmation: repeatPassword,
             };
 
-            console.log('Datos enviados (cambiar contraseña):', data);
             const response = await clienteAxios.post('/api/cambiarpassword', data,
                 {
                     headers: {

@@ -28,6 +28,9 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
 
     // Cargar datos iniciales en paralelo desde la API
     useEffect(() => {
+        // En "Mi perfil" no se editan rol ni organización: no hace falta pedirlos.
+        if (ocultarRolesYOrganizaciones) return;
+
         const fetchInitialData = async () => {
             try {
                 const [rolesRes, orgRes] = await Promise.all([
@@ -59,6 +62,9 @@ export default function ModalUsuarios({ onClose, modo, usuario = {}, refrescarUs
     // Cargar las sucursales de la organización elegida. Si tiene una sola, se
     // asigna automáticamente (equivale a la organización principal).
     useEffect(() => {
+        // En "Mi perfil" tampoco se edita la sucursal.
+        if (ocultarRolesYOrganizaciones) return;
+
         const fetchSucursales = async () => {
             if (!organizacionSeleccionada) {
                 setSucursales([]);

@@ -6,6 +6,8 @@ import clienteAxios from "../config/axios";
 const ProtectedRoute = ({ permission, adminOnly = false, children }) => {
     const token = localStorage.getItem('AUTH_TOKEN');
     const [userRole, setUserRole] = useState(null);
+    // El portal de familias tiene su propio layout: nunca debe caer en el backoffice.
+    const [esFamilia, setEsFamilia] = useState(false);
     const [roleLoaded, setRoleLoaded] = useState(false);
 
     // Obtener el rol del usuario para redirigir correctamente a no-admins
@@ -22,6 +24,7 @@ const ProtectedRoute = ({ permission, adminOnly = false, children }) => {
             if (res.data?.rol_id != null) {
                 setUserRole(Number(res.data.rol_id));
             }
+            setEsFamilia(res.data?.role?.name === 'Familia');
         })
         .catch(() => {
             // Si falla, simplemente continuamos sin rol
@@ -59,7 +62,18 @@ const ProtectedRoute = ({ permission, adminOnly = false, children }) => {
     }
 
 
+    // Las cuentas del portal solo pueden estar en /familia.
+    if (esFamilia && permission !== 'Portal_Familia') {
+        return <Navigate to="/familia" replace />;
+    }
+
     if (!hasPermission(permission)) {
+        // Portal de familias: si por algún motivo no tiene el permiso, no se lo
+        // manda al backoffice sino al login.
+        if (esFamilia) {
+            return <Navigate to="/familia" replace />;
+        }
+
         // Si el usuario está autenticado pero no es admin (rol_id !== 1),
         // redirigir a /iniciousuarios en lugar de /error
         if (userRole !== null && userRole !== 1) {
@@ -71,6 +85,10 @@ const ProtectedRoute = ({ permission, adminOnly = false, children }) => {
 
     // Ruta exclusiva de administrador (rol_id = 1).
     if (adminOnly && !isAdmin) {
+        if (esFamilia) {
+            return <Navigate to="/familia" replace />;
+        }
+
         if (userRole !== null && userRole !== 1) {
             return <Navigate to="/iniciousuarios" replace />;
         }

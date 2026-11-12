@@ -125,7 +125,21 @@ class AuthController extends Controller
 
         // Encontrar el usuario por su ID
         $usuario = User::findOrFail($id);
+        $autenticado = Auth::user();
 
+        // Una cuenta del portal solo puede editar SU propio usuario y nunca su
+        // rol, organización o sucursal (evita escalar privilegios).
+        if ($autenticado->esFamilia()) {
+            if ((int) $autenticado->id !== (int) $usuario->id) {
+                return response()->json([
+                    'message' => 'Solo podés modificar tu propio usuario.',
+                ], 403);
+            }
+
+            $data['rol_id'] = $usuario->rol_id;
+            $data['id_organizacion'] = $usuario->id_organizacion;
+            $data['id_sucursal'] = $usuario->id_sucursal;
+        }
 
         // Actualizar los datos del usuario con los nuevos valores
         $usuario->name = $data['name'];

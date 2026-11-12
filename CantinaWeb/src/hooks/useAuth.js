@@ -9,6 +9,10 @@ const CONNECTION_TOAST_ID = 'backend-connection-error';
 
 
 
+// Cuenta del portal de familias: el rol (que ya viene cargado en /api/user y
+// en el login) es la única fuente de verdad.
+const esCuentaFamilia = (user) => user?.role?.name === 'Familia';
+
 export const useAuth = ({middleware,url}) =>{
 
     const token = localStorage.getItem('AUTH_TOKEN');
@@ -129,6 +133,14 @@ export const useAuth = ({middleware,url}) =>{
 
     useEffect(() => {
         
+        // El portal de familias tiene su propia aplicación: solo puede estar en
+        // /familia. Aplica al iniciar sesión (guest) y a cualquier pantalla del
+        // backoffice (auth), sin importar por qué ruta haya entrado.
+        if (user && esCuentaFamilia(user) && !location.pathname.startsWith('/familia')){
+            safeNavigate('/familia');
+            return;
+        }
+
         if (middleware === 'guest' && url && user){
             safeNavigate(url);
         }
@@ -149,12 +161,6 @@ export const useAuth = ({middleware,url}) =>{
         //  //Si no tiene definido su organizacion le va a aparecer en la pagina de error
         if (middleware === 'guest' && user && (user.id_organizacion === undefined || user.id_organizacion === null) ){
             safeNavigate('/error');
-            return;
-        }
-
-        // Las cuentas del portal de familias (rol Familia) van directo a su portal.
-        if (middleware === 'guest' && user && user.role?.name === 'Familia'){
-            safeNavigate('/familia');
             return;
         }
 
